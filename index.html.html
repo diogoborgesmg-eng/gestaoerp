@@ -275,7 +275,7 @@ const API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL   = "claude-sonnet-4-20250514";
 
 async function analisarImagem(b64, mime, system, user) {
-  const r = await fetch(API_URL, {
+  const r = await API_URL, {
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":API_KEY,"anthropic-version":"2023-06-01"},
     body: JSON.stringify({model:MODEL,max_tokens:1200,system,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:user}]}]})
