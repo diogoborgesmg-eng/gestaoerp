@@ -109,10 +109,26 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." 
  oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''"
  onblur="this.placeholder='🔍 Buscar...';setTimeout(()=>{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)"
- style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+ style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
 <div class="main" id="main"></div>
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
+</div>
+<!-- MODAL PDV -->
+<div id="modal-fila" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:flex-end;justify-content:center;">
+<div style="background:var(--sf);border-radius:18px 18px 0 0;padding:0;width:100%;max-height:92vh;overflow-y:auto;">
+<div id="modal-fila-conteudo"></div>
+<button onclick="fecharModalFila()" style="width:calc(100% - 28px);margin:4px 14px 20px;padding:12px;border-radius:10px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">✕ Fechar</button>
+</div>
+</div>
+
+<!-- BOTÃO FLUTUANTE VOZ PDV -->
+<div id="pdv-voz-flutuante" style="display:none;position:fixed;bottom:72px;right:14px;z-index:400;">
+ <div id="voz-status-flutuante" style="display:none;position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--tx);max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+ <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()"
+  style="width:54px;height:54px;border-radius:50%;border:2px solid var(--re);background:var(--sf);color:var(--re);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,51,102,0.35);">
+  🎙️
+ </button>
 </div>
 <div class="bnav"><div class="nis"><button class="ni a" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
 </div></div><script>
@@ -318,13 +334,7 @@ ${prontos.length>0?`<button onclick="lancarFila()" style="flex:2;min-width:120px
 <button onclick="limparFila()" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">🗑️</button>
 </div>`:""}
 
-<!-- MODAL DE DETALHES -->
-<div id="modal-fila" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:flex-end;justify-content:center;">
-<div style="background:var(--sf);border-radius:18px 18px 0 0;padding:0;width:100%;max-height:92vh;overflow-y:auto;">
-<div id="modal-fila-conteudo"></div>
-<button onclick="document.getElementById('modal-fila').style.display='none'" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:13px;cursor:pointer;margin-top:10px;">✕ Fechar</button>
-</div>
-</div>
+
 </div>`;
 }
 
@@ -3287,7 +3297,17 @@ function dispararWppFolha(){
  else window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank");
 }
 
-function gMesas(){const d=ldb();if(!d.mesas)d.mesas=Array.from({length:12},(_,i)=>({id:i+1,nome:`Mesa ${i+1}`,status:"livre",comanda:[],garcom:"",abertura:null}));return d.mesas;}
+function gMesas(){
+ const d=ldb();
+ // Cria 50 comandas se não existir
+ if(!d.mesas) d.mesas=Array.from({length:150},(_,i)=>({id:i+1,nome:'Comanda '+(i+1),mesa:'',status:'livre',comanda:[],garcom:'',abertura:null}));
+ // Renomeia "Mesa X" → "Comanda X" automaticamente
+ d.mesas=d.mesas.map(m=>({...m,nome:m.nome.replace(/^Mesa\s+(\d+)$/,'Comanda $1'),mesa:m.mesa||''}));
+ // Expande para 50 se necessário
+ while(d.mesas.length<150){const i=d.mesas.length;d.mesas.push({id:i+1,nome:'Comanda '+(i+1),mesa:'',status:'livre',comanda:[],garcom:'',abertura:null});}
+ sdb(d);
+ return d.mesas;
+}
 function sMesas(m){const d=ldb();d.mesas=m;sdb(d);}
 function gPromos(){const d=ldb();if(!d.promos)d.promos=[];return d.promos;}
 function sPromos(p){const d=ldb();d.promos=p;sdb(d);}
@@ -3821,8 +3841,11 @@ ${mesas.length>12?`<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:
 <button onclick="filtrarMesasPDV('conta')" id="btn-mesa-conta" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">🧾 Conta (${mesas.filter(m=>m.status==="conta").length})</button>
 </div>`:""}
 
-<p class="lbl">🗺️ Mapa de Mesas</p>
-<div id="pdv-mapa-mesas" style="display:grid;grid-template-columns:repeat(${Math.min(mesas.length>50?5:mesas.length>20?4:3,5)},1fr);gap:${mesas.length>30?'5px':'8px'};margin-bottom:12px;${mesas.length>60?'max-height:350px;overflow-y:auto;padding-right:4px;':''}"> ${mesas.map(m=>{
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+<p class="lbl" style="margin:0;">🗒️ Comandas</p>
+<button onclick="abrirBuscaComanda()" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">🔍 Buscar #</button>
+</div>
+<div id="pdv-mapa-mesas" style="display:grid;grid-template-columns:repeat(${mesas.length>100?6:mesas.length>50?5:mesas.length>20?4:3},1fr);gap:${mesas.length>30?'5px':'8px'};margin-bottom:12px;${mesas.length>60?'max-height:420px;overflow-y:auto;padding-right:4px;':''}"> ${mesas.map(m=>{
  const total=(m.comanda||[]).reduce((a,i)=>a+i.val*i.qtd,0);
  // Calcular tempo de ocupação
  let tempo="";let alertaTempo=false;
@@ -3841,14 +3864,15 @@ ${mesas.length>12?`<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:
  const cor=m.status==="livre"?"rgba(0,255,136,0.12)":m.status==="conta"?"rgba(255,51,102,0.18)":alertaTempo?"rgba(255,106,0,0.18)":"rgba(255,204,0,0.12)";
  const borda=m.status==="livre"?"rgba(0,255,136,0.3)":m.status==="conta"?"rgba(255,51,102,0.5)":alertaTempo?"rgba(255,106,0,0.6)":"rgba(255,204,0,0.3)";
  const icone=m.status==="livre"?"✅":m.status==="conta"?"🧾":alertaTempo?"⏰":"🍽️";
- const pad=mesas.length>50?"7px 4px":"10px 6px";
- const fIcon=mesas.length>50?"12px":"14px";
- const fNome=mesas.length>50?"9px":"11px";
- const showInfo=mesas.length<=50;
+ const pad=mesas.length>100?"5px 3px":mesas.length>50?"7px 4px":"10px 6px";
+ const fIcon=mesas.length>100?"10px":mesas.length>50?"12px":"14px";
+ const fNome=mesas.length>100?"8px":mesas.length>50?"9px":"11px";
+ const showInfo=mesas.length<=100;
  const clickFn = _pdvModoVisual ? 'abrirPainelVisual' : 'abrirMesa';
 let html='<button onclick="'+clickFn+'('+m.id+')" data-mesa-id="'+m.id+'" style="padding:'+pad+';border-radius:10px;border:2px solid '+borda+';background:'+cor+';cursor:pointer;text-align:center;">';
  html+='<p style="font-size:'+fIcon+';margin-bottom:2px;">'+icone+'</p>';
  html+='<p style="font-size:'+fNome+';font-weight:700;color:var(--tx);">'+m.nome+'</p>';
+ if(m.mesa)html+='<p style="font-size:9px;color:#f59e0b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍'+m.mesa+'</p>';
  if(showInfo&&m.garcom)html+='<p style="font-size:9px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+m.garcom+'</p>';
  if(showInfo&&tempo)html+='<p style="font-size:9px;color:'+(alertaTempo?"#ff6a00":"var(--mu)")+';">'+tempo+'</p>';
  if(showInfo&&total>0)html+='<p style="font-size:11px;font-weight:700;color:#f59e0b;">'+brl(total)+'</p>';
@@ -3964,14 +3988,17 @@ function abrirMesa(id){
  const verVal=podeVerValores();
  const modal=document.getElementById("modal-fila");if(!modal)return;
  modal.style.display="flex";
- modal.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;padding:16px 14px 32px;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;">
+ document.getElementById("modal-fila-conteudo").innerHTML=`<div style="padding:16px 14px 0;">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-<div><p style="font-weight:800;font-size:15px;">${m.nome}</p>
-<p style="font-size:11px;color:var(--mu);">${m.status==="livre"?"🟢 Livre":m.status==="conta"?"🔴 Conta pedida":"🟡 Ocupada"}</p></div>
+<div><p style="font-weight:800;font-size:15px;">${m.nome}${m.mesa?" · 📍 "+m.mesa:""}</p>
+<p style="font-size:11px;color:var(--mu);">${m.status==="livre"?"🟢 Livre":m.status==="conta"?"🔴 Conta pedida":"🟡 Ocupada"} · ⏱️ ${m.abertura||"--:--"}</p></div>
 <button onclick="fecharModalFila()" style="background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:4px 10px;color:var(--mu);cursor:pointer;">✕</button>
 </div>
 ${m.status==="livre"?`
-<div class="campo"><label>Cliente / Responsável</label><input type="text" id="pdv-cliente" placeholder="Nome..." class="inp"/></div>
+<div style="display:flex;gap:8px;margin-bottom:8px;">
+<div style="flex:1;"><label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">📍 Mesa física</label><input type="text" id="pdv-mesa" placeholder="Ex: Mesa 2, Balcão..." class="inpm" value="${m.mesa||""}"/></div>
+<div style="flex:1;"><label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">👤 Cliente</label><input type="text" id="pdv-cliente" placeholder="Nome..." class="inpm"/></div>
+</div>
 <div class="campo"><label>Garçom (opcional)</label><input type="text" id="pdv-garcom" placeholder="Nome do garçom" class="inp"/></div>
 <button onclick="abrirMesaPDV(${id})" class="bok">🍽️ Abrir Mesa</button>
 `:m.status!=="livre"?`
@@ -3987,6 +4014,13 @@ style="padding:6px 10px;margin:2px;border-radius:7px;border:2px solid rgba(245,1
 ${(()=>{const pc={};cardapio.forEach(c=>{const cat=c.cat||"Outros";if(!pc[cat])pc[cat]=[];pc[cat].push(c);});return Object.entries(pc).map(([cat,itens])=>`<p style="font-size:9px;color:var(--mu);font-weight:700;margin:5px 0 3px;">${cat}</p><div style="display:flex;flex-wrap:wrap;gap:3px;">${itens.map(c=>`<button onclick="addItemPromo(${id},this.dataset.n,this.dataset.p)" data-n="${c.nome}" data-p="${c.preco}" style="padding:6px 9px;border-radius:7px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:11px;cursor:pointer;">${c.nome}<br/><span style="font-size:10px;color:#f59e0b;">${brl(c.preco)}</span></button>`).join("")}</div>`).join("");})()}
 </div>`:""}
 
+${m.status==="conta"?`
+<div style="background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:12px;margin-bottom:10px;text-align:center;">
+ <p style="font-size:24px;margin-bottom:6px;">🔒</p>
+ <p style="font-size:13px;font-weight:800;color:var(--re);">Conta pedida — lançamentos bloqueados</p>
+ <p style="font-size:11px;color:var(--mu);margin-top:4px;">Clique em 🔓 Reabrir Comanda para adicionar mais itens</p>
+</div>
+`:`
 <!-- ADICIONAR ITEM — 4 MÉTODOS -->
 <div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:10px;">
 <div style="display:flex;gap:4px;margin-bottom:8px;">
@@ -4097,6 +4131,8 @@ autofocus/>
 <div id="balanca-resultado" style="margin-top:4px;"></div>
 </div>
 </div><!-- ITENS DA COMANDA -->
+`}
+
 <p style="font-size:11px;font-weight:700;margin-bottom:6px;">📋 Comanda (${m.comanda.length} item${m.comanda.length!==1?"s":""})</p>
 ${m.comanda.length===0?`<p style="font-size:11px;color:var(--mu);text-align:center;padding:12px;">Comanda vazia — adicione itens acima</p>`:""}
 ${m.comanda.map((item,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);">
@@ -4126,6 +4162,7 @@ ${item.obs?`<p style="font-size:10px;color:var(--mu);margin-left:28px;font-style
 <button onclick="juntarMesa(${id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:11px;cursor:pointer;">🔗 Juntar</button>
 <button onclick="imprimirComanda(${id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:11px;cursor:pointer;">🖨️</button>
 </div>
+${m.status==="conta"?`<button onclick="reabrirMesa(${m.id})" style="width:100%;margin-top:8px;padding:11px;border-radius:9px;border:2px solid rgba(255,204,0,0.5);background:rgba(255,204,0,0.12);color:var(--ye);font-size:13px;font-weight:800;cursor:pointer;">🔓 Reabrir Comanda — adicionar mais itens</button>`:""}
 `:""}
 </div>`;
 }
@@ -8112,8 +8149,8 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto};
- const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc"];
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,resultado:rResultadoDia};
+ const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
 <p style="font-size:32px;margin-bottom:10px;">🔒</p>
@@ -8124,7 +8161,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- el.innerHTML=(m[aba]||rDRE)();
+ el.innerHTML=(m[aba]||rDRE)();const _vf=document.getElementById("pdv-voz-flutuante");if(_vf)_vf.style.display=aba==="pdv"?"block":"none";
  }catch(e){
  el.innerHTML=`<div class="si"><div class="ial ar"><span>❌</span><span>Erro: ${e.message}</span></div><button onclick="ir('dre')" class="bok" style="margin-top:10px;">← DRE</button></div>`;
  console.error("Erro render",aba,e);
@@ -8239,6 +8276,24 @@ ${funcs.filter(f=>f.ativo).length>0?`<div style="display:flex;justify-content:sp
 </div>`;
 })()}
 </div><!-- HISTÓRICO DE LANÇAMENTOS -->
+<div class="card" style="margin-bottom:10px;border-color:rgba(68,136,255,0.3);">
+<p style="font-size:11px;font-weight:700;color:var(--bl);margin-bottom:8px;">🏢 Dados Fiscais — NF-e / NFC-e</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+<div><label style="font-size:10px;color:var(--mu);">CNPJ</label><input id="cfg-cnpj" class="inpm" placeholder="44.686.412/0001-00" style="font-family:'Space Mono',monospace;font-size:10px;"/></div>
+<div><label style="font-size:10px;color:var(--mu);">Inscrição Estadual</label><input id="cfg-ie" class="inpm" placeholder="IE"/></div>
+<div style="grid-column:1/-1;"><label style="font-size:10px;color:var(--mu);">Razão Social</label><input id="cfg-razao" class="inpm" placeholder="Di Casa Laranjinha Restaurante e Pizzaria"/></div>
+<div><label style="font-size:10px;color:var(--mu);">Regime Tributário</label><select id="cfg-crt" class="inpm"><option value="1">1 — Simples Nacional</option><option value="2">2 — Simples Exc.</option><option value="3">3 — Regime Normal</option></select></div>
+<div><label style="font-size:10px;color:var(--mu);">CEP</label><input id="cfg-cep" class="inpm" placeholder="38700-000" style="font-family:'Space Mono',monospace;font-size:10px;"/></div>
+<div style="grid-column:1/-1;"><label style="font-size:10px;color:var(--mu);">Logradouro</label><input id="cfg-logradouro" class="inpm" placeholder="Rua, Av..."/></div>
+<div><label style="font-size:10px;color:var(--mu);">Número</label><input id="cfg-numero" class="inpm" placeholder="Nº"/></div>
+<div><label style="font-size:10px;color:var(--mu);">Bairro</label><input id="cfg-bairro" class="inpm" placeholder="Bairro"/></div>
+<div><label style="font-size:10px;color:var(--mu);">CSC NFC-e</label><input id="cfg-csc" class="inpm" placeholder="Cód do contador" style="font-family:'Space Mono',monospace;font-size:10px;"/></div>
+<div><label style="font-size:10px;color:var(--mu);">ID Token NFC-e</label><input id="cfg-cscid" class="inpm" placeholder="000001" style="font-family:'Space Mono',monospace;font-size:10px;"/></div>
+<div><label style="font-size:10px;color:var(--mu);">URL Backend SEFAZ</label><input id="cfg-backend-url" class="inpm" placeholder="https://gestaoerp-api.vercel.app" style="font-size:10px;"/></div>
+<div><label style="font-size:10px;color:var(--mu);">Token API</label><input id="cfg-backend-token" class="inpm" placeholder="gestaoerp_diCasa_..." style="font-size:10px;"/></div>
+</div>
+<button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
+</div>
 <div class="card" style="margin-top:8px;">
 <p class="lbl">📅 Lançamentos deste mês</p>
 <div id="fixos-historico">${gerarHistoricoFixos()}</div>
@@ -8577,6 +8632,11 @@ ${(()=>{const ub=localStorage.getItem("erp_ultimo_backup");if(!ub)return`<div cl
 <label style="flex:1;cursor:pointer;"><input type="file" accept=".json" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarDados(this)"/><div style="padding:10px;border-radius:9px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;text-align:center;">📥 Restaurar</div></label>
 </div>
 <button onclick="verificarSaudeDados()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.08);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔍 Verificar saúde dos dados</button>
+<div style="background:rgba(255,51,102,0.05);border:1px solid rgba(255,51,102,0.2);border-radius:10px;padding:12px;margin-top:8px;">
+<p style="font-size:11px;font-weight:700;color:var(--re);margin-bottom:4px;">🗑️ Limpar Dados de Teste</p>
+<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Remove estoque, vendas e lançamentos. Mantém cardápio, fichas e configurações.</p>
+<button onclick="limparDadosTeste()" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;">🗑️ Limpar Estoque + Vendas + Contas</button>
+</div>
 <button onclick="enviarRelatorioSemanal()" style="flex:1;padding:9px;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">📲 Relatório Semanal</button>
 <button onclick="exportarRelatorioPDF()" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.1);color:var(--ye);font-size:11px;font-weight:700;cursor:pointer;">📊 Relatório (.txt)</button>
 ${localStorage.getItem("erp_notif")?`<div class="ial ag"><span>🔔</span><span>Notificações ativadas</span></div>`:`<button onclick="pedirPermissaoNotificacao()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">🔔 Ativar notificações</button>`}
@@ -14027,8 +14087,8 @@ function atualizarAlertas(){
  [1,2].forEach(n=>{const info=JSON.parse(localStorage.getItem("erp_cert_info_"+n)||"{}");if(!info.validade)return;const dv=new Date(info.validade);const dias=Math.ceil((dv-new Date())/(1000*60*60*24));if(dias<0)alertas.push({txt:`🔐${n}`,cor:"#ff3366",tip:`Cert ${n} VENCIDO!`,aba:"cfg"});else if(dias<=30)alertas.push({txt:`🔐${n}`,cor:"#ffcc00",tip:`Cert ${n} vence em ${dias}d`,aba:"cfg"});});
  // Mesas PDV abertas
  const mesasAbertas=gMesas().filter(m=>m.status!=="livre").length;
- if(mesasAbertas>0)alertas.push({txt:`🍽️${mesasAbertas}`,cor:"#f59e0b",tip:`${mesasAbertas} mesa(s) abertas no PDV`,aba:"pdv"});
- el.innerHTML=alertas.map(a=>`<span onclick="ir('${a.aba}')" style="font-size:10px;font-weight:700;color:${a.cor};cursor:pointer;padding:3px 6px;background:${a.cor}20;border-radius:5px;white-space:nowrap;" title="${a.tip}">${a.txt}</span>`).join("");
+ if(mesasAbertas>0)alertas.push({txt:`🍽️${mesasAbertas}`,cor:"#f59e0b",tip:`${mesasAbertas} comanda(s) abertas`,aba:"pdv",fn:"abrirResumoMesas"});
+ el.innerHTML=alertas.map(a=>`<span onclick="${a.fn?a.fn+'()':"ir('"+a.aba+"')"}" style="font-size:10px;font-weight:700;color:${a.cor};cursor:pointer;padding:3px 6px;background:${a.cor}20;border-radius:5px;white-space:nowrap;" title="${a.tip}">${a.txt}</span>`).join("");
 }
 
 // IMPORTAR CARDÁPIO DI CASA v1
@@ -14148,6 +14208,1398 @@ async function receberCompartilhamento(b64,mime,nome){
  const file=new File([blob],nome,{type:mime});
  await processarComprovante({files:[file]});
  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUSCA RÁPIDA DE COMANDA
+// ══════════════════════════════════════════════════════════════
+function abrirBuscaComanda(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;">
+  <div style="padding:14px 14px 0;flex-shrink:0;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <p style="font-weight:800;font-size:15px;">🔍 Localizar Comanda</p>
+    <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+   </div>
+
+   <!-- Campo de busca grande -->
+   <input id="inp-busca-cmd" type="number" placeholder="Digite o número da comanda..."
+    oninput="_filtrarComandas(this.value)"
+    style="width:100%;background:var(--sf2);border:2px solid var(--bl);border-radius:12px;padding:14px;color:var(--tx);font-size:20px;font-weight:700;text-align:center;margin-bottom:10px;"/>
+
+   <!-- Teclado numérico rápido -->
+   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px;">
+    ${Array.from({length:10},(_,i)=>i+1).concat([10,20,30,40,50,60,70,80,90,100]).map(n=>`
+    <button onclick="const inp=document.getElementById('inp-busca-cmd');inp.value=${n};_filtrarComandas(${n})"
+     style="padding:10px 4px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;">${n}</button>`).join('')}
+   </div>
+
+   <!-- Botão nova comanda -->
+   <button onclick="_novaComandaRapida()" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;">+ Nova Comanda</button>
+  </div>
+
+  <!-- Lista de comandas -->
+  <div id="lista-cmd" style="flex:1;overflow-y:auto;padding:0 14px 24px;">
+   ${_gerarListaComandas('')}
+  </div>
+ </div>`;
+
+ window._filtrarComandas=function(val){
+  const el=document.getElementById('lista-cmd');
+  if(el)el.innerHTML=_gerarListaComandas(String(val||''));
+ };
+
+ window._novaComandaRapida=function(){
+  const num=document.getElementById('inp-busca-cmd')?.value?.trim();
+  if(!num){alert('Digite o número da comanda primeiro');return;}
+  div.remove();
+  abrirComandaNum(num);
+ };
+
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+ setTimeout(()=>document.getElementById('inp-busca-cmd')?.focus(),100);
+}
+
+function _gerarListaComandas(filtro){
+ const mesas=gMesas();
+ const abertas=mesas.filter(m=>{
+  if(m.status==='livre')return false;
+  if(!filtro)return true;
+  const num=String(m.id);
+  const nome=m.nome.toLowerCase();
+  const mesa=(m.mesa||'').toLowerCase();
+  return num.includes(filtro)||nome.includes(filtro.toLowerCase())||mesa.includes(filtro.toLowerCase());
+ }).sort((a,b)=>a.id-b.id);
+
+ if(!abertas.length){
+  return`<div style="text-align:center;padding:24px;">
+   <p style="font-size:32px;margin-bottom:8px;">📭</p>
+   <p style="font-size:13px;color:var(--mu);">${filtro?'Nenhuma comanda #'+filtro:'Nenhuma comanda aberta'}</p>
+  </div>`;
+ }
+
+ return abertas.map(m=>{
+  const total=(m.comanda||[]).reduce((a,i)=>a+i.val*i.qtd,0);
+  const cor=m.status==='conta'?'var(--re)':m.status==='livre'?'var(--gr)':'var(--ye)';
+  const label=m.status==='conta'?'Conta pedida':m.status==='livre'?'Livre':'Ocupada';
+  return`<div onclick="this.closest('[style*=inset]').remove();abrirMesa(${m.id})"
+   style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:6px;background:var(--sf2);border-radius:10px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;active:opacity:0.7;">
+   <div style="width:50px;height:50px;border-radius:10px;background:var(--sf);border:2px solid ${cor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:${cor};flex-shrink:0;">${m.id}</div>
+   <div style="flex:1;min-width:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+     <span style="font-size:14px;font-weight:800;">${m.nome}</span>
+     <span style="font-size:14px;font-weight:800;color:var(--gr);">${total>0?brl(total):'R$0,00'}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;">
+     <span style="font-size:11px;color:#f59e0b;">${m.mesa?'📍 '+m.mesa:'Sem mesa definida'}</span>
+     <span style="font-size:11px;color:${cor};">${label} · ${(m.comanda||[]).length} item(s)</span>
+    </div>
+    <div style="font-size:10px;color:var(--mu);margin-top:2px;">⏱️ ${m.abertura||'--:--'}</div>
+   </div>
+  </div>`;
+ }).join('');
+}
+
+// Abre comanda pelo número (cria se não existe)
+function abrirComandaNum(num){
+ const mesas=gMesas();
+ // Usa o id como número da comanda
+ const id=parseInt(num);
+ let mesa=mesas.find(m=>m.id===id);
+ if(!mesa){
+  // Cria nova entrada se não existe
+  mesa={id,nome:'Comanda '+id,mesa:'',status:'livre',comanda:[],garcom:'',abertura:null};
+  const db=ldb();
+  if(!db.mesas)db.mesas=mesas;
+  // Expande o array se necessário
+  while(db.mesas.length < id){
+   const nextId=db.mesas.length+1;
+   db.mesas.push({id:nextId,nome:'Comanda '+nextId,mesa:'',status:'livre',comanda:[],garcom:'',abertura:null});
+  }
+  sdb(db);
+ }
+ abrirMesa(id);
+}
+
+// Salva mesa física quando informada no modal
+function salvarMesaFisica(mesaId){
+ const mesaInput=document.getElementById('pdv-mesa');
+ if(!mesaInput)return;
+ const mesaFisica=mesaInput.value.trim();
+ const db=ldb();
+ const mesas=db.mesas||gMesas();
+ const idx=mesas.findIndex(m=>m.id===mesaId);
+ if(idx>=0){
+  mesas[idx].mesa=mesaFisica;
+  db.mesas=mesas;
+  sdb(db);
+ }
+}
+
+// Reabrir comanda após pedir conta
+function reabrirMesa(mesaId){
+ const db=ldb();
+ const mesas=db.mesas||gMesas();
+ const idx=mesas.findIndex(m=>m.id===mesaId);
+ if(idx<0)return;
+ mesas[idx].status='ocupada';
+ mesas[idx].contaPedida=false;
+ db.mesas=mesas;
+ sdb(db);
+ fecharModalFila();
+ render();
+ setTimeout(()=>abrirMesa(mesaId),150);
+}
+
+// Resumo rápido das comandas abertas (clique no alerta do header)
+function abrirResumoMesas(){
+ const mesas=gMesas().filter(m=>m.status!=='livre');
+ if(!mesas.length){alert('Nenhuma comanda aberta.');return;}
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;padding:14px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <p style="font-weight:800;font-size:14px;">🍽️ Comandas em Andamento</p>
+   <div style="display:flex;gap:6px;">
+    <button onclick="div.remove();abrirBuscaComanda()" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;cursor:pointer;">🔍 Buscar</button>
+    <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+   </div>
+  </div>
+  ${mesas.sort((a,b)=>a.id-b.id).map(m=>{
+   const total=(m.comanda||[]).reduce((a,i)=>a+i.val*i.qtd,0);
+   const cor=m.status==='conta'?'var(--re)':'var(--ye)';
+   return`<div onclick="this.closest('[style*=inset]').remove();abrirMesa(${m.id})"
+    style="display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:6px;background:var(--sf2);border-radius:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
+    <div style="width:44px;height:44px;border-radius:10px;border:2px solid ${cor};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${cor};flex-shrink:0;">${m.id}</div>
+    <div style="flex:1;">
+     <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;font-weight:800;">${m.nome}</span><span style="font-size:13px;font-weight:800;color:var(--gr);">${brl(total)}</span></div>
+     <div style="display:flex;justify-content:space-between;margin-top:2px;">
+      <span style="font-size:10px;color:#f59e0b;">${m.mesa?'📍 '+m.mesa:'Sem mesa'}</span>
+      <span style="font-size:10px;color:var(--mu);">${(m.comanda||[]).length} item(s) · ${m.abertura||'--:--'}</span>
+     </div>
+    </div>
+   </div>`;
+  }).join('')}
+  <div style="padding:10px;background:rgba(0,255,136,0.06);border-radius:8px;display:flex;justify-content:space-between;margin-top:4px;">
+   <span style="font-size:12px;font-weight:700;">${mesas.length} comanda(s) abertas</span>
+   <span style="font-size:13px;font-weight:800;color:var(--gr);">${brl(mesas.reduce((a,m)=>a+(m.comanda||[]).reduce((s,i)=>s+i.val*i.qtd,0),0))}</span>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+// ══════════════════════════════════════════════════════════════
+// VOZ HANDS-FREE — Botão flutuante PDV
+// ══════════════════════════════════════════════════════════════
+let _vozFlutuanteAtiva=false;
+let _vozFlutuanteRec=null;
+
+function toggleVozFlutuante(){
+ if(_vozFlutuanteAtiva) pararVozFlutuante();
+ else iniciarVozFlutuante();
+}
+
+function iniciarVozFlutuante(){
+ const btn=document.getElementById('btn-voz-flutuante');
+ const status=document.getElementById('voz-status-flutuante');
+ if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
+  if(status){status.style.display='block';status.textContent='❌ Voz não disponível — use Chrome';}
+  setTimeout(()=>{if(status)status.style.display='none';},3000);
+  return;
+ }
+ _vozFlutuanteAtiva=true;
+ if(btn){btn.style.background='rgba(255,51,102,0.3)';btn.textContent='🔴';}
+ if(status){status.style.display='block';status.textContent='🎙️ Fale: "Comanda X produto qtd"';}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ _vozFlutuanteRec=new SR();
+ _vozFlutuanteRec.lang='pt-BR';
+ _vozFlutuanteRec.continuous=false;
+ _vozFlutuanteRec.interimResults=false;
+ _vozFlutuanteRec.onresult=async(e)=>{
+  const txt=e.results[0][0].transcript;
+  if(status)status.textContent='⟳ "'+txt+'"';
+  await processarVozHandsFree(txt,status);
+ };
+ _vozFlutuanteRec.onerror=(e)=>{
+  pararVozFlutuante();
+  if(status){status.style.display='block';status.textContent='❌ '+e.error;}
+  setTimeout(()=>{if(status)status.style.display='none';},3000);
+ };
+ _vozFlutuanteRec.onend=()=>{if(_vozFlutuanteAtiva)pararVozFlutuante();};
+ _vozFlutuanteRec.start();
+}
+
+function pararVozFlutuante(){
+ _vozFlutuanteAtiva=false;
+ if(_vozFlutuanteRec){try{_vozFlutuanteRec.stop();}catch(e){}_vozFlutuanteRec=null;}
+ const btn=document.getElementById('btn-voz-flutuante');
+ if(btn){btn.style.background='var(--sf)';btn.textContent='🎙️';}
+ setTimeout(()=>{const s=document.getElementById('voz-status-flutuante');if(s)s.style.display='none';},1500);
+}
+
+async function processarVozHandsFree(texto,statusEl){
+ try{
+  const d=await claudeAPI({model:MODEL,max_tokens:300,messages:[{role:'user',content:
+   'Pedido em restaurante: "'+texto+'".\nRetorne APENAS JSON:\n{"comanda":numero_ou_null,"itens":[{"nome":"item","qtd":1,"obs":""}]}\nEx: "comanda 5 dois frangos uma coca" → {"comanda":5,"itens":[{"nome":"frango","qtd":2},{"nome":"coca","qtd":1}]}'
+  }]});
+  const pedido=JSON.parse((d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+  if(!pedido.comanda||!pedido.itens?.length){
+   if(statusEl)statusEl.textContent='❌ Fale: "Comanda X produto quantidade"';
+   setTimeout(()=>pararVozFlutuante(),3000);return;
+  }
+  // Encontra/cria a comanda
+  const db=ldb();
+  if(!db.mesas)db.mesas=gMesas();
+  const mesaIdx=db.mesas.findIndex(m=>m.id===parseInt(pedido.comanda));
+  if(mesaIdx<0){if(statusEl)statusEl.textContent='❌ Comanda '+pedido.comanda+' não existe';setTimeout(()=>pararVozFlutuante(),2000);return;}
+  if(db.mesas[mesaIdx].status==='livre'){
+   db.mesas[mesaIdx].status='ocupada';
+   db.mesas[mesaIdx].abertura=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  if(db.mesas[mesaIdx].status==='conta'){
+   if(statusEl)statusEl.textContent='🔒 Comanda '+pedido.comanda+' com conta pedida';
+   setTimeout(()=>pararVozFlutuante(),2500);return;
+  }
+  // Adiciona itens
+  const cardapio=gCardapioPDV();
+  const adicionados=[];
+  pedido.itens.forEach(item=>{
+   const t=item.nome.toLowerCase();
+   const prod=cardapio.find(p=>p.nome.toLowerCase().includes(t)||t.includes(p.nome.toLowerCase().substring(0,3)));
+   if(!db.mesas[mesaIdx].comanda)db.mesas[mesaIdx].comanda=[];
+   db.mesas[mesaIdx].comanda.push({id:uid(),nome:prod?prod.nome:item.nome,val:prod?prod.preco:0,qtd:item.qtd||1,obs:item.obs||'',hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+   adicionados.push((item.qtd||1)+'x '+(prod?prod.nome:item.nome));
+  });
+  sdb(db);
+  const msg='✅ C'+pedido.comanda+': '+adicionados.join(', ');
+  if(statusEl)statusEl.textContent=msg;
+  // Feedback por voz
+  if('speechSynthesis'in window){
+   const u=new SpeechSynthesisUtterance('Comanda '+pedido.comanda+'. '+adicionados.join('. '));
+   u.lang='pt-BR';u.rate=1.2;speechSynthesis.speak(u);
+  }
+  render();
+  setTimeout(()=>pararVozFlutuante(),2000);
+ }catch(e){
+  if(statusEl)statusEl.textContent='❌ '+e.message;
+  setTimeout(()=>pararVozFlutuante(),3000);
+ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RELATÓRIOS ESPECÍFICOS
+// ═══════════════════════════════════════════════════════════════
+
+// ── RESULTADO DO DIA ────────────────────────────────────────
+function rResultadoDia(){
+ const db=ldb();
+ const dia=hj();
+ const hoje=db[dia]||{r:[],c:[]};
+ const r=hoje.r||[];
+ const c=hoje.c||[];
+ const totalR=r.reduce((a,x)=>a+Number(x.v),0);
+ const totalC=c.reduce((a,x)=>a+Number(x.v),0);
+ const resultado=totalR-totalC;
+ const mesas=gMesas().filter(m=>m.status!=='livre');
+ const totalAberto=mesas.reduce((a,m)=>a+(m.comanda||[]).reduce((s,i)=>s+i.val*i.qtd,0),0);
+
+ // Receita por segmento
+ const porSeg={};
+ r.forEach(x=>{porSeg[x.seg||'outros']=(porSeg[x.seg||'outros']||0)+Number(x.v);});
+
+ // Custos por categoria
+ const porCat={};
+ c.forEach(x=>{porCat[x.cat||'Outros']=(porCat[x.cat||'Outros']||0)+Number(x.v);});
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:12px;">📅 Resultado de Hoje — ${dia}</p>
+
+<!-- KPIs -->
+<div class="kg" style="margin-bottom:10px;">
+ <div class="kpi"><p class="kl">Receita</p><p class="kv" style="color:var(--gr);">${brl(totalR)}</p><p class="ks">${r.length} lançamentos</p></div>
+ <div class="kpi"><p class="kl">Custos</p><p class="kv" style="color:var(--re);">${brl(totalC)}</p><p class="ks">${c.length} lançamentos</p></div>
+ <div class="kpi"><p class="kl">Resultado</p><p class="kv" style="color:${resultado>=0?'var(--gr)':'var(--re)'};">${brl(resultado)}</p><p class="ks">${totalR>0?(resultado/totalR*100).toFixed(1)+'%':'-'} margem</p></div>
+ <div class="kpi"><p class="kl">Em Aberto</p><p class="kv" style="color:var(--ye);">${brl(totalAberto)}</p><p class="ks">${mesas.length} comanda(s)</p></div>
+</div>
+
+<!-- Receitas do dia -->
+${totalR>0?`<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:8px;">🟢 Receitas do dia</p>
+ ${r.map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+  <span style="font-size:11px;">${x.d||'Receita'}</span>
+  <span style="font-size:11px;font-weight:700;color:var(--gr);">${brl(x.v)}</span>
+ </div>`).join('')}
+ <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:800;">
+  <span>Total</span><span style="color:var(--gr);">${brl(totalR)}</span>
+ </div>
+</div>`:'<div class="card" style="margin-bottom:8px;text-align:center;padding:16px;"><p style="color:var(--mu);">Nenhuma receita registrada hoje</p></div>'}
+
+<!-- Custos do dia -->
+${totalC>0?`<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:11px;font-weight:700;color:var(--re);margin-bottom:8px;">🔴 Custos do dia</p>
+ ${c.map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+  <div><span style="font-size:11px;">${x.d||'Custo'}</span><span style="font-size:9px;color:var(--mu);margin-left:6px;">${x.cat||''}</span></div>
+  <span style="font-size:11px;font-weight:700;color:var(--re);">${brl(x.v)}</span>
+ </div>`).join('')}
+ <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:800;">
+  <span>Total</span><span style="color:var(--re);">${brl(totalC)}</span>
+ </div>
+</div>`:''}
+
+<!-- Comandas abertas -->
+${mesas.length>0?`<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:11px;font-weight:700;color:var(--ye);margin-bottom:8px;">🟡 Comandas ainda abertas</p>
+ ${mesas.map(m=>{
+  const tot=(m.comanda||[]).reduce((a,i)=>a+i.val*i.qtd,0);
+  return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+   <span style="font-size:11px;">${m.nome}${m.mesa?' · '+m.mesa:''}</span>
+   <span style="font-size:11px;font-weight:700;color:var(--ye);">${brl(tot)}</span>
+  </div>`;}).join('')}
+ <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:800;">
+  <span>Total em aberto</span><span style="color:var(--ye);">${brl(totalAberto)}</span>
+ </div>
+</div>`:''}
+
+<button onclick="window.print()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;margin-top:4px;">🖨️ Imprimir resultado</button>
+</div>`;
+}
+
+// ── FLUXO DE CAIXA ───────────────────────────────────────
+function rFluxoCaixa(){
+ const db=ldb();
+ const hoje=new Date();
+ const dias=[];
+ for(let i=29;i>=0;i--){
+  const d=new Date(hoje);d.setDate(hoje.getDate()-i);
+  const key=[String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('/');
+  const data=db[key]||{r:[],c:[]};
+  const r=(data.r||[]).reduce((a,x)=>a+Number(x.v),0);
+  const c=(data.c||[]).reduce((a,x)=>a+Number(x.v),0);
+  dias.push({key,d:d.getDate(),r,c,saldo:r-c});
+ }
+ const totalR=dias.reduce((a,d)=>a+d.r,0);
+ const totalC=dias.reduce((a,d)=>a+d.c,0);
+ const saldoAcum=dias.reduce((a,d)=>a+d.saldo,0);
+ const maxVal=Math.max(...dias.map(d=>Math.max(d.r,d.c)),1);
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:12px;">💧 Fluxo de Caixa — últimos 30 dias</p>
+
+<!-- KPIs -->
+<div class="kg" style="margin-bottom:10px;">
+ <div class="kpi"><p class="kl">Entradas</p><p class="kv" style="color:var(--gr);">${brl(totalR)}</p></div>
+ <div class="kpi"><p class="kl">Saídas</p><p class="kv" style="color:var(--re);">${brl(totalC)}</p></div>
+ <div class="kpi"><p class="kl">Saldo</p><p class="kv" style="color:${saldoAcum>=0?'var(--gr)':'var(--re)'};">${brl(saldoAcum)}</p></div>
+</div>
+
+<!-- Gráfico -->
+<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:11px;font-weight:700;margin-bottom:8px;">📊 Entradas vs Saídas</p>
+ <div style="display:flex;gap:2px;align-items:flex-end;height:80px;">
+  ${dias.map(d=>{
+   const hR=d.r>0?Math.round((d.r/maxVal)*72):0;
+   const hC=d.c>0?Math.round((d.c/maxVal)*72):0;
+   const isHoje=d.key===hj();
+   return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;" title="${d.key}: +${brl(d.r)} -${brl(d.c)}">
+    <div style="width:100%;display:flex;gap:1px;align-items:flex-end;height:76px;">
+     <div style="flex:1;background:${isHoje?'var(--ye)':'var(--gr)'};border-radius:1px 1px 0 0;height:${hR}px;min-height:${d.r>0?2:0}px;opacity:0.85;"></div>
+     <div style="flex:1;background:var(--re);border-radius:1px 1px 0 0;height:${hC}px;min-height:${d.c>0?2:0}px;opacity:0.7;"></div>
+    </div>
+   </div>`;}).join('')}
+ </div>
+ <div style="display:flex;gap:12px;margin-top:6px;">
+  <span style="font-size:10px;color:var(--gr);">█ Entradas</span>
+  <span style="font-size:10px;color:var(--re);">█ Saídas</span>
+ </div>
+</div>
+
+<!-- Tabela -->
+<div class="card" style="margin-bottom:8px;overflow-x:auto;">
+ <p style="font-size:11px;font-weight:700;margin-bottom:8px;">📋 Detalhamento diário</p>
+ <table style="width:100%;border-collapse:collapse;font-size:11px;">
+  <thead><tr style="color:var(--mu);font-size:10px;border-bottom:1px solid var(--br);">
+   <th style="text-align:left;padding:4px;">Data</th>
+   <th style="text-align:right;padding:4px;">Entrada</th>
+   <th style="text-align:right;padding:4px;">Saída</th>
+   <th style="text-align:right;padding:4px;">Saldo</th>
+  </tr></thead>
+  <tbody>
+  ${dias.filter(d=>d.r>0||d.c>0).reverse().map(d=>`
+  <tr style="border-bottom:1px solid rgba(255,255,255,0.04);${d.key===hj()?'background:rgba(68,136,255,0.06);':''}">
+   <td style="padding:5px 4px;font-size:10px;">${d.key}</td>
+   <td style="padding:5px 4px;text-align:right;color:var(--gr);">${d.r>0?brl(d.r):'-'}</td>
+   <td style="padding:5px 4px;text-align:right;color:var(--re);">${d.c>0?brl(d.c):'-'}</td>
+   <td style="padding:5px 4px;text-align:right;font-weight:700;color:${d.saldo>=0?'var(--gr)':'var(--re)'};">${brl(d.saldo)}</td>
+  </tr>`).join('')}
+  <tr style="border-top:2px solid var(--br);font-weight:800;">
+   <td style="padding:6px 4px;">30 dias</td>
+   <td style="padding:6px 4px;text-align:right;color:var(--gr);">${brl(totalR)}</td>
+   <td style="padding:6px 4px;text-align:right;color:var(--re);">${brl(totalC)}</td>
+   <td style="padding:6px 4px;text-align:right;color:${saldoAcum>=0?'var(--gr)':'var(--re)'};">${brl(saldoAcum)}</td>
+  </tr>
+  </tbody>
+ </table>
+</div>
+</div>`;
+}
+
+// ── CONTAS A PAGAR ───────────────────────────────────────
+function rContasPagar(){
+ const db=ldb();
+ const contas=(db.contasPagar||[]).sort((a,b)=>{
+  if(!a.venc)return 1;if(!b.venc)return -1;
+  const da=new Date(a.venc.split('/').reverse().join('-'));
+  const db2=new Date(b.venc.split('/').reverse().join('-'));
+  return da-db2;
+ });
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const vencidas=contas.filter(c=>!c.pago&&c.venc&&new Date(c.venc.split('/').reverse().join('-'))<hoje);
+ const aVencer=contas.filter(c=>!c.pago&&(!c.venc||new Date(c.venc.split('/').reverse().join('-'))>=hoje));
+ const pagas=contas.filter(c=>c.pago);
+ const totalVencidas=vencidas.reduce((a,c)=>a+Number(c.valor||0),0);
+ const totalAVencer=aVencer.reduce((a,c)=>a+Number(c.valor||0),0);
+
+ return`<div class="si">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+ <p style="font-weight:800;font-size:15px;">💳 Contas a Pagar</p>
+ <button onclick="novaContaPagar()" style="padding:7px 12px;border-radius:8px;border:none;background:var(--re);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">+ Nova</button>
+</div>
+
+<!-- KPIs -->
+<div class="kg" style="margin-bottom:10px;">
+ <div class="kpi"><p class="kl">Vencidas</p><p class="kv" style="color:var(--re);">${brl(totalVencidas)}</p><p class="ks">${vencidas.length} conta(s)</p></div>
+ <div class="kpi"><p class="kl">A vencer</p><p class="kv" style="color:var(--ye);">${brl(totalAVencer)}</p><p class="ks">${aVencer.length} conta(s)</p></div>
+ <div class="kpi"><p class="kl">Total pendente</p><p class="kv" style="color:var(--re);">${brl(totalVencidas+totalAVencer)}</p></div>
+</div>
+
+${vencidas.length>0?`<div class="card" style="margin-bottom:8px;border-color:rgba(255,51,102,0.3);">
+ <p style="font-size:11px;font-weight:700;color:var(--re);margin-bottom:8px;">⚠️ Vencidas (${vencidas.length})</p>
+ ${vencidas.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+  <div style="flex:1;">
+   <p style="font-size:12px;font-weight:700;">${c.desc||'Conta'}</p>
+   <p style="font-size:10px;color:var(--re);">Venceu em ${c.venc||'—'} · ${c.cat||''}</p>
+  </div>
+  <span style="font-size:12px;font-weight:800;color:var(--re);">${brl(c.valor||0)}</span>
+  <button onclick="pagarConta('${c.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">✅ Pagar</button>
+ </div>`).join('')}
+</div>`:''}
+
+${aVencer.length>0?`<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:11px;font-weight:700;color:var(--ye);margin-bottom:8px;">📅 A vencer (${aVencer.length})</p>
+ ${aVencer.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+  <div style="flex:1;">
+   <p style="font-size:12px;font-weight:700;">${c.desc||'Conta'}</p>
+   <p style="font-size:10px;color:var(--mu);">Vence ${c.venc||'sem data'} · ${c.cat||''}</p>
+  </div>
+  <span style="font-size:12px;font-weight:800;color:var(--ye);">${brl(c.valor||0)}</span>
+  <button onclick="pagarConta('${c.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">✅ Pagar</button>
+ </div>`).join('')}
+</div>`:'<div class="card" style="text-align:center;padding:16px;margin-bottom:8px;"><p style="color:var(--mu);">Nenhuma conta a vencer 🎉</p></div>'}
+</div>`;
+}
+
+function novaContaPagar(){
+ const desc=prompt('Descrição da conta:');if(!desc)return;
+ const valor=parseFloat(prompt('Valor (R$):')||0);
+ const venc=prompt('Vencimento (DD/MM/AAAA):');
+ const cat=prompt('Categoria (Aluguel, Energia, Fornecedor...):');
+ const db=ldb();
+ if(!db.contasPagar)db.contasPagar=[];
+ db.contasPagar.push({id:uid(),desc,valor,venc:venc||'',cat:cat||'Outros',pago:false,dt:hj()});
+ sdb(db);render();
+}
+
+function pagarConta(id){
+ if(!confirm('Marcar como paga?'))return;
+ const db=ldb();
+ const idx=(db.contasPagar||[]).findIndex(c=>c.id===id);
+ if(idx>=0){db.contasPagar[idx].pago=true;db.contasPagar[idx].dtPag=hj();sdb(db);render();}
+}
+
+// ── BANCOS ───────────────────────────────────────────────
+function rBancos(){
+ const db=ldb();
+ const bancos=db.bancos||[];
+ const total=bancos.reduce((a,b)=>a+Number(b.saldo||0),0);
+
+ return`<div class="si">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+ <p style="font-weight:800;font-size:15px;">🏦 Bancos e Caixas</p>
+ <button onclick="novoBanco()" style="padding:7px 12px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">+ Adicionar</button>
+</div>
+
+${bancos.length===0?`<div class="card" style="text-align:center;padding:24px;margin-bottom:8px;">
+ <p style="font-size:32px;margin-bottom:8px;">🏦</p>
+ <p style="font-size:13px;font-weight:700;margin-bottom:4px;">Nenhum banco/caixa cadastrado</p>
+ <p style="font-size:11px;color:var(--mu);">Adicione contas bancárias e o caixa do restaurante</p>
+ <button onclick="novoBanco()" style="margin-top:12px;padding:10px 20px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Adicionar primeiro banco</button>
+</div>`:''}
+
+${bancos.map(b=>`<div class="card" style="margin-bottom:8px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;">
+  <div style="display:flex;align-items:center;gap:10px;">
+   <div style="width:42px;height:42px;border-radius:10px;background:${b.cor||'var(--bl)'}20;border:1px solid ${b.cor||'var(--bl)'}40;display:flex;align-items:center;justify-content:center;font-size:20px;">${b.icone||'🏦'}</div>
+   <div>
+    <p style="font-size:13px;font-weight:700;">${b.nome}</p>
+    <p style="font-size:10px;color:var(--mu);">${b.tipo||'Conta corrente'}</p>
+   </div>
+  </div>
+  <div style="text-align:right;">
+   <p style="font-size:16px;font-weight:800;color:${Number(b.saldo)>=0?'var(--gr)':'var(--re)'};">${brl(b.saldo||0)}</p>
+   <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px;">
+    <button onclick="ajustarSaldoBanco('${b.id}',1)" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">+ Entrada</button>
+    <button onclick="ajustarSaldoBanco('${b.id}',-1)" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);color:var(--re);font-size:10px;cursor:pointer;">- Saída</button>
+    <button onclick="abrirLeituraBancaria('${b.id}')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.08);color:var(--bl);font-size:10px;cursor:pointer;">📄 OFX</button>
+   </div>
+  </div>
+ </div>
+</div>`).join('')}
+
+${bancos.length>0?`<div class="card" style="margin-top:4px;">
+ <div style="display:flex;justify-content:space-between;padding:4px 0;">
+  <span style="font-size:13px;font-weight:800;">Saldo Total</span>
+  <span style="font-size:15px;font-weight:800;color:${total>=0?'var(--gr)':'var(--re)'};">${brl(total)}</span>
+ </div>
+</div>`:''}
+</div>`;
+}
+
+function novoBanco(){
+ const nome=prompt('Nome do banco/caixa (ex: Caixa, Sicoob, Nubank):');if(!nome)return;
+ const tipo=prompt('Tipo (Conta corrente, Poupança, Caixa físico, PIX):');
+ const saldo=parseFloat(prompt('Saldo inicial (R$):')||0);
+ const icone=prompt('Ícone (emoji):','🏦');
+ const db=ldb();
+ if(!db.bancos)db.bancos=[];
+ db.bancos.push({id:uid(),nome,tipo:tipo||'Conta corrente',saldo,icone:icone||'🏦',dt:hj()});
+ sdb(db);render();
+}
+
+function ajustarSaldoBanco(id,sinal){
+ const valor=parseFloat(prompt((sinal>0?'Valor da entrada':'Valor da saída')+' (R$):')||0);
+ if(!valor)return;
+ const desc=prompt('Descrição:');
+ const db=ldb();
+ const idx=(db.bancos||[]).findIndex(b=>b.id===id);
+ if(idx>=0){
+  db.bancos[idx].saldo=(Number(db.bancos[idx].saldo)||0)+(valor*sinal);
+  if(!db.bancos[idx].extrato)db.bancos[idx].extrato=[];
+  db.bancos[idx].extrato.push({dt:hj(),desc:desc||'',val:valor*sinal});
+  sdb(db);render();
+ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ABA CADASTROS — Fornecedores, Matéria-Prima, Produtos de Venda
+// ═══════════════════════════════════════════════════════════════
+function rCadastros(){
+ const db=ldb();
+ const sub=db._cadSub||'fornecedor';
+ const fornecedores=db.forn||[];
+ const materias=db.est?.filter(e=>e.cat==='Matéria-Prima')||[];
+ const produtos=gCardapioPDV()||[];
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:10px;">📝 Cadastros</p>
+
+<!-- Sub-abas -->
+<div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;">
+ ${[['fornecedor','🏭 Fornecedores',fornecedores.length],['materia','🌾 Matéria-Prima',materias.length],['produto','🛒 Produtos de Venda',produtos.length]].map(([id,lbl,cnt])=>`
+ <button onclick="const d=ldb();d._cadSub='${id}';sdb(d);render()"
+  style="padding:8px 14px;border-radius:10px;border:${sub===id?'none':'1px solid var(--br)'};background:${sub===id?'var(--bl)':'var(--sf2)'};color:${sub===id?'#fff':'var(--mu)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+  ${lbl} <span style="font-size:10px;opacity:0.8;">(${cnt})</span>
+ </button>`).join('')}
+</div>
+
+<!-- Botão voz + busca -->
+<div style="display:flex;gap:6px;margin-bottom:10px;">
+ <input id="busca-cad" oninput="filtrarCadastros(this.value)" placeholder="🔍 Buscar..." 
+  style="flex:1;background:var(--sf2);border:1px solid var(--br);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;"/>
+ <button onclick="abrirCadastroPorVoz()" style="padding:8px 14px;border-radius:9px;border:2px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🎙️ Voz</button>
+ <button onclick="novoCadastro('${sub}')" style="padding:8px 14px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">+ Novo</button>
+</div>
+
+<!-- Lista -->
+<div id="lista-cad">
+ ${sub==='fornecedor'?_listarFornecedores(fornecedores):sub==='materia'?_listarMaterias(materias):_listarProdutos(produtos)}
+</div>
+</div>`;
+}
+
+function _listarFornecedores(lista){
+ if(!lista.length)return'<div class="card" style="text-align:center;padding:20px;"><p style="font-size:32px;">🏭</p><p style="color:var(--mu);margin-top:8px;">Nenhum fornecedor cadastrado</p></div>';
+ return lista.map(f=>`<div class="card" style="margin-bottom:6px;padding:10px 12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+   <div style="flex:1;min-width:0;">
+    <p style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.n||f.nome}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;">
+     ${f.tel?`<span style="font-size:10px;color:var(--mu);">📞 ${f.tel}</span>`:''}
+     ${f.cnpj?`<span style="font-size:10px;color:var(--mu);">CNPJ: ${f.cnpj}</span>`:''}
+     ${f.categoria?`<span style="font-size:10px;color:var(--bl);">${f.categoria}</span>`:''}
+    </div>
+   </div>
+   <div style="display:flex;gap:4px;margin-left:8px;">
+    <button onclick="editarFornecedor('${f.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✏️</button>
+    <button onclick="excluirFornecedor('${f.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid rgba(255,51,102,0.3);background:rgba(255,51,102,0.08);color:var(--re);font-size:11px;cursor:pointer;">🗑️</button>
+   </div>
+  </div>
+ </div>`).join('');
+}
+
+function _listarMaterias(lista){
+ if(!lista.length)return'<div class="card" style="text-align:center;padding:20px;"><p style="font-size:32px;">🌾</p><p style="color:var(--mu);margin-top:8px;">Nenhuma matéria-prima cadastrada</p><p style="font-size:11px;color:var(--mu);margin-top:4px;">Use o botão 🎙️ Voz ou + Novo</p></div>';
+ return lista.map(e=>`<div class="card" style="margin-bottom:6px;padding:10px 12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+   <div style="flex:1;min-width:0;">
+    <p style="font-size:13px;font-weight:700;">${e.n}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;">
+     <span style="font-size:10px;color:var(--ye);">Estoque: ${e.q}${e.u}</span>
+     ${e.cu?`<span style="font-size:10px;color:var(--mu);">Custo: ${brl(e.cu)}/${e.u}</span>`:''}
+     ${e.forn?`<span style="font-size:10px;color:var(--mu);">🏭 ${e.forn}</span>`:''}
+    </div>
+   </div>
+   <div style="display:flex;gap:4px;margin-left:8px;">
+    <button onclick="ir('est')" style="padding:5px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">📦</button>
+   </div>
+  </div>
+ </div>`).join('');
+}
+
+function _listarProdutos(lista){
+ if(!lista.length)return'<div class="card" style="text-align:center;padding:20px;"><p style="font-size:32px;">🛒</p><p style="color:var(--mu);margin-top:8px;">Nenhum produto de venda cadastrado</p><p style="font-size:11px;color:var(--mu);margin-top:4px;">Use o botão 🎙️ Voz ou + Novo</p></div>';
+ return lista.map(p=>`<div class="card" style="margin-bottom:6px;padding:10px 12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+   <div style="flex:1;min-width:0;">
+    <p style="font-size:13px;font-weight:700;">${p.nome}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;">
+     <span style="font-size:10px;color:var(--gr);font-weight:700;">${brl(p.preco||0)}</span>
+     ${p.cat?`<span style="font-size:10px;color:var(--mu);">${p.cat}</span>`:''}
+     ${p.cod?`<span style="font-size:10px;color:var(--mu);">Cód: ${p.cod}</span>`:''}
+    </div>
+   </div>
+   <div style="display:flex;gap:4px;margin-left:8px;">
+    <button onclick="editarProdutoPDV('${p.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✏️</button>
+    <button onclick="excluirProdutoPDV('${p.id}')" style="padding:5px 8px;border-radius:6px;border:1px solid rgba(255,51,102,0.3);background:rgba(255,51,102,0.08);color:var(--re);font-size:11px;cursor:pointer;">🗑️</button>
+   </div>
+  </div>
+ </div>`).join('');
+}
+
+function novoCadastro(tipo){
+ if(tipo==='fornecedor') abrirFormFornecedor();
+ else if(tipo==='materia') abrirFormMateria();
+ else abrirFormProduto();
+}
+
+function filtrarCadastros(termo){
+ const el=document.getElementById('lista-cad');
+ if(!el)return;
+ const db=ldb();const sub=db._cadSub||'fornecedor';
+ if(!termo.trim()){
+  if(sub==='fornecedor')el.innerHTML=_listarFornecedores(db.forn||[]);
+  else if(sub==='materia')el.innerHTML=_listarMaterias((db.est||[]).filter(e=>e.cat==='Matéria-Prima'));
+  else el.innerHTML=_listarProdutos(gCardapioPDV()||[]);
+  return;
+ }
+ const t=termo.toLowerCase();
+ if(sub==='fornecedor')el.innerHTML=_listarFornecedores((db.forn||[]).filter(f=>(f.n||f.nome||'').toLowerCase().includes(t)||(f.cnpj||'').includes(t)));
+ else if(sub==='materia')el.innerHTML=_listarMaterias((db.est||[]).filter(e=>e.cat==='Matéria-Prima'&&e.n.toLowerCase().includes(t)));
+ else el.innerHTML=_listarProdutos((gCardapioPDV()||[]).filter(p=>p.nome.toLowerCase().includes(t)));
+}
+
+// ─── Modal de cadastro de Fornecedor ──────────────────────
+function abrirFormFornecedor(id){
+ const db=ldb();
+ const forn=id?(db.forn||[]).find(f=>f.id===id):null;
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:16px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">${id?'✏️ Editar':'+ Novo'} Fornecedor</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div><label class="lbl">Nome / Razão Social*</label><input id="ff-nome" class="inpm" placeholder="Ex: Frigorífico São José" value="${forn?.n||forn?.nome||''}"/></div>
+   <div><label class="lbl">CNPJ</label><input id="ff-cnpj" class="inpm" placeholder="00.000.000/0001-00" style="font-family:'Space Mono',monospace;" value="${forn?.cnpj||''}"/></div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Telefone</label><input id="ff-tel" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.tel||''}"/></div>
+    <div style="flex:1;"><label class="lbl">WhatsApp</label><input id="ff-wpp" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.wpp||''}"/></div>
+   </div>
+   <div><label class="lbl">E-mail</label><input id="ff-email" class="inpm" placeholder="contato@fornecedor.com" value="${forn?.email||''}"/></div>
+   <div><label class="lbl">Categoria</label>
+    <select id="ff-cat" class="inpm">
+     ${['Frigorífico/Carnes','Hortifruti','Bebidas','Embalagens','Gás/Combustível','Limpeza','Laticínios','Panificação','Outros'].map(c=>`<option value="${c}" ${(forn?.categoria||'')==c?'selected':''}>${c}</option>`).join('')}
+    </select>
+   </div>
+   <div><label class="lbl">Observações</label><input id="ff-obs" class="inpm" placeholder="Dias de entrega, condições..." value="${forn?.obs||''}"/></div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Prazo pagamento</label><input id="ff-prazo" class="inpm" placeholder="Ex: 30 dias" value="${forn?.prazo||''}"/></div>
+    <div style="flex:1;"><label class="lbl">Dia de entrega</label><input id="ff-dia" class="inpm" placeholder="Ex: Terças e Quintas" value="${forn?.diaEntrega||''}"/></div>
+   </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;">
+   <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>
+   <button onclick="salvarFornecedor('${id||''}')" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">💾 Salvar</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarFornecedor(id){
+ const nome=document.getElementById('ff-nome')?.value?.trim();
+ if(!nome){alert('Informe o nome');return;}
+ const db=ldb();if(!db.forn)db.forn=[];
+ const dados={id:id||uid(),n:nome,cnpj:document.getElementById('ff-cnpj')?.value?.trim()||'',
+  tel:document.getElementById('ff-tel')?.value?.trim()||'',wpp:document.getElementById('ff-wpp')?.value?.trim()||'',
+  email:document.getElementById('ff-email')?.value?.trim()||'',categoria:document.getElementById('ff-cat')?.value||'',
+  obs:document.getElementById('ff-obs')?.value?.trim()||'',prazo:document.getElementById('ff-prazo')?.value?.trim()||'',
+  diaEntrega:document.getElementById('ff-dia')?.value?.trim()||'',dt:hj()};
+ if(id){const idx=db.forn.findIndex(f=>f.id===id);if(idx>=0)db.forn[idx]=dados;else db.forn.push(dados);}
+ else db.forn.push(dados);
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ render();
+}
+
+function editarFornecedor(id){abrirFormFornecedor(id);}
+function excluirFornecedor(id){
+ if(!confirm('Excluir fornecedor?'))return;
+ const db=ldb();db.forn=(db.forn||[]).filter(f=>f.id!==id);sdb(db);render();
+}
+
+// ─── Modal de Matéria-Prima ────────────────────────────────
+function abrirFormMateria(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:16px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">🌾 Nova Matéria-Prima / Insumo</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div><label class="lbl">Nome*</label><input id="fm-nome" class="inpm" placeholder="Ex: Alcatra, Muçarela, Arroz..."/></div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Estoque inicial</label><input id="fm-qtd" type="number" class="inpm" placeholder="0" step="0.1"/></div>
+    <div style="flex:1;"><label class="lbl">Unidade</label>
+     <select id="fm-unid" class="inpm">
+      <option value="kg">kg</option><option value="g">g</option><option value="l">l</option>
+      <option value="ml">ml</option><option value="un">un</option><option value="cx">cx</option><option value="pct">pct</option>
+     </select>
+    </div>
+   </div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Custo unitário (R$)</label><input id="fm-custo" type="number" class="inpm" placeholder="0.00" step="0.01"/></div>
+    <div style="flex:1;"><label class="lbl">Estoque mínimo</label><input id="fm-min" type="number" class="inpm" placeholder="0" step="0.1"/></div>
+   </div>
+   <div><label class="lbl">Fornecedor</label>
+    <select id="fm-forn" class="inpm">
+     <option value="">— Selecionar —</option>
+     ${(ldb().forn||[]).map(f=>`<option value="${f.n||f.nome}">${f.n||f.nome}</option>`).join('')}
+    </select>
+   </div>
+   <div><label class="lbl">Observação</label><input id="fm-obs" class="inpm" placeholder="Validade, armazenamento..."/></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;">
+   <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>
+   <button onclick="salvarMateria()" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">💾 Salvar</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarMateria(){
+ const nome=document.getElementById('fm-nome')?.value?.trim();
+ if(!nome){alert('Informe o nome');return;}
+ const db=ldb();if(!db.est)db.est=[];
+ db.est.push({id:uid(),n:nome,q:parseFloat(document.getElementById('fm-qtd')?.value||0),
+  u:document.getElementById('fm-unid')?.value||'un',cu:parseFloat(document.getElementById('fm-custo')?.value||0),
+  min:parseFloat(document.getElementById('fm-min')?.value||0),cat:'Matéria-Prima',
+  forn:document.getElementById('fm-forn')?.value||'',obs:document.getElementById('fm-obs')?.value?.trim()||'',
+  historico:{entradas:[],saidas:[],perdas:[]}});
+ sdb(db);document.querySelector('[style*="inset:0"]')?.remove();render();
+}
+
+// ─── Modal de Produto de Venda ─────────────────────────────
+function abrirFormProduto(id){
+ const db=ldb();
+ const prods=gCardapioPDV();
+ const prod=id?prods.find(p=>p.id===id):null;
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:16px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">${id?'✏️ Editar':'🛒 Novo'} Produto de Venda</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div><label class="lbl">Nome do produto*</label><input id="fp-nome" class="inpm" placeholder="Ex: Pizza Calabresa, Coca 310ml..." value="${prod?.nome||''}"/></div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Preço de venda (R$)*</label><input id="fp-preco" type="number" class="inpm" placeholder="0,00" step="0.01" value="${prod?.preco||''}"/></div>
+    <div style="flex:1;"><label class="lbl">Categoria</label>
+     <select id="fp-cat" class="inpm">
+      ${['🍕 Pizzas','🍢 Espetos','🍺 Bebidas','🍔 Lanches','🍽️ Pratos','🥗 Saladas','🍰 Sobremesas','🧃 Sucos','outros'].map(c=>`<option value="${c}" ${(prod?.cat||'')==c?'selected':''}>${c}</option>`).join('')}
+     </select>
+    </div>
+   </div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Segmento</label>
+     <select id="fp-seg" class="inpm">
+      <option value="restaurante" ${(prod?.seg||'')==='restaurante'?'selected':''}>🍽️ Restaurante</option>
+      <option value="pizzaria" ${(prod?.seg||'')==='pizzaria'?'selected':''}>🍕 Pizzaria</option>
+      <option value="espetaria" ${(prod?.seg||'')==='espetaria'?'selected':''}>🍢 Espetaria</option>
+      <option value="bar" ${(prod?.seg||'')==='bar'?'selected':''}>🍺 Bar</option>
+     </select>
+    </div>
+    <div style="flex:1;"><label class="lbl">Código (opcional)</label><input id="fp-cod" class="inpm" placeholder="Cód barra ou interno" value="${prod?.cod||''}"/></div>
+   </div>
+   <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+    <input type="checkbox" id="fp-producao" ${prod?.fichaId?'checked':''}/> Produção própria (tem ficha técnica)
+   </label>
+   <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+    <input type="checkbox" id="fp-ativo" ${(prod?.ativo!==false)?'checked':''}/> Ativo no PDV
+   </label>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;">
+   <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>
+   <button onclick="salvarProduto('${id||''}')" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">💾 Salvar no PDV</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarProduto(id){
+ const nome=document.getElementById('fp-nome')?.value?.trim();
+ const preco=parseFloat(document.getElementById('fp-preco')?.value||0);
+ if(!nome){alert('Informe o nome do produto');return;}
+ const db=ldb();if(!db.cardapioPDV)db.cardapioPDV=[];
+ const dados={id:id||uid(),nome,preco,cat:document.getElementById('fp-cat')?.value||'outros',
+  seg:document.getElementById('fp-seg')?.value||'restaurante',cod:document.getElementById('fp-cod')?.value?.trim()||'',
+  ativo:document.getElementById('fp-ativo')?.checked!==false,variacoes:[]};
+ if(id){const idx=db.cardapioPDV.findIndex(p=>p.id===id);if(idx>=0)db.cardapioPDV[idx]={...db.cardapioPDV[idx],...dados};else db.cardapioPDV.push(dados);}
+ else db.cardapioPDV.push(dados);
+ sdb(db);document.querySelector('[style*="inset:0"]')?.remove();render();
+}
+
+function editarProdutoPDV(id){abrirFormProduto(id);}
+function excluirProdutoPDV(id){
+ if(!confirm('Excluir produto do PDV?'))return;
+ const db=ldb();db.cardapioPDV=(db.cardapioPDV||[]).filter(p=>p.id!==id);sdb(db);render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CADASTRO POR VOZ (restaurado)
+// ═══════════════════════════════════════════════════════════════
+function abrirCadastroPorVoz(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:16px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div><p style="font-weight:800;font-size:14px;">🎙️ Cadastrar por Voz</p>
+   <p style="font-size:10px;color:var(--mu);">Fale o produto, fornecedor ou matéria-prima</p></div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+  </div>
+  <div style="background:rgba(68,136,255,0.06);border:1px solid rgba(68,136,255,0.2);border-radius:8px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:10px;font-weight:700;color:var(--bl);margin-bottom:4px;">💡 Exemplos:</p>
+   <p style="font-size:10px;color:var(--mu);">• "Coca cola lata 350ml preço 5 reais estoque 48"</p>
+   <p style="font-size:10px;color:var(--mu);">• "Pizza calabresa preço 70 reais produção própria"</p>
+   <p style="font-size:10px;color:var(--mu);">• "Matéria prima alcatra 10kg custo 45 reais por kg"</p>
+   <p style="font-size:10px;color:var(--mu);">• "Fornecedor Frigorífico São José fone 34999990000"</p>
+  </div>
+  <button id="btn-cad-voz" onclick="iniciarVozCadastroModal()"
+   style="width:100%;padding:14px;border-radius:12px;border:2px solid var(--re);background:rgba(255,51,102,0.1);color:var(--re);font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px;">
+   🎙️ Toque para falar
+  </button>
+  <div id="cad-voz-res" style="margin-bottom:8px;"></div>
+  <div id="cad-voz-form" style="display:none;background:var(--sf2);border-radius:10px;padding:12px;">
+   <p style="font-size:11px;font-weight:700;margin-bottom:8px;">Confirme os dados:</p>
+   <input id="cv-nome" class="inpm" placeholder="Nome" style="margin-bottom:6px;"/>
+   <div style="display:flex;gap:6px;margin-bottom:6px;">
+    <input id="cv-preco" type="number" class="inpm" placeholder="Preço venda R$" step="0.01" style="flex:1;"/>
+    <select id="cv-tipo" class="inpm" style="flex:1;">
+     <option value="produto">Produto venda</option>
+     <option value="materia">Matéria-prima</option>
+     <option value="fornecedor">Fornecedor</option>
+    </select>
+   </div>
+   <div style="display:flex;gap:6px;margin-bottom:6px;">
+    <input id="cv-estoque" type="number" class="inpm" placeholder="Estoque" style="flex:1;"/>
+    <select id="cv-unid" class="inpm" style="flex:1;">
+     <option value="un">un</option><option value="kg">kg</option><option value="g">g</option>
+     <option value="l">l</option><option value="ml">ml</option><option value="cx">cx</option>
+    </select>
+   </div>
+   <div style="display:flex;gap:6px;margin-top:4px;">
+    <button onclick="document.getElementById('cad-voz-form').style.display='none'" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
+    <button onclick="confirmarVozCadastro()" style="flex:2;padding:10px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Cadastrar</button>
+   </div>
+  </div>
+  <div id="cad-voz-hist"></div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function iniciarVozCadastroModal(){
+ const btn=document.getElementById('btn-cad-voz');
+ const res=document.getElementById('cad-voz-res');
+
+ // Pede permissão do microfone explicitamente
+ try{
+  await navigator.mediaDevices.getUserMedia({audio:true});
+ }catch(e){
+  if(res)res.innerHTML='<div class="ial ar"><span>🎤</span><span>Permita o microfone no Chrome para usar voz.<br><small>Toque no ícone 🔒 na barra de endereço → Permissões → Microfone → Permitir</small></span></div>';
+  return;
+ }
+
+ if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
+  if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>Voz não disponível neste navegador</span></div>';
+  return;
+ }
+
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const rec=new SR();
+ rec.lang='pt-BR';
+ rec.continuous=false;
+ rec.interimResults=false;
+ rec.maxAlternatives=1;
+
+ if(btn){btn.textContent='🔴 OUVINDO — fale agora!';btn.style.background='rgba(255,51,102,0.35)';btn.style.borderColor='var(--re)';}
+ if(res)res.innerHTML='<div class="ial ay" style="animation:pulse 1s infinite;"><span>🎙️</span><span style="font-weight:700;">Ouvindo... fale agora!</span></div>';
+
+ let reconheceu=false;
+
+ rec.onresult=function(e){
+  reconheceu=true;
+  const txt=Array.from(e.results).map(r=>r[0].transcript).join(' ');
+  if(btn){btn.textContent='⟳ Processando...';btn.style.background='rgba(255,204,0,0.15)';}
+  if(res)res.innerHTML='<div class="ial ag"><span>✅</span><span>Ouvi: "<b>'+txt+'</b>"</span></div>';
+  interpretarVozCadastro(txt,res,btn);
+ };
+
+ rec.onspeechstart=function(){
+  if(res)res.innerHTML='<div class="ial ag"><span>🎙️</span><span>Captando fala...</span></div>';
+ };
+
+ rec.onnomatch=function(){
+  if(btn){btn.textContent='🎙️ Toque para falar';btn.style.background='rgba(255,51,102,0.1)';}
+  if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>Não entendi. Tente falar mais alto e claro.</span></div>';
+ };
+
+ rec.onerror=function(e){
+  if(btn){btn.textContent='🎙️ Toque para falar';btn.style.background='rgba(255,51,102,0.1)';}
+  let msg='Erro de voz: '+e.error;
+  if(e.error==='not-allowed')msg='Microfone bloqueado. Permita no Chrome (ícone 🔒 na barra).';
+  if(e.error==='no-speech')msg='Não captou fala. Tente mais perto do microfone.';
+  if(e.error==='network')msg='Erro de rede. A voz precisa de internet no Chrome.';
+  if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>'+msg+'</span></div>';
+ };
+
+ rec.onend=function(){
+  if(btn&&!reconheceu){btn.textContent='🎙️ Toque para falar';btn.style.background='rgba(255,51,102,0.1)';}
+ };
+
+ rec.start();
+}
+
+async function interpretarVozCadastro(txt,res,btn){
+ try{
+  const d=await claudeAPI({model:MODEL,max_tokens:300,messages:[{role:'user',content:
+   'Classifique este comando de voz para cadastro em restaurante:\n"'+txt+'"\n'+
+   'Retorne APENAS JSON sem markdown:\n{"tipo":"produto|materia|fornecedor","nome":"...","preco":0,"estoque":0,"unidade":"un","custo":0,"producaoPropria":false,"telefone":null}'
+  }]});
+  const raw=(d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const dados=JSON.parse(raw);
+  const form=document.getElementById('cad-voz-form');if(!form)return;
+  if(document.getElementById('cv-nome'))document.getElementById('cv-nome').value=dados.nome||'';
+  if(document.getElementById('cv-preco'))document.getElementById('cv-preco').value=dados.preco||'';
+  if(document.getElementById('cv-estoque'))document.getElementById('cv-estoque').value=dados.estoque||0;
+  if(dados.tipo){const sel=document.getElementById('cv-tipo');if(sel)for(const op of sel.options)if(op.value===dados.tipo){op.selected=true;break;}}
+  if(dados.unidade){const sel=document.getElementById('cv-unid');if(sel)for(const op of sel.options)if(op.value===dados.unidade){op.selected=true;break;}}
+  form.style.display='block';
+  form.scrollIntoView({behavior:'smooth'});
+ }catch(err){
+  if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>Erro ao interpretar: '+err.message+'</span></div>';
+ }
+ if(btn){btn.textContent='🎙️ Toque para falar';btn.style.background='rgba(255,51,102,0.1)';}
+}
+
+function confirmarVozCadastro(){
+ const nome=document.getElementById('cv-nome')?.value?.trim();if(!nome)return;
+ const preco=parseFloat(document.getElementById('cv-preco')?.value||0);
+ const estoque=parseFloat(document.getElementById('cv-estoque')?.value||0);
+ const unid=document.getElementById('cv-unid')?.value||'un';
+ const tipo=document.getElementById('cv-tipo')?.value||'produto';
+ const db=ldb();
+ if(tipo==='fornecedor'){
+  if(!db.forn)db.forn=[];
+  db.forn.push({id:uid(),n:nome,tel:'',cnpj:'',obs:'Via voz',dt:hj()});
+ }else if(tipo==='materia'){
+  if(!db.est)db.est=[];
+  db.est.push({id:uid(),n:nome,q:estoque,u:unid,min:0,cu:preco,cat:'Matéria-Prima',historico:{entradas:[],saidas:[],perdas:[]}});
+ }else{
+  if(!db.cardapioPDV)db.cardapioPDV=[];
+  db.cardapioPDV.push({id:uid(),nome,preco,cat:'outros',seg:'restaurante',ativo:true,variacoes:[]});
+ }
+ sdb(db);
+ const hist=document.getElementById('cad-voz-hist');
+ if(hist)hist.innerHTML+=`<div class="ial ag" style="margin-top:6px;"><span>✅</span><span><b>${nome}</b> cadastrado como ${tipo}!</span></div>`;
+ document.getElementById('cad-voz-form').style.display='none';
+ ['cv-nome','cv-preco','cv-estoque'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LEITURA BANCÁRIA — OFX / OPEN FINANCE
+// Lê extrato do banco, classifica lançamentos automaticamente
+// Execução diária às 6:00 ou manual
+// ═══════════════════════════════════════════════════════════════
+
+function abrirLeituraBancaria(bancoId){
+ const db=ldb();
+ const banco=(db.bancos||[]).find(b=>b.id===bancoId);
+ if(!banco)return;
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;';
+ const ultLeitura=banco.ultLeitura||'Nunca';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:16px 14px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div>
+    <p style="font-weight:800;font-size:14px;">${banco.icone||'🏦'} ${banco.nome} — Extrato</p>
+    <p style="font-size:10px;color:var(--mu);">Última leitura: ${ultLeitura}</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Upload OFX -->
+  <div style="background:rgba(68,136,255,0.06);border:2px dashed rgba(68,136,255,0.3);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;cursor:pointer;"
+   onclick="document.getElementById('inp-ofx-${bancoId}').click()">
+   <p style="font-size:28px;margin-bottom:6px;">📄</p>
+   <p style="font-size:13px;font-weight:700;color:var(--bl);">Importar extrato OFX / OFC</p>
+   <p style="font-size:10px;color:var(--mu);margin-top:4px;">Exporte do seu banco internet e arraste aqui</p>
+   <p style="font-size:10px;color:var(--mu);">Sicoob, Bradesco, Itaú, Santander, Nubank... todos suportam OFX</p>
+   <input type="file" id="inp-ofx-${bancoId}" accept=".ofx,.ofc,.qif,.csv" style="display:none;"
+    onchange="processarOFX('${bancoId}',this)"/>
+  </div>
+
+  <!-- Como exportar OFX -->
+  <div style="background:rgba(255,204,0,0.06);border:1px solid rgba(255,204,0,0.2);border-radius:8px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:10px;font-weight:700;color:var(--ye);margin-bottom:6px;">📱 Como baixar o extrato OFX:</p>
+   <p style="font-size:10px;color:var(--mu);margin-bottom:2px;">• Sicoob: App → Extrato → Exportar → OFX</p>
+   <p style="font-size:10px;color:var(--mu);margin-bottom:2px;">• Bradesco: Internet banking → Extrato → Exportar OFX</p>
+   <p style="font-size:10px;color:var(--mu);margin-bottom:2px;">• Nubank: App → Perfil → Exportar → Extrato (CSV)</p>
+   <p style="font-size:10px;color:var(--mu);">• Outros: Procure "Exportar extrato" ou "OFX"</p>
+  </div>
+
+  <!-- Resultado da leitura -->
+  <div id="ofx-resultado-${bancoId}"></div>
+
+  <!-- Extrato importado -->
+  <div id="ofx-lancamentos-${bancoId}"></div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function processarOFX(bancoId, input){
+ const file=input?.files?.[0];if(!file)return;
+ const resEl=document.getElementById('ofx-resultado-'+bancoId);
+ const lancEl=document.getElementById('ofx-lancamentos-'+bancoId);
+ if(resEl)resEl.innerHTML='<div class="ial ay"><span>⟳</span><span>Lendo extrato...</span></div>';
+
+ try{
+  const texto=await file.text();
+  let lancamentos=[];
+
+  // Parser OFX/OFC
+  if(file.name.toLowerCase().endsWith('.ofx')||file.name.toLowerCase().endsWith('.ofc')){
+   lancamentos=_parseOFX(texto);
+  } else if(file.name.toLowerCase().endsWith('.csv')){
+   lancamentos=_parseCSVNubank(texto);
+  } else {
+   throw new Error('Formato não suportado. Use OFX ou CSV do Nubank.');
+  }
+
+  if(!lancamentos.length)throw new Error('Nenhum lançamento encontrado no arquivo.');
+
+  // Classifica com IA
+  if(resEl)resEl.innerHTML=`<div class="ial ay"><span>⟳</span><span>Classificando ${lancamentos.length} lançamentos com IA...</span></div>`;
+
+  const resumo=lancamentos.slice(0,30).map(l=>`${l.data}: ${l.memo} (${l.valor>0?'+':''} R$${Math.abs(l.valor).toFixed(2)})`).join('\n');
+  const d=await claudeAPI({model:MODEL,max_tokens:600,messages:[{role:'user',content:
+   'Classifique estes lançamentos bancários de um restaurante. Para cada um, identifique o tipo.\n'+
+   'Retorne JSON: [{"idx":0,"tipo":"receita|despesa|transferencia|imposto|juros|iof|cheque_especial|boleto|pix_in|pix_out","categoria":"...","descricao":"..."}]\n\n'+
+   resumo
+  }]});
+  const classificacoes=JSON.parse((d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+
+  // Aplica classificações
+  lancamentos.forEach((l,i)=>{
+   const cls=classificacoes.find(c=>c.idx===i)||{tipo:'despesa',categoria:'Outros',descricao:l.memo};
+   l.tipo=cls.tipo;l.categoria=cls.categoria;l.descricao=cls.descricao;
+  });
+
+  // Calcula saldo e totais
+  const entradas=lancamentos.filter(l=>l.valor>0).reduce((a,l)=>a+l.valor,0);
+  const saidas=lancamentos.filter(l=>l.valor<0).reduce((a,l)=>a+l.valor,0);
+  const juros=lancamentos.filter(l=>l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial').reduce((a,l)=>a+Math.abs(l.valor),0);
+  const boletos=lancamentos.filter(l=>l.tipo==='boleto').reduce((a,l)=>a+Math.abs(l.valor),0);
+  const saldo=entradas+saidas;
+
+  // Atualiza saldo do banco
+  const db=ldb();
+  const bIdx=(db.bancos||[]).findIndex(b=>b.id===bancoId);
+  if(bIdx>=0){
+   db.bancos[bIdx].saldo=lancamentos[lancamentos.length-1]?.saldoFinal||db.bancos[bIdx].saldo;
+   db.bancos[bIdx].ultLeitura=new Date().toLocaleDateString('pt-BR')+' '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+   if(!db.bancos[bIdx].extrato)db.bancos[bIdx].extrato=[];
+   db.bancos[bIdx].extrato=[...lancamentos,...(db.bancos[bIdx].extrato||[])].slice(0,500);
+   sdb(db);
+  }
+
+  if(resEl)resEl.innerHTML=`<div class="ial ag" style="margin-bottom:8px;">
+   <span>✅</span><span style="font-weight:700;">${lancamentos.length} lançamentos importados!</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+   <div style="background:rgba(0,255,136,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:10px;color:var(--mu);">Entradas</p>
+    <p style="font-size:12px;font-weight:800;color:var(--gr);">${brl(entradas)}</p>
+   </div>
+   <div style="background:rgba(255,51,102,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:10px;color:var(--mu);">Saídas</p>
+    <p style="font-size:12px;font-weight:800;color:var(--re);">${brl(Math.abs(saidas))}</p>
+   </div>
+   <div style="background:rgba(255,204,0,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:10px;color:var(--mu);">Juros/IOF</p>
+    <p style="font-size:12px;font-weight:800;color:var(--ye);">${brl(juros)}</p>
+   </div>
+  </div>`;
+
+  if(lancEl)lancEl.innerHTML=`<p style="font-size:11px;font-weight:700;margin-bottom:8px;">📋 Lançamentos</p>`+
+   lancamentos.map(l=>{
+    const cor=l.valor>0?'var(--gr)':'var(--re)';
+    const icone=l.tipo==='juros'||l.tipo==='iof'?'⚠️':l.tipo==='boleto'?'📄':l.tipo==='pix_in'||l.tipo==='pix_out'?'⚡':l.valor>0?'↓':'↑';
+    return`<div style="display:flex;align-items:center;gap:8px;padding:7px;margin-bottom:4px;background:var(--sf2);border-radius:8px;${l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial'?'border:1px solid rgba(255,204,0,0.3);':''}">
+     <span style="font-size:14px;">${icone}</span>
+     <div style="flex:1;min-width:0;">
+      <p style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.descricao||l.memo}</p>
+      <p style="font-size:9px;color:var(--mu);">${l.data} · ${l.categoria||''}</p>
+     </div>
+     <span style="font-size:12px;font-weight:800;color:${cor};white-space:nowrap;">${l.valor>0?'+':''}${brl(l.valor)}</span>
+    </div>`;}).join('');
+
+ }catch(err){
+  if(resEl)resEl.innerHTML=`<div class="ial ar"><span>❌</span><span>${err.message}</span></div>`;
+ }
+}
+
+// ─── Parser OFX ───────────────────────────────────────────
+function _parseOFX(texto){
+ const lancamentos=[];
+ const matches=[...texto.matchAll(/<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi)];
+ matches.forEach(m=>{
+  const bloco=m[1];
+  const get=tag=>{const r=bloco.match(new RegExp('<'+tag+'>([^<\\n]+)','i'));return r?r[1].trim():''};
+  const valorStr=get('TRNAMT')||get('TRNAMT');
+  const valor=parseFloat(valorStr.replace(',','.'))||0;
+  const dtStr=get('DTPOSTED');
+  let data=dtStr;
+  if(dtStr.length>=8)data=dtStr.substring(6,8)+'/'+dtStr.substring(4,6)+'/'+dtStr.substring(0,4);
+  lancamentos.push({
+   id:get('FITID')||uid(),
+   data,valor,
+   memo:(get('MEMO')||get('NAME')||'Lançamento').substring(0,60),
+   tipo:'',categoria:'',descricao:''
+  });
+ });
+ // Pega saldo final se disponível
+ const saldoMatch=texto.match(/<LEDGERBAL>[\s\S]*?<BALAMT>([^<\n]+)/i);
+ if(saldoMatch&&lancamentos.length>0)lancamentos[lancamentos.length-1].saldoFinal=parseFloat(saldoMatch[1].replace(',','.'));
+ return lancamentos;
+}
+
+// ─── Parser CSV Nubank ────────────────────────────────────
+function _parseCSVNubank(texto){
+ const lines=texto.split(/\n/).filter(l=>l.trim());
+ const lancamentos=[];
+ lines.slice(1).forEach(line=>{
+  const parts=line.split(',');
+  if(parts.length<3)return;
+  const data=parts[0]?.trim();
+  const desc=(parts[1]||'').trim().replace(/"/g,'');
+  const valor=parseFloat((parts[2]||'0').replace(',','.'))||0;
+  if(data&&(valor!==0))lancamentos.push({id:uid(),data,valor:-valor,memo:desc,tipo:'',categoria:'',descricao:''});
+ });
+ return lancamentos;
+}
+
+// ─── Atualização automática diária às 6:00 ────────────────
+function iniciarVerificacaoBancariaDiaria(){
+ function checar(){
+  const agora=new Date();
+  if(agora.getHours()===6&&agora.getMinutes()===0){
+   const db=ldb();
+   const bancos=db.bancos||[];
+   if(bancos.length>0){
+    // Notifica usuário para fazer a importação manual
+    if(Notification.permission==='granted'){
+     new Notification('🏦 Atualização bancária',{
+      body:'São 6h! Exporte o extrato OFX do seu banco e importe em Bancos para atualizar.',
+      icon:'/favicon.ico'
+     });
+    }
+   }
+  }
+ }
+ // Verifica a cada minuto
+ setInterval(checar,60000);
+}
+
+iniciarVerificacaoBancariaDiaria();
+// ═══════════════════════════════════════════════════════════════
+// DADOS FISCAIS E LIMPEZA
+// ═══════════════════════════════════════════════════════════════
+function gDadosFiscais(){return JSON.parse(localStorage.getItem('erp_dados_fiscais')||'{}');}
+function sDadosFiscais(d){localStorage.setItem('erp_dados_fiscais',JSON.stringify(d));}
+
+function salvarDadosFiscais(){
+ const f=id=>document.getElementById(id)?.value?.trim()||'';
+ const d={cnpj:f('cfg-cnpj'),ie:f('cfg-ie'),razao:f('cfg-razao'),
+  crt:document.getElementById('cfg-crt')?.value||'1',
+  cep:f('cfg-cep'),logradouro:f('cfg-logradouro'),numero:f('cfg-numero'),
+  bairro:f('cfg-bairro'),municipio:'Patos de Minas',
+  csc:f('cfg-csc'),cscId:f('cfg-cscid'),
+  backendUrl:f('cfg-backend-url'),backendToken:f('cfg-backend-token')};
+ sDadosFiscais(d);
+ const btn=document.querySelector('[onclick="salvarDadosFiscais()"]');
+ if(btn){const t=btn.textContent;btn.textContent='✅ Salvo!';setTimeout(()=>btn.textContent=t,1500);}
+}
+
+function limparDadosTeste(){
+ if(!confirm('ATENÇÃO: Apaga estoque, vendas, lançamentos e comandas.\nNÃO apaga: cardápio PDV, fichas técnicas, fornecedores, configs.\n\nContinuar?'))return;
+ const db=ldb();
+ const keep={
+  cardapioPDV:db.cardapioPDV,fichas:db.fichas,funcs:db.funcs,
+  forn:db.forn,custoFixo:db.custoFixo,destinatarios:db.destinatarios,
+  identVisual:db.identVisual,planoContas:db.planoContas,
+  planFin:db.planFin,compliance:db.compliance,
+  _cardapioHistorico:db._cardapioHistorico,
+  _buffetMediaConsumo:db._buffetMediaConsumo,
+  bancos:db.bancos,
+ };
+ const keys=['erp_empresa','erp_meta','erp_pdv_perfil','erp_pin_pdv',
+  'erp_cert_pfx_1','erp_cert_pfx_2','erp_cert_senha_1','erp_cert_senha_2',
+  'erp_cert_info_1','erp_cert_info_2','erp_fotos_pdv','erp_mig_muccarela250',
+  'erp_cardapio_importado_v4','erp_dados_fiscais','erp_api_key'];
+ const cfg={};keys.forEach(k=>{const v=localStorage.getItem(k);if(v)cfg[k]=v;});
+ localStorage.clear();
+ keys.forEach(k=>{if(cfg[k])localStorage.setItem(k,cfg[k]);});
+ localStorage.setItem('erp',JSON.stringify(keep));
+ alert('✅ Dados de teste limpos!\nCardápio, fichas, fornecedores e configurações mantidos.');
+ render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO DE INSTRUÇÕES
+// ═══════════════════════════════════════════════════════════════
+function rInstrucoes(){
+ const db=ldb();
+ const topico=db._instTopico||'pdv';
+ const topicos=[
+  {id:'pdv',icone:'🍽️',titulo:'PDV — Ponto de Venda',
+   itens:[
+    {q:'Como abrir uma comanda?',r:'No PDV, o grid mostra 150 comandas numeradas. Toque em qualquer comanda para abri-la. Se estiver livre (verde), informe a mesa física (ex: "Mesa 2") e o cliente, depois adicione produtos.'},
+    {q:'Como lançar pedidos por voz?',r:'Botão 🎙️ flutuante no canto inferior direito do PDV. Fale: "Comanda 5 dois frangos uma coca". O sistema interpreta com IA e adiciona automaticamente, falando de volta a confirmação.'},
+    {q:'Como buscar rapidamente uma comanda?',r:'Botão "🔍 Buscar #" ao lado do título COMANDAS. Digite o número da comanda ou a mesa. Também tem atalhos numéricos rápidos.'},
+    {q:'Como pedir conta?',r:'Abra a comanda → botão laranja "📋 Conta". Lançamentos ficam bloqueados. Para reabrir, use o botão amarelo "🔓 Reabrir Comanda".'},
+    {q:'Como fechar e lançar a venda?',r:'Abra a comanda → botão verde "✅ Fechar". A venda é registrada automaticamente no DRE do dia.'},
+    {q:'Como dividir a conta?',r:'Abra a comanda → botão roxo "➗ Dividir". Informe o número de pessoas para divisão igualitária.'},
+    {q:'Como transferir para outra comanda?',r:'Abra a comanda → botão "🔀 Transferir". Informe o número da comanda destino.'},
+   ]},
+  {id:'cad',icone:'📝',titulo:'Cadastros',
+   itens:[
+    {q:'Como cadastrar um produto de venda?',r:'Aba Cadastros → sub-aba "🛒 Produtos de Venda" → botão "+ Novo". Informe nome, preço, categoria e segmento (Restaurante/Pizzaria/Espetaria). O produto fica disponível no PDV imediatamente.'},
+    {q:'Como cadastrar por voz?',r:'Aba Cadastros → botão "🎙️ Voz" → fale o produto. Ex: "Pizza calabresa preço 70 reais" ou "Coca cola lata 350ml preço 5 reais estoque 48". A IA classifica e preenche o formulário.'},
+    {q:'Como cadastrar matéria-prima?',r:'Aba Cadastros → sub-aba "🌾 Matéria-Prima" → botão "+ Novo". Informe nome, estoque, unidade (kg/g/l/un), custo e fornecedor. Fica vinculado ao estoque.'},
+    {q:'Como cadastrar fornecedor?',r:'Aba Cadastros → sub-aba "🏭 Fornecedores" → botão "+ Novo". Campos: nome, CNPJ, telefone, WhatsApp, e-mail, prazo de pagamento, dia de entrega.'},
+   ]},
+  {id:'financeiro',icone:'💰',titulo:'Financeiro',
+   itens:[
+    {q:'Como lançar receitas e custos?',r:'Aba DRE → seção do dia atual. Botões "+ Receita" e "+ Custo". Informe descrição, valor, categoria e segmento. O DRE atualiza em tempo real.'},
+    {q:'Como ver o resultado do dia?',r:'Aba "📅 Resultado Dia" no menu. Mostra receitas, custos, margem e comandas ainda abertas.'},
+    {q:'Como ver o fluxo de caixa?',r:'Aba "💧 Fluxo Caixa" → gráfico e tabela dos últimos 30 dias com entradas vs saídas por dia.'},
+    {q:'Como cadastrar contas a pagar?',r:'Aba "💳 Contas a Pagar" → botão "+ Nova". Informe descrição, valor, vencimento e categoria. O sistema alerta quando vencer.'},
+    {q:'Como cadastrar bancos e caixas?',r:'Aba "🏦 Bancos" → botão "+ Adicionar". Cadastre Caixa físico, Sicoob, Nubank etc. Use "+ Entrada"/"-Saída" para movimentar. Use "📄 OFX" para importar extrato bancário.'},
+    {q:'Como importar extrato bancário (OFX)?',r:'Aba Bancos → botão "📄 OFX" no banco desejado. Exporte o arquivo OFX do seu banco (Sicoob: App → Extrato → Exportar → OFX) e importe aqui. A IA classifica cada lançamento automaticamente.'},
+   ]},
+  {id:'estoque',icone:'📦',titulo:'Estoque',
+   itens:[
+    {q:'Como dar entrada no estoque?',r:'Aba Estoque → toque no produto → botão "Entrada". Informe quantidade e custo unitário. O histórico é registrado automaticamente.'},
+    {q:'Como receber uma nota fiscal de fornecedor?',r:'Aba "📥 Fila NF" → botão "+". Fotografe ou insira a chave da NF. O sistema lê os itens e dá baixa no estoque ao confirmar.'},
+    {q:'Como ver o CMV?',r:'Aba DRE → seção de custos. O CMV é calculado automaticamente com base nas fichas técnicas e saídas de estoque.'},
+   ]},
+  {id:'voz',icone:'🎙️',titulo:'Comandos de Voz',
+   itens:[
+    {q:'Quais comandos de voz existem?',r:'1) Lançamento rápido no PDV: 🎙️ flutuante → "Comanda 5 dois frangos"\n2) Voz dentro da comanda: abre a comanda → botão Voz\n3) Cadastro por voz: aba Cadastros → botão 🎙️ Voz\n4) Treinar cardápio: aba IA → Treinar → foto do caderno'},
+    {q:'A voz não está funcionando, o que fazer?',r:'1) Verifique se está usando o Chrome (não Samsung Internet)\n2) Permita o microfone: toque no 🔒 na barra de endereço → Permissões → Microfone → Permitir\n3) A voz requer internet ativa (Google Speech API)\n4) Fale claramente a 20-30cm do microfone'},
+   ]},
+  {id:'ia',icone:'🤖',titulo:'Recursos de IA',
+   itens:[
+    {q:'O que a IA faz no sistema?',r:'Interpreta pedidos por voz, sugere cardápio do dia seguinte com base no histórico, analisa vendas e custos, responde perguntas no Consultor, gera posts de marketing, analisa compliance e classifica lançamentos bancários.'},
+    {q:'Como usar o Consultor IA?',r:'Aba 🧠 Consultor → faça qualquer pergunta sobre o restaurante. Ex: "Qual meu produto mais rentável?" ou "Estou com lucro ou prejuízo este mês?"'},
+    {q:'Como treinar o cardápio?',r:'Aba 🤖 IA → botão "📷 Treinar (várias fotos)" → fotografe as páginas do seu caderno de cardápio. O sistema aprende os pratos e começa a sugerir cardápios automaticamente.'},
+   ]},
+  {id:'config',icone:'⚙️',titulo:'Configurações',
+   itens:[
+    {q:'Como configurar os dados da empresa?',r:'Aba ⚙️ Configurações → seção "Empresa". Informe nome do restaurante, CNPJ, cidade, metas, logo e cores.'},
+    {q:'Como configurar dados fiscais (NFC-e)?',r:'Aba Config → seção "🏢 Dados Fiscais". Informe CNPJ, IE, endereço, CSC e ID Token (fornecidos pelo contador). Necessário para emissão de NFC-e.'},
+    {q:'Como fazer backup dos dados?',r:'Aba Config → seção Backup → "📤 Backup JSON". Salva todos os dados em um arquivo que pode ser restaurado depois.'},
+    {q:'Como limpar dados de teste?',r:'Aba Config → role até o final → "🗑️ Limpar Estoque + Vendas + Contas". Remove dados de teste mas preserva cardápio, fichas e configurações.'},
+   ]},
+ ];
+
+ const topObj=topicos.find(t=>t.id===topico)||topicos[0];
+ const db2=ldb();
+ const aberta=db2._instAberta||'';
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:10px;">📖 Instruções e Ajuda</p>
+
+<!-- Nav de tópicos -->
+<div style="display:flex;gap:5px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px;">
+ ${topicos.map(t=>`<button onclick="const d=ldb();d._instTopico='${t.id}';sdb(d);render()"
+  style="padding:7px 12px;border-radius:9px;border:${topico===t.id?'none':'1px solid var(--br)'};background:${topico===t.id?'var(--bl)':'var(--sf2)'};color:${topico===t.id?'#fff':'var(--mu)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+  ${t.icone} ${t.titulo.split('—')[0].trim()}
+ </button>`).join('')}
+</div>
+
+<!-- Tópico atual -->
+<p style="font-size:12px;font-weight:700;color:var(--bl);margin-bottom:8px;">${topObj.icone} ${topObj.titulo}</p>
+
+${topObj.itens.map((item,idx)=>{
+ const isAberta=aberta===topico+'-'+idx;
+ return`<div style="margin-bottom:6px;border-radius:10px;border:1px solid ${isAberta?'rgba(68,136,255,0.3)':'var(--br)'};overflow:hidden;">
+  <button onclick="toggleInstTopico('${topico}',${idx})"
+   style="width:100%;padding:12px;background:${isAberta?'rgba(68,136,255,0.08)':'var(--sf2)'};border:none;color:var(--tx);text-align:left;font-size:12px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+   <span>${item.q}</span>
+   <span style="font-size:14px;color:var(--bl);flex-shrink:0;margin-left:8px;">${isAberta?'▲':'▼'}</span>
+  </button>
+  ${isAberta?`<div style="padding:12px;font-size:12px;color:var(--mu);line-height:1.6;background:var(--sf);">
+   ${item.r.replace(/\n/g,'<br/>')}
+  </div>`:''}
+ </div>`;}).join('')}
+
+<!-- Suporte -->
+<div class="card" style="margin-top:12px;background:rgba(170,68,255,0.06);border-color:rgba(170,68,255,0.2);">
+ <p style="font-size:11px;font-weight:700;color:var(--pu);margin-bottom:6px;">🤝 Precisa de mais ajuda?</p>
+ <p style="font-size:11px;color:var(--mu);">Use o 🧠 Consultor IA para perguntas específicas sobre seu restaurante.</p>
+</div>
+</div>`;
 }
 
 render();
