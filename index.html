@@ -15696,57 +15696,77 @@ ${topObj.itens.map((item,idx)=>{
 // ═══════════════════════════════════════════════════════════════
 async function publicarNoVercel(){
  const df=gDadosFiscais();
- const token=document.getElementById('cfg-gh-token')?.value?.trim()||df.ghToken||'';
- const repo=document.getElementById('cfg-gh-repo')?.value?.trim()||'diogoborgesmg-eng/gestaoerp';
+ const token=(document.getElementById('cfg-gh-token')?.value?.trim()||df.ghToken||'').trim();
+ const repo=(document.getElementById('cfg-gh-repo')?.value?.trim()||df.ghRepo||'diogoborgesmg-eng/gestaoerp').trim();
  const btn=document.getElementById('btn-publicar');
 
  if(!token){
-  alert('Configure o GitHub Token (PAT) primeiro.\n\nComo obter:\n1. github.com → clique no seu avatar → Settings\n2. Developer settings → Personal access tokens → Tokens (classic)\n3. Generate new token → marque "repo" → Generate\n4. Copie o token e cole aqui');
+  alert('Cole o GitHub Token no campo "GitHub Token (PAT)" e clique Salvar primeiro.');
   return;
  }
 
- if(!confirm('Publicar atualização no Vercel?\n\nO sistema atual será enviado para o GitHub e o Vercel vai atualizar automaticamente em ~1 minuto.'))return;
+ if(!confirm('Publicar no Vercel?\n\nRepositório: '+repo+'\n\nO Vercel vai atualizar em ~1 minuto.'))return;
 
- if(btn){btn.textContent='⟳ Publicando...';btn.disabled=true;}
+ if(btn){btn.textContent='⟳ Conectando ao GitHub...';btn.disabled=true;btn.style.background='rgba(68,136,255,0.15)';}
 
  try{
-  // 1. Pega o SHA atual do arquivo no GitHub
-  const infoRes=await fetch(`https://api.github.com/repos/${repo}/contents/index.html`,{
+  // Teste de autenticação primeiro
+  const authRes=await fetch('https://api.github.com/user',{
+   headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
+  });
+  const authData=await authRes.json();
+  if(!authData.login){
+   throw new Error('Token inválido. Mensagem GitHub: '+(authData.message||'Sem resposta'));
+  }
+  if(btn)btn.textContent='✅ Token OK ('+authData.login+') — Buscando arquivo...';
+
+  // Busca o SHA do index.html
+  const infoRes=await fetch('https://api.github.com/repos/'+repo+'/contents/index.html',{
    headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
   });
   const info=await infoRes.json();
-  if(!info.sha)throw new Error('Arquivo não encontrado no repositório: '+repo);
 
-  // 2. Obtém o conteúdo atual da página (o próprio sistema)
+  if(infoRes.status===401)throw new Error('Token sem permissão. Crie um novo token com escopo "repo".');
+  if(infoRes.status===403)throw new Error('Acesso negado. Verifique se o token tem escopo "repo".');
+  if(infoRes.status===404)throw new Error('Arquivo index.html não encontrado em '+repo+'. Verifique o nome do repositório.');
+  if(!info.sha)throw new Error('Erro GitHub: '+(info.message||JSON.stringify(info)));
+
+  if(btn)btn.textContent='⟳ Enviando arquivo ('+Math.round(info.size/1024)+'KB → novo)...';
+
+  // Codifica o HTML atual
   const html=document.documentElement.outerHTML;
   const encoded=btoa(unescape(encodeURIComponent(html)));
 
-  // 3. Envia para o GitHub
-  const updateRes=await fetch(`https://api.github.com/repos/${repo}/contents/index.html`,{
+  // Envia para o GitHub
+  const updateRes=await fetch('https://api.github.com/repos/'+repo+'/contents/index.html',{
    method:'PUT',
    headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
    body:JSON.stringify({
-    message:'GestaoERP v'+new Date().toISOString().slice(0,10)+' — auto-deploy',
+    message:'GestaoERP auto-deploy '+new Date().toISOString().slice(0,16),
     content:encoded,
     sha:info.sha
    })
   });
-
   const result=await updateRes.json();
-  if(result.content){
-   // Salva o token para próxima vez
-   const d=gDadosFiscais();d.ghToken=token;d.ghRepo=repo;sDadosFiscais(d);
 
-   if(btn){btn.textContent='✅ Publicado! Vercel atualiza em ~1 min';btn.style.background='rgba(0,255,136,0.15)';btn.style.borderColor='rgba(0,255,136,0.4)';btn.style.color='var(--gr)';}
+  if(result.content){
+   const d=gDadosFiscais();d.ghToken=token;d.ghRepo=repo;sDadosFiscais(d);
+   if(btn){
+    btn.textContent='✅ Publicado! Vercel atualiza em ~1 min';
+    btn.style.background='rgba(0,255,136,0.15)';
+    btn.style.borderColor='rgba(0,255,136,0.5)';
+    btn.style.color='var(--gr)';
+    btn.disabled=false;
+   }
    setTimeout(()=>{
-    if(btn){btn.textContent='🚀 Publicar Atualização no Vercel';btn.style.background='rgba(255,204,0,0.1)';btn.style.borderColor='rgba(255,204,0,0.4)';btn.style.color='var(--ye)';btn.disabled=false;}
-   },5000);
+    if(btn){btn.textContent='🚀 Publicar Atualização no Vercel';btn.style.background='rgba(255,204,0,0.12)';btn.style.borderColor='rgba(255,204,0,0.5)';btn.style.color='var(--ye)';}
+   },8000);
   }else{
-   throw new Error(result.message||'Erro ao publicar');
+   throw new Error('Falha no upload: '+(result.message||JSON.stringify(result)));
   }
  }catch(e){
-  if(btn){btn.textContent='❌ Erro: '+e.message;btn.disabled=false;}
-  console.error('GitHub push error:',e);
+  if(btn){btn.textContent='❌ '+e.message;btn.disabled=false;}
+  console.error('Publicar erro:',e);
  }
 }
 
