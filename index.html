@@ -15733,8 +15733,19 @@ async function publicarNoVercel(){
 
   if(btn)btn.textContent='⟳ Enviando arquivo ('+Math.round(info.size/1024)+'KB → novo)...';
 
-  // Codifica o HTML atual
-  const html=document.documentElement.outerHTML;
+  // Codifica o HTML atual (remove campos sensíveis antes)
+  const tempDiv=document.createElement('div');
+  tempDiv.innerHTML=document.documentElement.outerHTML;
+  // Limpa campos de senha/token para não violar regras do GitHub
+  ['cfg-gh-token','cfg-backend-token','chave-api','api-key'].forEach(id=>{
+   const el=tempDiv.querySelector('#'+id);
+   if(el){el.value='';el.setAttribute('value','');}
+  });
+  // Remove o valor da chave API do HTML (input type password)
+  tempDiv.querySelectorAll('input[type=password],input[id*=token],input[id*=key],input[id*=chave]').forEach(el=>{
+   el.value='';el.removeAttribute('value');
+  });
+  const html=tempDiv.innerHTML;
   const encoded=btoa(unescape(encodeURIComponent(html)));
 
   // Envia para o GitHub
