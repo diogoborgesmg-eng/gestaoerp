@@ -181,7 +181,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div><label class="lbl">Repositório</label><input id="cfg-gh-repo" class="inpm" placeholder="diogoborgesmg-eng/gestaoerp" value="diogoborgesmg-eng/gestaoerp"></div>
 </div>
 <button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
-<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1072KB → novo)...</button>
+<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1077KB → novo)...</button>
 <p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia para o GitHub → Vercel atualiza em ~1 min</p>
 </div>
 <!-- CHAVE API -->
@@ -16714,11 +16714,14 @@ function rExtraviado(){
   // Procura no sistema um custo com valor similar (±5%) na mesma data ou ±3 dias
   const [dd,mm,yyyy]=(saida.data||'').split('/');
   const dataRef=yyyy&&mm&&dd?new Date(yyyy,mm-1,dd):null;
+  // Já foi lançado pelo próprio OFX?
+  if((db[saida.data]?.c||[]).some(c=>c._ofxId&&c._ofxId===saida.id))return false;
+  // Já existe lançamento manual com valor similar?
   const temNoSistema=(db[saida.data]?.c||[]).some(c=>{
-   const diff=Math.abs(Number(c.v)-valorSaida)/valorSaida;
-   return diff<0.05; // tolerância 5%
+   if(c._ofxId)return false; // ignora lançamentos automáticos do OFX
+   return Math.abs(Number(c.v)-valorSaida)/Math.max(valorSaida,1)<0.05;
   });
-  return!temNoSistema&&valorSaida>10; // ignora valores abaixo de R$10
+  return!temNoSistema&&valorSaida>10;
  }).sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor));
 
  const totalExtrav=extraviados.reduce((a,l)=>a+Math.abs(l.valor),0);
