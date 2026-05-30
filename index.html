@@ -1,4 +1,3 @@
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0f">
@@ -171,7 +170,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div><label class="lbl">Repositório</label><input id="cfg-gh-repo" class="inpm" placeholder="diogoborgesmg-eng/gestaoerp" value="diogoborgesmg-eng/gestaoerp"></div>
 </div>
 <button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
-<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1039KB → novo)...</button>
+<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1067KB → novo)...</button>
 <p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia para o GitHub → Vercel atualiza em ~1 min</p>
 </div>
 <!-- CHAVE API -->
@@ -197,27 +196,27 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div id="cfg-cert" class="card" style="margin-bottom:10px;border-color:rgba(99,102,241,0.4);">
 <p style="font-weight:700;font-size:12px;margin-bottom:4px;">🔐 Certificados Digitais A1</p>
 <p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Um por CNPJ — necessário para NFC-e e integração SEFAZ</p>
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
+<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.4);">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 1</p>
-<span style="font-size:10px;color:var(--mu);">Não configurado</span>
+<p style="font-size:11px;font-weight:700;">🔐 Certificado 1 — Documento de DIOGO B</p>
+<span style="font-size:10px;color:#00ff88;">✅ OK</span>
 </div>
 
 
 <div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(1)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
-
+<button onclick="abrirCertificado(1)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">🔄 Atualizar</button>
+<button onclick="if(confirm('Remover certificado 1?')){localStorage.removeItem('erp_cert_pfx_1');localStorage.removeItem('erp_cert_senha_1');localStorage.removeItem('erp_cert_info_1');render();}" style="padding:6px 8px;border-radius:7px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">🗑️</button>
 </div>
 <div id="cert-form-1" style="display:none;">
 <!-- Upload do arquivo .pfx -->
 <div id="cert-drop-1" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],1);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-1').click()">
  <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-1">Arraste ou toque para selecionar o arquivo .pfx</p>
+ <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-1">✅ Certificado carregado — clique para trocar</p>
  <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
  <input type="file" id="cert-file-1" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],1)">
 </div>
-<div id="cert-info-1" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-1"></p>
+<div id="cert-info-1" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
+ <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-1">📄 Documento de DIOGO BORGES · </p>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:1;">
@@ -232,7 +231,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:2;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-1" placeholder="Di Casa Laranjinha" class="inpm" value="">
+ <input type="text" id="cfg-cert-nome-1" placeholder="Di Casa Laranjinha" class="inpm" value="Documento de DIOGO BORGES">
 </div>
 <div style="flex:1;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
@@ -241,27 +240,27 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div>
 <button onclick="salvarCertificado(1)" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(99,102,241,0.8);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">💾 Salvar Certificado 1</button>
 </div>
-</div><div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
+</div><div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.4);">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 2</p>
-<span style="font-size:10px;color:var(--mu);">Não configurado</span>
+<p style="font-size:11px;font-weight:700;">🔐 Certificado 2 — Documento de DIOGO B</p>
+<span style="font-size:10px;color:#00ff88;">✅ OK</span>
 </div>
 
 
 <div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(2)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
-
+<button onclick="abrirCertificado(2)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">🔄 Atualizar</button>
+<button onclick="if(confirm('Remover certificado 2?')){localStorage.removeItem('erp_cert_pfx_2');localStorage.removeItem('erp_cert_senha_2');localStorage.removeItem('erp_cert_info_2');render();}" style="padding:6px 8px;border-radius:7px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">🗑️</button>
 </div>
 <div id="cert-form-2" style="display:none;">
 <!-- Upload do arquivo .pfx -->
 <div id="cert-drop-2" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],2);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-2').click()">
  <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-2">Arraste ou toque para selecionar o arquivo .pfx</p>
+ <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-2">✅ Certificado carregado — clique para trocar</p>
  <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
  <input type="file" id="cert-file-2" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],2)">
 </div>
-<div id="cert-info-2" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-2"></p>
+<div id="cert-info-2" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
+ <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-2">📄 Documento de DIOGO BORGES · </p>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:1;">
@@ -276,7 +275,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:2;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-2" placeholder="Di Casa Laranjinha" class="inpm" value="">
+ <input type="text" id="cfg-cert-nome-2" placeholder="Di Casa Laranjinha" class="inpm" value="Documento de DIOGO BORGES">
 </div>
 <div style="flex:1;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
@@ -380,11 +379,9 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div>
 
 <!-- BOTÃO FLUTUANTE VOZ PDV -->
-<div id="pdv-voz-flutuante" style="display:none;position:fixed;bottom:72px;right:14px;z-index:400;">
- <div id="voz-status-flutuante" style="display:none;position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--tx);max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
- <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()" style="width:54px;height:54px;border-radius:50%;border:2px solid var(--re);background:var(--sf);color:var(--re);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,51,102,0.35);">
-  🎙️
- </button>
+<div id="pdv-voz-flutuante" style="display: none; position: fixed; bottom: 72px; right: 14px; z-index: 400;">
+ <div id="voz-status-flutuante" style="display: none; position: absolute; right: 62px; top: 50%; transform: translateY(-50%); background: var(--sf); border: 1px solid var(--br); border-radius: 10px; padding: 6px 10px; white-space: nowrap; font-size: 11px; color: var(--tx); max-width: 200px; box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 16px;">❌ Unexpected token 'A', "Analisando"... is not valid JSON</div>
+ <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()" style="width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--re); background: var(--sf); color: var(--re); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: rgba(255, 51, 102, 0.35) 0px 4px 20px;">🎙️</button>
 </div>
 <div class="bnav"><div class="nis"><button class="ni" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
 </div></div><script>
