@@ -104,7 +104,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </style>
 
 
-<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''" onblur="this.placeholder='🔍 Buscar...';setTimeout(()=&gt;{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)" style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data">30/05/2026</span><span id="hdr-alertas"><span onclick="ir('comp')" style="font-size:10px;font-weight:700;color:#ff3366;cursor:pointer;padding:3px 6px;background:#ff336620;border-radius:5px;white-space:nowrap;" title="30 compliance pendente(s)">✅0/30</span><span onclick="abrirResumoMesas()" style="font-size:10px;font-weight:700;color:#f59e0b;cursor:pointer;padding:3px 6px;background:#f59e0b20;border-radius:5px;white-space:nowrap;" title="1 comanda(s) abertas">🍽️1</span></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background: var(--sf2); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; color: var(--mu); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''" onblur="this.placeholder='🔍 Buscar...';setTimeout(()=&gt;{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)" style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data">30/05/2026</span><span id="hdr-alertas"><span onclick="ir('comp')" style="font-size:10px;font-weight:700;color:#ff3366;cursor:pointer;padding:3px 6px;background:#ff336620;border-radius:5px;white-space:nowrap;" title="30 compliance pendente(s)">✅0/30</span><span onclick="abrirResumoMesas()" style="font-size:10px;font-weight:700;color:#f59e0b;cursor:pointer;padding:3px 6px;background:#f59e0b20;border-radius:5px;white-space:nowrap;" title="1 comanda(s) abertas">🍽️1</span></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background: var(--sf2); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; color: var(--mu); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
 <div class="main" id="main"><div class="si">
 <p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;font-weight:700;">⚙️ Configurações</p>
@@ -181,7 +181,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div><label class="lbl">Repositório</label><input id="cfg-gh-repo" class="inpm" placeholder="diogoborgesmg-eng/gestaoerp" value="diogoborgesmg-eng/gestaoerp"></div>
 </div>
 <button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
-<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1081KB → novo)...</button>
+<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1072KB → novo)...</button>
 <p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia para o GitHub → Vercel atualiza em ~1 min</p>
 </div>
 <!-- CHAVE API -->
@@ -8415,7 +8415,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,buffet:rCustoBuffet,resultado:rResultadoDia};
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8670,7 +8670,8 @@ function rCfg(){
    const el=document.getElementById('cfg-'+f);if(el&&_df[f==='cscid'?'cscId':f])el.value=_df[f==='cscid'?'cscId':f];
   });
   const selCrt=document.getElementById('cfg-crt');if(selCrt&&_df.crt)selCrt.value=_df.crt;
-  const ghTok=document.getElementById('cfg-gh-token');if(ghTok&&_df.ghToken)ghTok.value=_df.ghToken;
+  const ghTok=document.getElementById('cfg-gh-token');
+  if(ghTok)ghTok.value=_df.ghToken||'';
   const ghRepo=document.getElementById('cfg-gh-repo');if(ghRepo&&_df.ghRepo)ghRepo.value=_df.ghRepo;
   const urlEl=document.getElementById('cfg-backend-url');if(urlEl&&_df.backendUrl)urlEl.value=_df.backendUrl;
   const tokEl=document.getElementById('cfg-backend-token');if(tokEl&&_df.backendToken)tokEl.value=_df.backendToken;
@@ -16125,16 +16126,16 @@ async function publicarNoVercel(){
 
   if(btn)btn.textContent='⟳ Enviando arquivo ('+Math.round(info.size/1024)+'KB → novo)...';
 
-  // Codifica o HTML atual (remove campos sensíveis antes)
+  // Salva valores sensíveis antes de limpar (para restaurar depois)
+  const _savedToken=token;
+  const _savedRepo=repo;
+  const _savedApiKey=document.getElementById('chave-api')?.value||localStorage.getItem('erp_api_key')||'';
+  const _savedBackendToken=document.getElementById('cfg-backend-token')?.value||'';
+
+  // Codifica o HTML atual (remove campos sensíveis para não violar regras do GitHub)
   const tempDiv=document.createElement('div');
   tempDiv.innerHTML=document.documentElement.outerHTML;
-  // Limpa campos de senha/token para não violar regras do GitHub
-  ['cfg-gh-token','cfg-backend-token','chave-api','api-key'].forEach(id=>{
-   const el=tempDiv.querySelector('#'+id);
-   if(el){el.value='';el.setAttribute('value','');}
-  });
-  // Remove o valor da chave API do HTML (input type password)
-  tempDiv.querySelectorAll('input[type=password],input[id*=token],input[id*=key],input[id*=chave]').forEach(el=>{
+  tempDiv.querySelectorAll('input[type=password],input[id*=token],input[id*=key],input[id*=chave],input[id*=api]').forEach(el=>{
    el.value='';el.removeAttribute('value');
   });
   const html=tempDiv.innerHTML;
@@ -16153,7 +16154,16 @@ async function publicarNoVercel(){
   const result=await updateRes.json();
 
   if(result.content){
-   const d=gDadosFiscais();d.ghToken=token;d.ghRepo=repo;sDadosFiscais(d);
+   // Restaura campos sensíveis na tela
+  const d=gDadosFiscais();
+  d.ghToken=_savedToken;d.ghRepo=_savedRepo;
+  if(_savedApiKey)d._cachedApiKey=_savedApiKey;
+  sDadosFiscais(d);
+  // Re-preenche os campos visíveis
+  setTimeout(()=>{
+   const ghEl=document.getElementById('cfg-gh-token');if(ghEl)ghEl.value=_savedToken;
+   const ghRepo=document.getElementById('cfg-gh-repo');if(ghRepo)ghRepo.value=_savedRepo;
+  },500);
    if(btn){
     btn.textContent='✅ Publicado! Vercel atualiza em ~1 min';
     btn.style.background='rgba(0,255,136,0.15)';
@@ -16673,6 +16683,89 @@ function verExtratoBanco(bancoId){
 
  window._extLista=lista;
  document.body.appendChild(div);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DINHEIRO EXTRAVIADO — saiu do banco mas não está no sistema
+// ═══════════════════════════════════════════════════════════════
+function rExtraviado(){
+ const db=ldb();
+ const bancos=db.bancos||[];
+
+ // Coleta todos os lançamentos do OFX de todos os bancos
+ const saidasBanco=[];
+ bancos.forEach(banco=>{
+  (banco.extrato||[]).filter(l=>l.valor<0&&l.tipo!=='transferencia').forEach(l=>{
+   saidasBanco.push({...l,banco:banco.nome,bancoId:banco.id});
+  });
+ });
+
+ // Coleta todos os lançamentos de custos no DRE
+ const custosSistema=[];
+ Object.keys(db).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k)).forEach(dia=>{
+  (db[dia]?.c||[]).forEach(c=>{
+   custosSistema.push({...c,dia,valor:Number(c.v)});
+  });
+ });
+
+ // Compara: saídas do banco sem correspondente no sistema
+ const extraviados=saidasBanco.filter(saida=>{
+  const valorSaida=Math.abs(saida.valor);
+  // Procura no sistema um custo com valor similar (±5%) na mesma data ou ±3 dias
+  const [dd,mm,yyyy]=(saida.data||'').split('/');
+  const dataRef=yyyy&&mm&&dd?new Date(yyyy,mm-1,dd):null;
+  const temNoSistema=(db[saida.data]?.c||[]).some(c=>{
+   const diff=Math.abs(Number(c.v)-valorSaida)/valorSaida;
+   return diff<0.05; // tolerância 5%
+  });
+  return!temNoSistema&&valorSaida>10; // ignora valores abaixo de R$10
+ }).sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor));
+
+ const totalExtrav=extraviados.reduce((a,l)=>a+Math.abs(l.valor),0);
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:4px;">🔍 Dinheiro Extraviado</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Saídas do banco sem lançamento correspondente no sistema</p>
+
+${extraviados.length===0?`<div class="card" style="text-align:center;padding:20px;">
+ <p style="font-size:32px;margin-bottom:8px;">✅</p>
+ <p style="font-size:13px;font-weight:700;">Tudo conciliado!</p>
+ <p style="font-size:11px;color:var(--mu);">Nenhuma saída sem lançamento encontrada</p>
+</div>`:`
+<div style="background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+ <p style="font-size:13px;font-weight:800;color:var(--re);">⚠️ ${brl(totalExtrav)} sem lançamento</p>
+ <p style="font-size:11px;color:var(--mu);">${extraviados.length} saída(s) do banco não encontradas no sistema</p>
+</div>
+
+${extraviados.map(l=>`<div class="card" style="margin-bottom:6px;border-color:rgba(255,51,102,0.2);">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+  <span style="font-size:12px;font-weight:700;color:var(--re);">${brl(Math.abs(l.valor))}</span>
+  <span style="font-size:10px;color:var(--mu);">${l.data||''} · ${l.banco||''}</span>
+ </div>
+ <p style="font-size:11px;color:var(--tx);margin-bottom:6px;">${l.descricao||l.memo||'Sem descrição'}</p>
+ <p style="font-size:10px;color:var(--mu);">Categoria: ${l.categoria||'Não classificado'}</p>
+ <button onclick="lancarExtraviado('${l.id}','${(l.descricao||l.memo||'').replace(/'/g,'')}',${Math.abs(l.valor)},'${l.data||''}')"
+  style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:11px;font-weight:700;cursor:pointer;">
+  ✅ Lançar no sistema
+ </button>
+</div>`).join('')}
+`}
+
+<div class="card" style="margin-top:8px;">
+ <p style="font-size:11px;color:var(--mu);">💡 Para aparecer aqui importe o OFX dos seus bancos em Bancos → 📄 OFX</p>
+</div>
+</div>`;
+}
+
+function lancarExtraviado(ofxId,desc,valor,data){
+ const cat=prompt('Categoria desta despesa?\n(Ex: Folha, Fornecedor, Aluguel, Energia, IOF, Juros...)',desc);
+ if(!cat)return;
+ const db=ldb();
+ if(!db[data])db[data]={r:[],c:[]};
+ db[data].c.push({id:uid(),d:desc,v:valor,cat,seg:'despesa',_ofxId:ofxId,_dia:data});
+ sdb(db);
+ alert('✅ Lançado em '+data+': R$'+valor.toFixed(2)+' — '+cat);
+ render();
 }
 
 render();
