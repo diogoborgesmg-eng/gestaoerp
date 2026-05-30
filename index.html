@@ -1,3 +1,4 @@
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0f">
@@ -103,7 +104,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </style>
 
 
-<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''" onblur="this.placeholder='🔍 Buscar...';setTimeout(()=&gt;{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)" style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data">30/05/2026</span><span id="hdr-alertas"><span onclick="ir('comp')" style="font-size:10px;font-weight:700;color:#ff3366;cursor:pointer;padding:3px 6px;background:#ff336620;border-radius:5px;white-space:nowrap;" title="30 compliance pendente(s)">✅0/30</span><span onclick="abrirResumoMesas()" style="font-size:10px;font-weight:700;color:#f59e0b;cursor:pointer;padding:3px 6px;background:#f59e0b20;border-radius:5px;white-space:nowrap;" title="5 comanda(s) abertas">🍽️5</span></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background: var(--sf2); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; color: var(--mu); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''" onblur="this.placeholder='🔍 Buscar...';setTimeout(()=&gt;{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)" style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data">30/05/2026</span><span id="hdr-alertas"><span onclick="ir('comp')" style="font-size:10px;font-weight:700;color:#ff3366;cursor:pointer;padding:3px 6px;background:#ff336620;border-radius:5px;white-space:nowrap;" title="30 compliance pendente(s)">✅0/30</span><span onclick="abrirResumoMesas()" style="font-size:10px;font-weight:700;color:#f59e0b;cursor:pointer;padding:3px 6px;background:#f59e0b20;border-radius:5px;white-space:nowrap;" title="1 comanda(s) abertas">🍽️1</span></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background: var(--sf2); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; color: var(--mu); border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer;" id="btn-cfg">⚙️</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
 <div class="main" id="main"><div class="si">
 <p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;font-weight:700;">⚙️ Configurações</p>
@@ -122,12 +123,22 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div>
 
 <!-- EMPRESA -->
-<div class="cfg-panel" style="margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:8px;">🏠 Empresa</p><div class="campo"><label>Nome do estabelecimento</label><input type="text" id="cfg-empresa-nome" placeholder="Di Casa Laranjinha" value="DI CASA LARANJINHA'S"></div><div class="campo"><label>CNPJ</label><input type="text" id="cfg-empresa-cnpj" placeholder="00.000.000/0001-00" value="44.686.412 0001-00"></div><div class="campo"><label>Cidade</label><input type="text" id="cfg-empresa-cidade" placeholder="Patos de Minas - MG" value="PATOS DE MINAS MG"></div><div class="campo"><label>Link direto para avaliação no Google ⭐</label><input type="url" id="cfg-empresa-google" placeholder="https://g.page/r/XXXXX/review" value="" style="font-size:11px;"><div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:8px;padding:8px;margin-top:6px;font-size:10px;line-height:1.6;color:var(--mu);"><p style="font-weight:700;color:var(--bl);margin-bottom:4px;">📍 Como pegar o link direto:</p><p>1. Acesse <strong>business.google.com</strong></p><p>2. Selecione seu negócio</p><p>3. Menu → <strong>"Pedir avaliações"</strong></p><p>4. Copie o link gerado</p><p style="margin-top:4px;">O link começa com <strong>g.page/r/</strong> e abre direto na tela de escrever ⭐</p></div></div><button onclick="salvarEmpresa()" class="bok" style="margin-top:4px;">💾 Salvar</button>
+<div class="cfg-panel" style="margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:8px;">🏠 Empresa</p><div class="campo"><label>Nome do estabelecimento</label><input type="text" id="cfg-empresa-nome" placeholder="Di Casa Laranjinha" value="Di CASA LARANJINHA'S"></div><div class="campo"><label>CNPJ</label><input type="text" id="cfg-empresa-cnpj" placeholder="00.000.000/0001-00" value="44.686.412 0001-00"></div><div class="campo"><label>Cidade</label><input type="text" id="cfg-empresa-cidade" placeholder="Patos de Minas - MG" value="PATOS DE MINAS MG"></div><div class="campo"><label>Link direto para avaliação no Google ⭐</label><input type="url" id="cfg-empresa-google" placeholder="https://g.page/r/XXXXX/review" value="" style="font-size:11px;"><div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:8px;padding:8px;margin-top:6px;font-size:10px;line-height:1.6;color:var(--mu);"><p style="font-weight:700;color:var(--bl);margin-bottom:4px;">📍 Como pegar o link direto:</p><p>1. Acesse <strong>business.google.com</strong></p><p>2. Selecione seu negócio</p><p>3. Menu → <strong>"Pedir avaliações"</strong></p><p>4. Copie o link gerado</p><p style="margin-top:4px;">O link começa com <strong>g.page/r/</strong> e abre direto na tela de escrever ⭐</p></div></div><button onclick="salvarEmpresa()" class="bok" style="margin-top:4px;">💾 Salvar</button>
 </div><!-- DESTINATÁRIOS WHATSAPP -->
 <div id="cfg-wpp" class="cfg-panel" style="margin-bottom:10px;border-color:rgba(37,211,102,0.4);">
 <p style="font-weight:700;font-size:13px;margin-bottom:4px;">📱 Destinatários WhatsApp</p>
 <p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Recebem listas de compras, contas a pagar e tarefas automaticamente</p>
 
+<div style="display:flex;justify-content:space-between;align-items:center;padding:7px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+<div>
+<p style="font-size:12px;font-weight:700;">Diogo Borges</p>
+<p style="font-size:10px;color:var(--mu);">34996853258 · compras,contas,preparo,dre</p>
+</div>
+<div style="display:flex;gap:4px;">
+<a href="https://wa.me/5534996853258?text=Ol%C3%A1Diogo%20Borges!%20%F0%9F%91%8B" target="_blank" style="padding:3px 8px;border-radius:5px;background:#25D366;color:#fff;font-size:11px;text-decoration:none;">✓</a>
+<button onclick="removerDestinatario(0)" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:11px;cursor:pointer;">✕</button>
+</div>
+</div>
 <div style="background:var(--sf2);border-radius:10px;padding:10px;margin-top:6px;">
 <div class="campo"><label>Nome</label>
 <input type="text" id="dest-nome" placeholder="Ex: Diogo, Sócio..." style="background:var(--sf);border:1px solid var(--br);border-radius:7px;padding:8px;color:var(--tx);font-size:12px;width:100%;"></div>
@@ -196,27 +207,27 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div id="cfg-cert" class="card" style="margin-bottom:10px;border-color:rgba(99,102,241,0.4);">
 <p style="font-weight:700;font-size:12px;margin-bottom:4px;">🔐 Certificados Digitais A1</p>
 <p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Um por CNPJ — necessário para NFC-e e integração SEFAZ</p>
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.4);">
+<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 1 — Documento de DIOGO B</p>
-<span style="font-size:10px;color:#00ff88;">✅ OK</span>
+<p style="font-size:11px;font-weight:700;">🔐 Certificado 1</p>
+<span style="font-size:10px;color:var(--mu);">Não configurado</span>
 </div>
 
 
 <div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(1)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">🔄 Atualizar</button>
-<button onclick="if(confirm('Remover certificado 1?')){localStorage.removeItem('erp_cert_pfx_1');localStorage.removeItem('erp_cert_senha_1');localStorage.removeItem('erp_cert_info_1');render();}" style="padding:6px 8px;border-radius:7px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">🗑️</button>
+<button onclick="abrirCertificado(1)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
+
 </div>
 <div id="cert-form-1" style="display:none;">
 <!-- Upload do arquivo .pfx -->
 <div id="cert-drop-1" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],1);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-1').click()">
  <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-1">✅ Certificado carregado — clique para trocar</p>
+ <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-1">Arraste ou toque para selecionar o arquivo .pfx</p>
  <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
  <input type="file" id="cert-file-1" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],1)">
 </div>
-<div id="cert-info-1" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-1">📄 Documento de DIOGO BORGES · </p>
+<div id="cert-info-1" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
+ <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-1"></p>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:1;">
@@ -231,7 +242,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:2;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-1" placeholder="Di Casa Laranjinha" class="inpm" value="Documento de DIOGO BORGES">
+ <input type="text" id="cfg-cert-nome-1" placeholder="Di Casa Laranjinha" class="inpm" value="">
 </div>
 <div style="flex:1;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
@@ -240,27 +251,27 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div>
 <button onclick="salvarCertificado(1)" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(99,102,241,0.8);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">💾 Salvar Certificado 1</button>
 </div>
-</div><div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.4);">
+</div><div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 2 — Documento de DIOGO B</p>
-<span style="font-size:10px;color:#00ff88;">✅ OK</span>
+<p style="font-size:11px;font-weight:700;">🔐 Certificado 2</p>
+<span style="font-size:10px;color:var(--mu);">Não configurado</span>
 </div>
 
 
 <div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(2)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">🔄 Atualizar</button>
-<button onclick="if(confirm('Remover certificado 2?')){localStorage.removeItem('erp_cert_pfx_2');localStorage.removeItem('erp_cert_senha_2');localStorage.removeItem('erp_cert_info_2');render();}" style="padding:6px 8px;border-radius:7px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">🗑️</button>
+<button onclick="abrirCertificado(2)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
+
 </div>
 <div id="cert-form-2" style="display:none;">
 <!-- Upload do arquivo .pfx -->
 <div id="cert-drop-2" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],2);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-2').click()">
  <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-2">✅ Certificado carregado — clique para trocar</p>
+ <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-2">Arraste ou toque para selecionar o arquivo .pfx</p>
  <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
  <input type="file" id="cert-file-2" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],2)">
 </div>
-<div id="cert-info-2" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-2">📄 Documento de DIOGO BORGES · </p>
+<div id="cert-info-2" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
+ <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-2"></p>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:1;">
@@ -275,7 +286,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div style="flex:2;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-2" placeholder="Di Casa Laranjinha" class="inpm" value="Documento de DIOGO BORGES">
+ <input type="text" id="cfg-cert-nome-2" placeholder="Di Casa Laranjinha" class="inpm" value="">
 </div>
 <div style="flex:1;">
  <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
@@ -298,7 +309,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Configure a meta de emissão de cupons para o mês</p>
 <div style="display:flex;gap:6px;margin-bottom:8px;">
 <div class="campo" style="flex:1;"><label>Meta mensal (%)</label>
-<input type="number" id="cfg-cupom-pct" value="10" min="0" max="100" step="5" class="inpm" style="font-size:14px;text-align:center;font-family:'Space Mono',monospace;"></div>
+<input type="number" id="cfg-cupom-pct" value="0" min="0" max="100" step="5" class="inpm" style="font-size:14px;text-align:center;font-family:'Space Mono',monospace;"></div>
 <div class="campo" style="flex:1;"><label>Alíquota imposto (%)</label>
 <input type="number" id="cfg-cupom-aliq" value="6" min="0" max="50" step="0.5" class="inpm" style="font-size:14px;text-align:center;font-family:'Space Mono',monospace;"></div>
 </div>
@@ -371,171 +382,19 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
 </div>
 <!-- MODAL PDV -->
-<div id="modal-fila" style="display: none; position: fixed; inset: 0px; background: rgba(0, 0, 0, 0.85); z-index: 200; align-items: flex-end; justify-content: center;">
+<div id="modal-fila" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:flex-end;justify-content:center;">
 <div style="background:var(--sf);border-radius:18px 18px 0 0;padding:0;width:100%;max-height:92vh;overflow-y:auto;">
-<div id="modal-fila-conteudo"><div style="padding:16px 14px 0;">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-<div><p style="font-weight:800;font-size:15px;">Comanda 5</p>
-<p style="font-size:11px;color:var(--mu);">🟡 Ocupada · ⏱️ 02:13</p></div>
-<button onclick="fecharModalFila()" style="background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:4px 10px;color:var(--mu);cursor:pointer;">✕</button>
-</div>
-
-<div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-<p style="font-size:12px;color:var(--mu);">👤 —</p>
-<p style="font-size:12px;color:var(--mu);">⏰ 02:13</p>
-</div><!-- CARDÁPIO RÁPIDO -->
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:10px;">
-<p style="font-size:11px;font-weight:700;margin-bottom:6px;">⚡ Cardápio Rápido</p>
-
-<p style="font-size:9px;color:var(--mu);font-weight:700;margin:5px 0 3px;">🍽️ Pratos</p><div style="display:flex;flex-wrap:wrap;gap:3px;"><button onclick="addItemPromo(5,this.dataset.n,this.dataset.p)" data-n="Prato único" data-p="25" style="padding:6px 9px;border-radius:7px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:11px;cursor:pointer;">Prato único<br><span style="font-size:10px;color:#f59e0b;">R$25,00</span></button><button onclick="addItemPromo(5,this.dataset.n,this.dataset.p)" data-n="Prato empresa" data-p="22" style="padding:6px 9px;border-radius:7px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:11px;cursor:pointer;">Prato empresa<br><span style="font-size:10px;color:#f59e0b;">R$22,00</span></button></div>
-</div>
-
-
-<!-- ADICIONAR ITEM — 4 MÉTODOS -->
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:10px;">
-<div style="display:flex;gap:4px;margin-bottom:8px;">
-<button onclick="setModoLanc('manual',5)" id="btn-modo-manual" style="flex:1;padding:5px;border-radius:6px;border:2px solid var(--bl);background:rgba(68,136,255,0.15);color:var(--bl);font-size:10px;font-weight:700;cursor:pointer;">✍️ Manual</button>
-<button onclick="setModoLanc('voz',5)" id="btn-modo-voz" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">🎙️ Voz</button>
-<button onclick="setModoLanc('barras',5)" id="btn-modo-barras" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">📷 Bip</button>
-<button onclick="setModoLanc('balanca',5)" id="btn-modo-balanca" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">⚖️ Balança</button>
-</div>
-<!-- MANUAL com busca inteligente -->
-<div id="lanc-manual" style="display:flex;flex-direction:column;gap:6px;">
-<div style="position:relative;">
-<input type="text" id="pdv-busca" placeholder="🔍 Nome, código ou parte do nome..." style="width:100%;background:var(--sf);border:2px solid rgba(68,136,255,0.4);border-radius:9px;padding:10px 12px;color:var(--tx);font-size:13px;" oninput="buscarCardapioPDV(5,this.value)" onkeydown="if(event.key==='Enter'){selecionarPrimeiroBusca(5);}" autofocus="">
-<div id="pdv-busca-res" style="position:absolute;top:100%;left:0;right:0;z-index:99;background:var(--sf);border:1px solid var(--br);border-radius:0 0 10px 10px;max-height:220px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
-</div>
-<!-- Item selecionado -->
-<div id="pdv-item-selecionado" style="display:none;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:8px;padding:8px 10px;">
-<div style="display:flex;justify-content:space-between;align-items:center;">
-<div>
-<p id="pdv-sel-nome" style="font-size:12px;font-weight:700;"></p>
-<p id="pdv-sel-info" style="font-size:10px;color:var(--mu);"></p>
-</div>
-<div style="display:flex;gap:6px;align-items:center;">
-<button onclick="alterarQtdPDV(-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">−</button>
-<span id="pdv-sel-qtd" style="font-size:14px;font-weight:700;min-width:24px;text-align:center;">1</span>
-<button onclick="alterarQtdPDV(1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">+</button>
-<button onclick="confirmarItemPDV(5)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">✓</button>
-</div>
-</div>
-</div>
-</div>
-<!-- VOZ -->
-<div id="lanc-voz" style="display:none;">
-<button onclick="vozComanda(5)" id="btn-voz-comanda" style="width:100%;padding:12px;border-radius:9px;border:2px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.1);color:var(--re);font-size:13px;font-weight:700;cursor:pointer;">
-🎙️ Toque e fale o pedido
-</button>
-<p style="font-size:10px;color:var(--mu);text-align:center;margin-top:4px;">Ex: "2 picanha" · "1 coca cola" · "3 porcões frango"</p>
-<div id="voz-comanda-resultado" style="margin-top:6px;"></div>
-</div>
-<!-- CÓDIGO DE BARRAS -->
-<div id="lanc-barras" style="display:none;">
-<div style="display:flex;gap:6px;margin-bottom:6px;">
-<input type="text" id="pdv-barras-input" placeholder="📋 Bipe a COMANDA do cliente..." class="inpm" style="flex:1;font-family:'Space Mono',monospace;font-size:12px;" onkeydown="bipOnKeydown(5,event)" autofocus="">
-<label style="cursor:pointer;">
-<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="lerBarrasPDV(this,5)">
-<div style="padding:8px 12px;border-radius:7px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;">📷</div>
-</label>
-</div>
-<p style="font-size:10px;color:var(--mu);">Conecte o leitor USB/BT ou tire foto do código</p>
-<div id="barras-resultado" style="margin-top:4px;"></div>
-</div>
-<!-- BALANÇA -->
-<div id="lanc-balanca" style="display:none;flex-direction:column;gap:8px;">
-<div id="balanca-etapa-comanda" style="display:block;">
-<p style="font-size:11px;color:var(--mu);margin-bottom:6px;">📋 Passo 1 — Leia a comanda do cliente</p>
-<div style="display:flex;gap:6px;">
-<label style="flex:1;cursor:pointer;">
-<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="lerComandaBalanca(this,5)">
-<div style="padding:10px;border-radius:8px;border:2px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;text-align:center;">📷 Fotografar Comanda</div>
-</label>
-<input type="text" id="balanca-mesa-manual" placeholder="Ou nº mesa" class="inpm" style="width:80px;font-size:13px;text-align:center;" onkeydown="if(event.key==='Enter'){confirmarMesaBalanca(5,this.value);}">
-</div>
-<div id="balanca-comanda-res" style="margin-top:6px;"></div>
-</div>
-<div id="balanca-etapa-prato" style="display:none;">
-<div style="background:rgba(170,68,255,0.08);border:1px solid rgba(170,68,255,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
-<p style="font-size:11px;font-weight:700;">Mesa: <span id="balanca-mesa-label" style="color:var(--pu);">—</span></p>
-</div>
-<p style="font-size:11px;color:var(--mu);margin-bottom:6px;">⚖️ Passo 2 — Digite o peso e fotografe o prato</p>
-<div style="display:flex;gap:6px;margin-bottom:6px;">
-<div style="flex:1;background:var(--sf);border:1px solid rgba(170,68,255,0.3);border-radius:8px;padding:8px;text-align:center;">
-<p style="font-size:10px;color:var(--mu);">Peso (kg)</p>
-<input type="number" id="balanca-peso" placeholder="0.000" step="0.001" min="0" style="width:100%;background:transparent;border:none;color:var(--pu);font-size:22px;font-family:'Space Mono',monospace;font-weight:700;text-align:center;outline:none;" oninput="calcularBalanca(5)">
-</div>
-<div style="flex:1;background:var(--sf);border:1px solid rgba(170,68,255,0.3);border-radius:8px;padding:8px;text-align:center;">
-<p style="font-size:10px;color:var(--mu);">R$/kg</p>
-<input type="number" id="balanca-preco-kg" placeholder="0.00" step="0.01" min="0" style="width:100%;background:transparent;border:none;color:var(--ye);font-size:22px;font-family:'Space Mono',monospace;font-weight:700;text-align:center;outline:none;" oninput="calcularBalanca(5)">
-</div>
-</div>
-<div id="balanca-total-preview" style="display:none;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:12px;text-align:center;margin-bottom:8px;">
-<p style="font-size:11px;color:var(--mu);margin-bottom:2px;" id="balanca-tipo-label">🍽️ Refeição</p>
-<p style="font-size:28px;font-weight:800;color:var(--gr);" id="balanca-total-valor">R$ 0,00</p>
-<p style="font-size:10px;color:var(--mu);" id="balanca-peso-label">0,000 kg × R$ 0,00/kg</p>
-</div>
-<label style="cursor:pointer;display:block;margin-bottom:8px;">
-<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="fotoBalanca(this,5)">
-<div style="padding:10px;border-radius:8px;border:2px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;text-align:center;">📸 Fotografar Prato (IA detecta tipo)</div>
-</label>
-<div id="balanca-foto-res" style="margin-bottom:8px;"></div>
-<div id="balanca-tela-cliente" style="display:none;background:var(--sf);border:2px solid rgba(170,68,255,0.5);border-radius:12px;padding:16px;text-align:center;margin-bottom:8px;">
-<p style="font-size:10px;color:var(--mu);margin-bottom:4px;">👁️ TELA DO CLIENTE</p>
-<img id="balanca-foto-preview" src="" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:none;">
-<p style="font-size:13px;font-weight:700;" id="balanca-cliente-tipo">🍽️ Refeição</p>
-<p style="font-size:32px;font-weight:800;color:var(--gr);font-family:'Space Mono',monospace;" id="balanca-cliente-total">R$ 0,00</p>
-<p style="font-size:12px;color:var(--mu);" id="balanca-cliente-detalhe">0,000 kg × R$ 0,00/kg</p>
-</div>
-<div style="display:flex;gap:6px;">
-<button onclick="voltarEtapaComanda()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">← Voltar</button>
-<button onclick="confirmarBalanca(5)" id="btn-confirmar-balanca" style="flex:2;padding:10px;border-radius:8px;border:none;background:var(--pu);color:#fff;font-size:13px;font-weight:800;cursor:pointer;" disabled="">✅ Lançar na Comanda</button>
-</div>
-</div>
-<div id="balanca-resultado" style="margin-top:4px;"></div>
-</div>
-</div><!-- ITENS DA COMANDA -->
-
-
-<p style="font-size:11px;font-weight:700;margin-bottom:6px;">📋 Comanda (1 item)</p>
-
-<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);">
-<div style="flex:1;">
-<div style="display:flex;align-items:center;gap:6px;">
-<span style="font-size:11px;color:var(--mu);min-width:22px;text-align:center;background:var(--sf2);border-radius:4px;padding:2px 4px;">1x</span>
-<p style="font-size:12px;font-weight:700;">Prato único</p>
-</div>
-
-<p style="font-size:10px;color:var(--mu);margin-left:28px;">R$25,00 cada · </p>
-</div>
-<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-<span style="font-size:12px;font-weight:700;color:#f59e0b;">R$25,00</span>
-<button onclick="adicionarObsItem(5,0)" style="padding:2px 5px;border-radius:4px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:9px;cursor:pointer;" title="Observação">💬</button>
-<button onclick="removerItemComanda(5,0)" style="padding:2px 6px;border-radius:4px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:11px;cursor:pointer;">✕</button>
-</div></div>
-<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:10px 0 0;border-top:2px solid var(--br);margin-top:4px;">
-<span>TOTAL</span><span style="color:#f59e0b;">R$25,00</span>
-</div>
-<div style="display:flex;gap:6px;margin-top:8px;">
-<button onclick="pedirContaMesa(5)" style="flex:1;padding:10px;border-radius:9px;border:none;background:var(--ye);color:#000;font-size:12px;font-weight:700;cursor:pointer;">🧾 Conta</button>
-<button onclick="dividirConta(5)" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;cursor:pointer;">➗ Dividir</button>
-<button onclick="fecharContaMesa(5)" style="flex:1;padding:10px;border-radius:9px;border:none;background:#00ff88;color:#000;font-size:12px;font-weight:700;cursor:pointer;">✅ Fechar</button>
-</div>
-<div style="display:flex;gap:6px;margin-top:6px;">
-<button onclick="transferirMesa(5)" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(255,106,0,0.3);background:rgba(255,106,0,0.08);color:#ff6a00;font-size:11px;cursor:pointer;">🔀 Transferir</button>
-<button onclick="juntarMesa(5)" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:11px;cursor:pointer;">🔗 Juntar</button>
-<button onclick="imprimirComanda(5)" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:11px;cursor:pointer;">🖨️</button>
-</div>
-
-
-</div></div>
+<div id="modal-fila-conteudo"></div>
 <button onclick="fecharModalFila()" style="width:calc(100% - 28px);margin:4px 14px 20px;padding:12px;border-radius:10px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">✕ Fechar</button>
 </div>
 </div>
 
 <!-- BOTÃO FLUTUANTE VOZ PDV -->
-<div id="pdv-voz-flutuante" style="display: none; position: fixed; bottom: 72px; right: 14px; z-index: 400;">
- <div id="voz-status-flutuante" style="display: none; position: absolute; right: 62px; top: 50%; transform: translateY(-50%); background: var(--sf); border: 1px solid var(--br); border-radius: 10px; padding: 6px 10px; white-space: nowrap; font-size: 11px; color: var(--tx); max-width: 200px; box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 16px;">✅ C2: 1x Prato único</div>
- <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()" style="width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--re); background: var(--sf); color: var(--re); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: rgba(255, 51, 102, 0.35) 0px 4px 20px;">🎙️</button>
+<div id="pdv-voz-flutuante" style="display:none;position:fixed;bottom:72px;right:14px;z-index:400;">
+ <div id="voz-status-flutuante" style="display:none;position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--tx);max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+ <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()" style="width:54px;height:54px;border-radius:50%;border:2px solid var(--re);background:var(--sf);color:var(--re);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,51,102,0.35);">
+  🎙️
+ </button>
 </div>
 <div class="bnav"><div class="nis"><button class="ni" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
 </div></div><script>
@@ -14892,49 +14751,96 @@ function pararVozFlutuante(){
 
 async function processarVozHandsFree(texto,statusEl){
  try{
+  if(statusEl)statusEl.textContent='⟳ Interpretando...';
   const d=await claudeAPI({model:MODEL,max_tokens:300,messages:[{role:'user',content:
-   'Pedido em restaurante: "'+texto+'".\nRetorne APENAS JSON:\n{"comanda":numero_ou_null,"itens":[{"nome":"item","qtd":1,"obs":""}]}\nEx: "comanda 5 dois frangos uma coca" → {"comanda":5,"itens":[{"nome":"frango","qtd":2},{"nome":"coca","qtd":1}]}'
-  }]});
-  const pedido=JSON.parse((d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+   'Produtos do restaurante: '+gCardapioPDV().slice(0,20).map(p=>p.nome).join(', ')+
+   '\nPedido: "'+texto+'"'+
+   '\nRETORNE APENAS JSON (sem explicação):'+
+   '\n{"comanda":NUMERO_DA_COMANDA,"itens":[{"nome":"NOME_EXATO_DO_PRODUTO","qtd":NUMERO}]}'+
+   '\nREGRAS: 1)Comanda=primeiro número após palavra comanda 2)Use nome exato da lista de produtos 3)Prato empresa≠Prato único'}]})
+  const raw=(d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const pedido=JSON.parse(raw);
+
   if(!pedido.comanda||!pedido.itens?.length){
    if(statusEl)statusEl.textContent='❌ Fale: "Comanda X produto quantidade"';
    setTimeout(()=>pararVozFlutuante(),3000);return;
   }
-  // Encontra/cria a comanda
+
+  const numComanda=parseInt(pedido.comanda);
   const db=ldb();
   if(!db.mesas)db.mesas=gMesas();
-  const mesaIdx=db.mesas.findIndex(m=>m.id===parseInt(pedido.comanda));
-  if(mesaIdx<0){if(statusEl)statusEl.textContent='❌ Comanda '+pedido.comanda+' não existe';setTimeout(()=>pararVozFlutuante(),2000);return;}
+
+  // Encontra a comanda pelo número
+  let mesaIdx=db.mesas.findIndex(m=>m.id===numComanda);
+
+  // Se não existe, expande o array
+  if(mesaIdx<0){
+   while(db.mesas.length<numComanda){
+    const ni=db.mesas.length+1;
+    db.mesas.push({id:ni,nome:'Comanda '+ni,mesa:'',status:'livre',comanda:[],garcom:'',abertura:null});
+   }
+   mesaIdx=db.mesas.findIndex(m=>m.id===numComanda);
+  }
+
+  if(mesaIdx<0){
+   if(statusEl)statusEl.textContent='❌ Comanda '+numComanda+' não encontrada';
+   setTimeout(()=>pararVozFlutuante(),2000);return;
+  }
+
+  // Verifica se está bloqueada
+  if(db.mesas[mesaIdx].status==='conta'){
+   if(statusEl)statusEl.textContent='🔒 Comanda '+numComanda+' com conta pedida';
+   setTimeout(()=>pararVozFlutuante(),2500);return;
+  }
+
+  // Abre a comanda se livre
   if(db.mesas[mesaIdx].status==='livre'){
    db.mesas[mesaIdx].status='ocupada';
    db.mesas[mesaIdx].abertura=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }
-  if(db.mesas[mesaIdx].status==='conta'){
-   if(statusEl)statusEl.textContent='🔒 Comanda '+pedido.comanda+' com conta pedida';
-   setTimeout(()=>pararVozFlutuante(),2500);return;
-  }
-  // Adiciona itens
+
+  if(!db.mesas[mesaIdx].comanda)db.mesas[mesaIdx].comanda=[];
+
+  // Adiciona os itens
   const cardapio=gCardapioPDV();
   const adicionados=[];
   pedido.itens.forEach(item=>{
-   const t=item.nome.toLowerCase();
-   const prod=cardapio.find(p=>p.nome.toLowerCase().includes(t)||t.includes(p.nome.toLowerCase().substring(0,3)));
-   if(!db.mesas[mesaIdx].comanda)db.mesas[mesaIdx].comanda=[];
-   db.mesas[mesaIdx].comanda.push({id:uid(),nome:prod?prod.nome:item.nome,val:prod?prod.preco:0,qtd:item.qtd||1,obs:item.obs||'',hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
-   adicionados.push((item.qtd||1)+'x '+(prod?prod.nome:item.nome));
+   const t=(item.nome||'').toLowerCase();
+   // Busca exata primeiro, depois parcial
+   const prod=cardapio.find(p=>p.nome.toLowerCase()===t)||
+    cardapio.find(p=>p.nome.toLowerCase().includes(t))||
+    (t.length>5?cardapio.find(p=>t.includes(p.nome.toLowerCase())):null);
+   db.mesas[mesaIdx].comanda.push({
+    id:uid(),
+    nome:prod?prod.nome:item.nome,
+    val:prod?Number(prod.preco||0):0,
+    qtd:Number(item.qtd)||1,
+    obs:item.obs||'',
+    hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+   });
+   adicionados.push((Number(item.qtd)||1)+'x '+(prod?prod.nome:item.nome));
   });
+
+  // Salva
   sdb(db);
-  const msg='✅ C'+pedido.comanda+': '+adicionados.join(', ');
+
+  // Feedback
+  const msg='✅ Comanda '+numComanda+': '+adicionados.join(', ');
   if(statusEl)statusEl.textContent=msg;
-  // Feedback por voz
+
+  // Voz de confirmação
   if('speechSynthesis'in window){
-   const u=new SpeechSynthesisUtterance('Comanda '+pedido.comanda+'. '+adicionados.join('. '));
-   u.lang='pt-BR';u.rate=1.2;speechSynthesis.speak(u);
+   const u=new SpeechSynthesisUtterance('Comanda '+numComanda+'. '+adicionados.join('. '));
+   u.lang='pt-BR';u.rate=1.2;
+   speechSynthesis.speak(u);
   }
+
   render();
-  setTimeout(()=>pararVozFlutuante(),2000);
+  setTimeout(()=>pararVozFlutuante(),2500);
+
  }catch(e){
   if(statusEl)statusEl.textContent='❌ '+e.message;
+  console.error('Voz erro:',e);
   setTimeout(()=>pararVozFlutuante(),3000);
  }
 }
@@ -15785,23 +15691,40 @@ async function processarOFX(bancoId, input){
 
   // PASSO 1: Classificação automática por palavras-chave
   const regras=[
+   // ── JUROS E ENCARGOS (Santander) ──────────────────────
+   [/juros.saldo|juros.utiliz|juros.limite|juros.*limite/i,'juros','⚠️ Juros Cheque Especial'],
    [/juro|juros|encargo/i,'juros','Juros Bancários'],
+   // ── IOF (Santander) ───────────────────────────────────
+   [/iof.adicional|iof.imposto|iof.operac/i,'iof','⚠️ IOF'],
    [/\biof\b/i,'iof','IOF'],
-   [/cheque.?esp|ch\.?esp|limite.?esp/i,'cheque_especial','Cheque Especial'],
+   // ── CHEQUE ESPECIAL ───────────────────────────────────
+   [/cheque.?esp|ch\.?esp|limite.?esp|contamax|conta.max/i,'cheque_especial','⚠️ Cheque Especial/ContaMax'],
+   // ── EMPRÉSTIMO ────────────────────────────────────────
+   [/debito.emprest|parc.*emprest|emprest/i,'despesa','💰 Parcela Empréstimo'],
+   // ── CAPITALIZAÇÃO ─────────────────────────────────────
+   [/titulo.capitaliz|capitaliz/i,'despesa','Título Capitalização'],
+   // ── RENDIMENTO ────────────────────────────────────────
+   [/rendimento|contamax|rend.*liquido/i,'receita','Rendimento ContaMax'],
+   // ── TARIFAS ───────────────────────────────────────────
    [/tarifa|taxa.serv|manut.*conta|anuidade/i,'despesa','Tarifas Bancárias'],
-   [/boleto|pagto.?tit|pagamento.de.tit/i,'boleto','Boleto Pago'],
-   [/pix.rec|pix.cred|receb.*pix|pix.in/i,'pix_in','PIX Recebido'],
-   [/pix.env|pix.deb|envio.*pix|pix.out/i,'pix_out','PIX Enviado'],
+   // ── BOLETOS ───────────────────────────────────────────
+   [/boleto|pagto.?tit|pagamento.de.tit|pagto.cartao|pagamento.cartao/i,'boleto','📄 Boleto/Cartão Pago'],
+   // ── PIX ───────────────────────────────────────────────
+   [/pix.rec|pix recebido/i,'pix_in','PIX Recebido'],
+   [/pix.env|pix enviado/i,'pix_out','PIX Enviado'],
+   // ── TED/DOC ───────────────────────────────────────────
    [/ted.cred|doc.cred|transf.*rec/i,'pix_in','Transferência Recebida'],
    [/ted.deb|doc.deb|transf.*deb|transf.*env/i,'pix_out','Transferência Enviada'],
+   // ── FOLHA ─────────────────────────────────────────────
    [/salario|folha|pagto.func/i,'despesa','Folha de Pagamento'],
+   // ── FIXOS ─────────────────────────────────────────────
    [/aluguel|locacao/i,'despesa','Aluguel'],
    [/energia|cemig|copel/i,'despesa','Energia Elétrica'],
    [/agua|copasa|sabesp/i,'despesa','Água'],
    [/internet|telecom|claro|vivo|\btim\b/i,'despesa','Telecom'],
+   // ── OUTROS ────────────────────────────────────────────
    [/estorno|devol/i,'receita','Estorno'],
-   [/stone|cielo|rede|getnet|adiq|credito|debito/i,'receita','Vendas Cartão'],
-   [/resgat|cdb|lci|lca|investim/i,'transferencia','Investimento'],
+   [/stone|cielo|rede|getnet|adiq/i,'receita','Vendas Maquininha'],
   ];
   lancamentos.forEach(l=>{
    if(l.tipo)return;
@@ -15847,7 +15770,7 @@ async function processarOFX(bancoId, input){
   const boletos=lancamentos.filter(l=>l.tipo==='boleto').reduce((a,l)=>a+Math.abs(l.valor),0);
   const saldo=entradas+saidas;
 
-  // Atualiza saldo do banco
+  // Atualiza saldo e lança no sistema com conciliação
   const db=ldb();
   const bIdx=(db.bancos||[]).findIndex(b=>b.id===bancoId);
   if(bIdx>=0){
@@ -15855,11 +15778,73 @@ async function processarOFX(bancoId, input){
    db.bancos[bIdx].ultLeitura=new Date().toLocaleDateString('pt-BR')+' '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
    if(!db.bancos[bIdx].extrato)db.bancos[bIdx].extrato=[];
    db.bancos[bIdx].extrato=[...lancamentos,...(db.bancos[bIdx].extrato||[])].slice(0,500);
-   sdb(db);
   }
 
+  // ── LANÇAMENTO AUTOMÁTICO NO DRE COM CONCILIAÇÃO ──────
+  let novos=0, conciliados=0, ignorados=0;
+  const banco=(db.bancos||[])[bIdx];
+
+  lancamentos.forEach(l=>{
+   // Ignora transferências entre contas próprias e saldos
+   if(l.tipo==='transferencia')return;
+   if(!l.valor||l.valor===0)return;
+
+   // Verifica se já existe lançamento com mesmo valor e data próxima (±2 dias)
+   const [dd,mm,yyyy]=l.data.split('/');
+   const dataLanc=yyyy&&mm&&dd?yyyy+'-'+mm+'-'+dd:null;
+   if(!dataLanc){ignorados++;return;}
+
+   const diaKey=dd+'/'+mm+'/'+yyyy;
+   const diaData=db[diaKey]||{r:[],c:[]};
+
+   // Verifica duplicata: mesmo valor e mesma data
+   const jaExiste=[...(diaData.r||[]),...(diaData.c||[])].some(x=>
+    Math.abs(Number(x.v)-Math.abs(l.valor))<0.02 &&
+    (x._ofxId===l.id || x._banco===banco?.nome)
+   );
+
+   if(jaExiste){conciliados++;return;}
+
+   // Cria o lançamento
+   const descricao=(l.descricao||l.memo||'').substring(0,50);
+   const lanc={
+    id:l.id||uid(),
+    d:descricao,
+    v:Math.abs(l.valor),
+    cat:l.categoria||'Outros',
+    seg:'financeiro',
+    _banco:banco?.nome||'Banco',
+    _ofxId:l.id,
+    _dia:diaKey
+   };
+
+   if(!db[diaKey])db[diaKey]={r:[],c:[]};
+
+   if(l.valor>0){
+    // Entrada — mas NÃO lança vendas do PDV (já lançadas)
+    if(l.tipo==='pix_in'||l.tipo==='receita'){
+     if(!db[diaKey].r)db[diaKey].r=[];
+     db[diaKey].r.push({...lanc,seg:'receita_banco'});
+     novos++;
+    }
+   } else {
+    // Saída — lança como despesa
+    if(!db[diaKey].c)db[diaKey].c=[];
+    db[diaKey].c.push(lanc);
+    novos++;
+   }
+  });
+
+  sdb(db);
+
+  // Mostra resumo da conciliação
+  const resumoConcil=`${novos} lançados no DRE · ${conciliados} já existiam · ${ignorados} ignorados`;
+
   if(resEl)resEl.innerHTML=`<div class="ial ag" style="margin-bottom:8px;">
-   <span>✅</span><span style="font-weight:700;">${lancamentos.length} lançamentos importados!</span>
+   <span>✅</span><span style="font-weight:700;">${lancamentos.length} importados → ${novos||0} lançados no DRE</span>
+  </div>
+  <div class="ial ay" style="margin-bottom:8px;font-size:11px;">
+   <span>📊</span><span>${resumoConcil||''}</span>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
    <div style="background:rgba(0,255,136,0.08);border-radius:8px;padding:8px;text-align:center;">
@@ -16619,87 +16604,74 @@ function abrirScoreFornecedor(){
 function verExtratoBanco(bancoId){
  const db=ldb();
  const banco=(db.bancos||[]).find(b=>b.id===bancoId);
- if(!banco||!banco.extrato?.length){alert('Nenhum extrato importado ainda. Use o botão 📄 OFX');return;}
- const ext=banco.extrato||[];
-
- // Calcula totais por tipo
- const totais={};
- ext.forEach(l=>{
-  const cat=l.categoria||'Outros';
-  if(!totais[cat])totais[cat]={total:0,count:0,tipo:l.tipo};
-  totais[cat].total+=l.valor;
-  totais[cat].count++;
- });
-
- // Alertas importantes
- const juros=ext.filter(l=>l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial');
- const totalJuros=juros.reduce((a,l)=>a+Math.abs(l.valor),0);
- const boletos=ext.filter(l=>l.tipo==='boleto');
- const totalBoletos=boletos.reduce((a,l)=>a+Math.abs(l.valor),0);
+ if(!banco||!banco.extrato?.length){alert('Importe o OFX primeiro: botão 📄 OFX');return;}
+ const ext=[...banco.extrato].sort((a,b)=>b.data>a.data?1:-1);
 
  const div=document.createElement('div');
- div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;overflow-y:auto;';
+ div.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:var(--sf);z-index:600;overflow-y:auto;padding:14px 14px 80px;';
 
- // Filtro ativo
- let _filtro='todos';
+ // Totais
+ const totalJuros=ext.filter(l=>l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial').reduce((a,l)=>a+Math.abs(l.valor),0);
+ const totalEntradas=ext.filter(l=>l.valor>0).reduce((a,l)=>a+l.valor,0);
+ const totalSaidas=ext.filter(l=>l.valor<0).reduce((a,l)=>a+Math.abs(l.valor),0);
 
- function renderExtrato(){
-  const filtrados=_filtro==='todos'?ext:ext.filter(l=>l.tipo===_filtro||l.categoria===_filtro);
-  const html=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 80px;">
-   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:0;background:var(--sf);padding:4px 0;z-index:10;">
-    <div><p style="font-weight:800;font-size:14px;">${banco.icone||'🏦'} ${banco.nome}</p>
-    <p style="font-size:10px;color:var(--mu);">${ext.length} lançamentos · Última: ${banco.ultLeitura||'?'}</p></div>
-    <button onclick="this.closest('[style*=position:fixed]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕ Fechar</button>
+ function lista(filtro){
+  const f=filtro==='todos'?ext:
+   filtro==='pix_in'?ext.filter(l=>l.tipo==='pix_in'):
+   filtro==='pix_out'?ext.filter(l=>l.tipo==='pix_out'):
+   filtro==='juros'?ext.filter(l=>l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial'):
+   filtro==='boleto'?ext.filter(l=>l.tipo==='boleto'):
+   filtro==='despesa'?ext.filter(l=>l.valor<0):
+   ext.filter(l=>l.valor>0);
+
+  if(!f.length)return'<p style="text-align:center;color:var(--mu);padding:20px;">Nenhum lançamento</p>';
+  return f.map(l=>`<div style="display:flex;gap:8px;padding:8px;margin-bottom:4px;background:var(--sf2);border-radius:8px;${(l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial')?'border:1px solid rgba(255,51,102,0.3);':''}">
+   <span style="font-size:16px;">${l.tipo==='juros'||l.tipo==='iof'?'⚠️':l.tipo==='boleto'?'📄':l.valor>0?'⬇️':'⬆️'}</span>
+   <div style="flex:1;min-width:0;">
+    <p style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.descricao||l.memo||'Lançamento'}</p>
+    <p style="font-size:9px;color:var(--mu);">${l.data||''} · ${l.categoria||'Outros'}</p>
    </div>
-
-   <!-- Alertas de custo financeiro -->
-   ${totalJuros>0?`<div style="background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
-    <p style="font-size:12px;font-weight:800;color:var(--re);margin-bottom:4px;">⚠️ Custo financeiro detectado: ${brl(totalJuros)}</p>
-    <p style="font-size:11px;color:var(--mu);">${juros.length} lançamentos de juros/IOF/cheque especial no período</p>
-    ${juros.slice(0,3).map(l=>`<p style="font-size:10px;color:var(--re);margin-top:3px;">• ${l.memo}: ${brl(Math.abs(l.valor))}</p>`).join('')}
-   </div>`:''}
-   ${totalBoletos>0?`<div style="background:rgba(255,204,0,0.06);border:1px solid rgba(255,204,0,0.2);border-radius:10px;padding:10px;margin-bottom:10px;">
-    <p style="font-size:11px;font-weight:700;color:var(--ye);">📄 Boletos pagos: ${brl(totalBoletos)} (${boletos.length})</p>
-   </div>`:''}
-
-   <!-- Filtros por categoria -->
-   <div style="display:flex;gap:5px;overflow-x:auto;margin-bottom:10px;padding-bottom:4px;">
-    ${[['todos','Todos',ext.length],['pix_in','PIX Rec.',ext.filter(l=>l.tipo==='pix_in').length],['pix_out','PIX Env.',ext.filter(l=>l.tipo==='pix_out').length],['juros','⚠️ Juros',juros.length],['boleto','📄 Boletos',boletos.length],['despesa','Despesas',ext.filter(l=>l.tipo==='despesa').length],['receita','Receitas',ext.filter(l=>l.tipo==='receita').length]].map(([id,lbl,cnt])=>
-     `<button onclick="window._exFiltro='${id}';document.getElementById('ext-lista').innerHTML=renderExtratolista('${id}',window._extData)"
-      style="padding:6px 10px;border-radius:8px;border:1px solid ${_filtro===id?'var(--bl)':'var(--br)'};background:${_filtro===id?'rgba(68,136,255,0.15)':'var(--sf2)'};color:${_filtro===id?'var(--bl)':'var(--mu)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">${lbl} (${cnt})</button>`
-    ).join('')}
-   </div>
-
-   <!-- Lista de lançamentos -->
-   <div id="ext-lista">
-    ${renderExtratolista('todos',ext)}
-   </div>
-  </div>`;
-  div.innerHTML=html;
-  window._extData=ext;
+   <span style="font-size:12px;font-weight:800;color:${l.valor>0?'var(--gr)':'var(--re)'};white-space:nowrap;">${l.valor>0?'+':''}${brl(l.valor)}</span>
+  </div>`).join('');
  }
 
- function renderExtratolista(filtro,dados){
-  const lista=filtro==='todos'?dados:dados.filter(l=>l.tipo===filtro);
-  if(!lista.length)return'<p style="text-align:center;color:var(--mu);padding:20px;">Nenhum lançamento nesta categoria</p>';
-  return lista.map(l=>{
-   const cor=l.valor>0?'var(--gr)':'var(--re)';
-   const icone=l.tipo==='juros'||l.tipo==='iof'?'⚠️':l.tipo==='cheque_especial'?'🚨':l.tipo==='boleto'?'📄':l.tipo==='pix_in'||l.tipo==='receita'?'⬇️':'⬆️';
-   const destaque=l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial';
-   return`<div style="display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:4px;background:${destaque?'rgba(255,51,102,0.06)':'var(--sf2)'};border-radius:8px;${destaque?'border:1px solid rgba(255,51,102,0.2);':''}">
-    <span style="font-size:16px;flex-shrink:0;">${icone}</span>
-    <div style="flex:1;min-width:0;">
-     <p style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.descricao||l.memo}</p>
-     <p style="font-size:9px;color:var(--mu);">${l.data} · ${l.categoria||'Outros'}</p>
-    </div>
-    <span style="font-size:12px;font-weight:800;color:${cor};white-space:nowrap;">${l.valor>0?'+':''}${brl(l.valor)}</span>
-   </div>`;
-  }).join('');
- }
+ div.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:sticky;top:0;background:var(--sf);padding:8px 0;z-index:10;">
+   <div><p style="font-weight:800;font-size:14px;">${banco.icone||'🏦'} ${banco.nome}</p>
+   <p style="font-size:10px;color:var(--mu);">${ext.length} lançamentos · ${banco.ultLeitura||''}</p></div>
+   <button onclick="this.closest('[style*=position:fixed]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;font-weight:700;">✕ Fechar</button>
+  </div>
 
- window.renderExtratolista=renderExtratolista;
- renderExtrato();
- div.onclick=e=>{if(e.target===div)div.remove();};
+  ${totalJuros>0?`<div style="background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:12px;font-weight:800;color:var(--re);">⚠️ Custo financeiro: ${brl(totalJuros)}</p>
+   <p style="font-size:10px;color:var(--mu);">Juros + IOF + Cheque Especial no período</p>
+  </div>`:''}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+   <div style="background:rgba(0,255,136,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:9px;color:var(--mu);">Entradas</p>
+    <p style="font-size:12px;font-weight:800;color:var(--gr);">${brl(totalEntradas)}</p>
+   </div>
+   <div style="background:rgba(255,51,102,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:9px;color:var(--mu);">Saídas</p>
+    <p style="font-size:12px;font-weight:800;color:var(--re);">${brl(totalSaidas)}</p>
+   </div>
+   <div style="background:rgba(255,204,0,0.08);border-radius:8px;padding:8px;text-align:center;">
+    <p style="font-size:9px;color:var(--mu);">⚠️ Juros/IOF</p>
+    <p style="font-size:12px;font-weight:800;color:var(--ye);">${brl(totalJuros)}</p>
+   </div>
+  </div>
+
+  <div style="display:flex;gap:5px;overflow-x:auto;margin-bottom:10px;" id="ext-filtros">
+   ${[['todos','Todos',ext.length],['pix_in','⬇️ Recebidos',ext.filter(l=>l.valor>0).length],['pix_out','⬆️ Enviados',ext.filter(l=>l.valor<0).length],['juros','⚠️ Juros/IOF',ext.filter(l=>l.tipo==='juros'||l.tipo==='iof'||l.tipo==='cheque_especial').length],['boleto','📄 Boletos',ext.filter(l=>l.tipo==='boleto').length]].map(([id,lbl,cnt])=>
+    `<button onclick="document.getElementById('ext-corpo').innerHTML=window._extLista('${id}');document.querySelectorAll('#ext-filtros button').forEach(b=>b.style.background='var(--sf2)');this.style.background='rgba(68,136,255,0.2)'"
+     style="padding:6px 10px;border-radius:8px;border:1px solid var(--br);background:${id==='todos'?'rgba(68,136,255,0.2)':'var(--sf2)'};color:var(--tx);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">${lbl} (${cnt})</button>`
+   ).join('')}
+  </div>
+
+  <div id="ext-corpo">${lista('todos')}</div>`;
+
+ window._extLista=lista;
  document.body.appendChild(div);
 }
 
