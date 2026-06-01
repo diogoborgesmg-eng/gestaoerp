@@ -16926,6 +16926,124 @@ function mostrarFormManualRecibo(imgB64){
  alert('Não consegui ler o comprovante. Use o lançamento manual em Extraviado ou no DRE.');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CONSULTA NF-e SEFAZ — puxa notas emitidas contra o CNPJ
+// ═══════════════════════════════════════════════════════════════
+async function consultarNFesSEFAZ(){
+ const df=gDadosFiscais();
+ const cnpj=(df.cnpj||'44686412000100').replace(/\D/g,'');
+ const cert=df.cert1||df.cert2||'';
+ const certSenha=df.certSenha1||df.certSenha2||'';
+
+ if(!cert){
+  alert('Certificado A1 não configurado.\nVá em Config → Certificados Digitais e faça o upload do arquivo .pfx');
+  return;
+ }
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;display:flex;align-items:center;justify-content:center;';
+ div.innerHTML=`<div style="text-align:center;padding:20px;">
+  <p style="font-size:32px;margin-bottom:8px;">📡</p>
+  <p style="color:#fff;font-size:14px;font-weight:700;">Consultando SEFAZ MG...</p>
+  <p style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:4px;">Buscando NF-e emitidas contra CNPJ ${cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5')}</p>
+ </div>`;
+ document.body.appendChild(div);
+
+ try{
+  const backendUrl=df.backendUrl||'https://gestaoerp.vercel.app';
+  const token=df.backendToken||'gestaoerp_diCasa_44686412';
+
+  const resp=await fetch(backendUrl+'/api/nfe/consultar',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':token},
+   body:JSON.stringify({cnpj,cert,certSenha,uf:'MG'})
+  });
+
+  const data=await resp.json();
+  div.remove();
+
+  if(data.notas&&data.notas.length>0){
+   mostrarNotasRecebidas(data.notas);
+  }else if(data.erro){
+   // Backend ainda não tem integração SEFAZ completa
+   // Orienta sobre o processo
+   mostrarInstrucoesSEFAZ(cnpj);
+  }else{
+   alert('✅ Nenhuma NF-e nova encontrada no período.');
+  }
+ }catch(e){
+  div.remove();
+  mostrarInstrucoesSEFAZ(cnpj);
+ }
+}
+
+function mostrarInstrucoesSEFAZ(cnpj){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">📡 NF-e do SEFAZ</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:12px;padding:14px;margin-bottom:12px;">
+   <p style="font-size:13px;font-weight:700;color:var(--bl);margin-bottom:8px;">🔐 Certificado configurado ✅</p>
+   <p style="font-size:11px;color:var(--mu);">CNPJ: ${cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5')}</p>
+   <p style="font-size:11px;color:var(--mu);margin-top:4px;">UF: MG — SEFAZ Minas Gerais</p>
+  </div>
+
+  <div style="background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.3);border-radius:12px;padding:14px;margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;color:var(--ye);margin-bottom:8px;">⚠️ Integração direta com SEFAZ</p>
+   <p style="font-size:11px;color:var(--mu);line-height:1.7;">A consulta automática de NF-e requer comunicação via SOAP com certificado A1 — isso precisa rodar no servidor, não no navegador (bloqueio de CORS).<br><br>O backend Vercel precisa ser atualizado com a biblioteca de NF-e para MG.</p>
+  </div>
+
+  <p style="font-size:12px;font-weight:700;margin-bottom:10px;">📥 Como puxar NF-e agora (funciona hoje):</p>
+
+  ${[
+   ['Portal da NF-e MG','Acesse nfe.fazenda.mg.gov.br → Consultar NF-e → Destinatário → informa seu CNPJ + certificado','https://nfe.fazenda.mg.gov.br'],
+   ['SEFAZ Nacional','nfe.fazenda.gov.br → Consulta destinatário → baixa XML das notas','https://nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa'],
+   ['Importar XML no sistema','Após baixar os XMLs, use o botão 📁 para importar cada NF-e no sistema',''],
+  ].map(([titulo,desc,link])=>`<div class="card" style="margin-bottom:8px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:4px;">${titulo}</p>
+   <p style="font-size:11px;color:var(--mu);margin-bottom:${link?'8px':'0'};">${desc}</p>
+   ${link?`<a href="${link}" target="_blank" style="display:block;padding:8px;border-radius:7px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);color:var(--bl);font-size:11px;font-weight:700;text-align:center;text-decoration:none;">Abrir →</a>`:''}
+  </div>`).join('')}
+
+  <div class="card" style="margin-top:8px;border-color:rgba(0,255,136,0.3);">
+   <p style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:4px;">🚀 Integração automática</p>
+   <p style="font-size:11px;color:var(--mu);">Para puxar automaticamente sem portal, preciso atualizar o backend com a biblioteca NF-e para Node.js. Disponível quando o servidor Evolution (bot) estiver funcionando.</p>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function mostrarNotasRecebidas(notas){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">📥 NF-e Recebidas (${notas.length})</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  ${notas.map(n=>`<div class="card" style="margin-bottom:8px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+     <p style="font-size:12px;font-weight:700;">${n.emitente||'Fornecedor'}</p>
+     <p style="font-size:10px;color:var(--mu);">${n.data||''} · NF ${n.numero||''}</p>
+    </div>
+    <p style="font-size:14px;font-weight:800;color:var(--re);">${brl(n.valor||0)}</p>
+   </div>
+   <button onclick="lancarNFeNoEstoque(${JSON.stringify(n).replace(/"/g,"'")})" 
+    style="width:100%;margin-top:8px;padding:8px;border-radius:7px;border:none;background:var(--gr);color:#000;font-size:11px;font-weight:800;cursor:pointer;">
+    ✅ Lançar no estoque
+   </button>
+  </div>`).join('')}
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
 render();
 
 </script>
