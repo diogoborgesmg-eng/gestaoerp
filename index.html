@@ -3795,7 +3795,7 @@ function rPDV(){
  const livres=mesas.filter(m=>m.status==='livre').length;
  const ocupadas=mesas.filter(m=>m.status==='ocupada').length;
  const conta=mesas.filter(m=>m.status==='conta').length;
- const vendHoje=calcVendasHoje();
+ const vendHoje=(()=>{const d=new Date();const k=String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();const dia=ldb()[k]||{r:[],c:[]};return(dia.r||[]).reduce((a,x)=>a+Number(x.v||0),0);})();
 
  return`<div style="background:var(--sf);min-height:100vh;">
 
