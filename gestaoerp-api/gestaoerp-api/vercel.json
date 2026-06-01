@@ -1,15 +1,11 @@
 {
   "version": 2,
   "functions": {
-    "api/index.js": {
-      "memory": 256,
-      "maxDuration": 30
-    }
+    "api/index.js": { "memory": 256, "maxDuration": 30 },
+    "api/webhook/whatsapp.js": { "memory": 256, "maxDuration": 30 }
   },
   "routes": [
+    { "src": "/api/webhook/whatsapp", "dest": "/api/webhook/whatsapp.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
-  ],
-  "env": {
-    "API_TOKEN": "gestaoerp_diCasa_44686412"
-  }
+  ]
 }
