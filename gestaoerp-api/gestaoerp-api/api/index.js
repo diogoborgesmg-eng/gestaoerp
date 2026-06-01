@@ -206,6 +206,73 @@ app.post('/api/nfce/cancelar', autenticar, async (req, res) => {
   }
 });
 
+
+// ─── Webhook WhatsApp (sem autenticação) ────────────────────
+const EVOLUTION_URL = 'https://evolution-api-latest-lrlv.onrender.com';
+const EVOLUTION_KEY = 'dicasalaranjinha2024';
+const INSTANCE = 'dicasalaranjinha';
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || process.env.API_TOKEN;
+
+async function enviarWpp(numero, texto) {
+  try {
+    await fetch(EVOLUTION_URL + '/message/sendText/' + INSTANCE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_KEY },
+      body: JSON.stringify({ number: numero, text: texto })
+    });
+  } catch(e) { console.error('Erro enviar:', e.message); }
+}
+
+async function analisarImagem(base64, mime) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 1024,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mime || 'image/jpeg', data: base64 } },
+        { type: 'text', text: 'Você é o assistente financeiro do Di Casa Laranjinha em Patos de Minas MG. Analise este documento e extraia: Tipo (recibo, NF, PIX, cupom, cartão, etc), Fornecedor/Estabelecimento, Data, Valor total, Forma de pagamento, Itens se visível. Responda direto em português.' }
+      ]}]
+    })
+  });
+  const d = await r.json();
+  return d.content?.[0]?.text || 'Não consegui analisar.';
+}
+
+app.get('/api/webhook/whatsapp', (req, res) => {
+  res.json({ status: 'Webhook WhatsApp ativo ✅', versao: '3.0' });
+});
+
+app.post('/api/webhook/whatsapp', async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (body.event !== 'messages.upsert') return res.json({ ok: true });
+    const msg = body.data;
+    if (!msg || msg.key?.fromMe) return res.json({ ok: true });
+    const numero = msg.key?.remoteJid;
+    const tipo = msg.messageType;
+    if (tipo === 'conversation' || tipo === 'extendedTextMessage') {
+      const txt = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').toLowerCase();
+      const isGrupo = numero?.endsWith('@g.us');
+      if (isGrupo && !txt.includes('ajuda') && !txt.includes('bot')) return res.json({ ok: true });
+      await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕
+
+📸 Mande uma *foto de recibo ou comprovante* que analiso na hora!');
+    } else if (tipo === 'imageMessage') {
+      await enviarWpp(numero, '🔍 Analisando documento...');
+      const base64 = msg.message?.imageMessage?.base64 || msg.message?.base64;
+      if (!base64) { await enviarWpp(numero, '❌ Não consegui acessar a imagem. Tente reenviar.'); return res.json({ ok: true }); }
+      const analise = await analisarImagem(base64, 'image/jpeg');
+      await enviarWpp(numero, '📋 *Análise do Documento*
+
+' + analise + '
+
+_Di Casa Laranjinha - GestaoERP_ ✅');
+    }
+    res.json({ ok: true });
+  } catch(e) { console.error(e); res.status(500).json({ erro: e.message }); }
+});
+
 // Inicia servidor (para teste local)
 const PORT = process.env.PORT || 3001;
 if (require.main === module) {
