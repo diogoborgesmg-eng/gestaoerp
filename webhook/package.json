@@ -1,0 +1,12 @@
+{
+  "name": "gestaoerp-webhook",
+  "version": "1.0.0",
+  "description": "Webhook WhatsApp Di Casa Laranjinha",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
