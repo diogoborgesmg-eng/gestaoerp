@@ -1,12 +1,14 @@
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a0a0f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GestaoERP">
-<link rel="manifest" href="/manifest.json">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="GestaoERP"/>
+<link rel="manifest" href="/manifest.json"/>
 <title>GestaoERP</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
@@ -102,283 +104,14 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 .f11{font-size:11px;}.f10{font-size:10px;}.f12{font-size:12px;}
 .mono12{font-family:'Space Mono',monospace;font-size:12px}.mono13{font-family:'Space Mono',monospace;font-size:13px}.mono14{font-family:'Space Mono',monospace;font-size:14px;font-weight:700}
 </style>
-
-
-<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''" onblur="this.placeholder='🔍 Buscar...';setTimeout(()=&gt;{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)" style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data">31/05/2026</span><span id="hdr-alertas"><span onclick="ir('comp')" style="font-size:10px;font-weight:700;color:#ff3366;cursor:pointer;padding:3px 6px;background:#ff336620;border-radius:5px;white-space:nowrap;" title="30 compliance pendente(s)">✅0/30</span><span onclick="abrirResumoMesas()" style="font-size:10px;font-weight:700;color:#f59e0b;cursor:pointer;padding:3px 6px;background:#f59e0b20;border-radius:5px;white-space:nowrap;" title="1 comanda(s) abertas">🍽️1</span></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+</head>
+<body>
+<div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." 
+ oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''"
+ onblur="this.placeholder='🔍 Buscar...';setTimeout(()=>{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)"
+ style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
-<div class="main" id="main"><div class="si">
-<p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;font-weight:700;">⚙️ Configurações</p>
-
-<!-- ATALHOS RÁPIDOS -->
-<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
-
-<button onclick="document.getElementById('cfg-empresa')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">🏠 Empresa</button>
-<button onclick="document.getElementById('cfg-api')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">🔑 API</button>
-<button onclick="document.getElementById('cfg-cert')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(99,102,241,0.6);background:rgba(99,102,241,0.15);color:#818cf8;font-size:11px;cursor:pointer;font-weight:700;">🔐 Certificados</button>
-<button onclick="document.getElementById('cfg-wpp')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">📱 WhatsApp</button>
-<button onclick="document.getElementById('cfg-fiscal')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">🧾 Fiscal</button>
-<button onclick="document.getElementById('cfg-supa')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">☁️ Supabase</button>
-<button onclick="document.getElementById('cfg-pin')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">🔐 PIN PDV</button>
-<button onclick="document.getElementById('cfg-backup')?.scrollIntoView({behavior:'smooth',block:'start'})" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;font-weight:400;">💾 Backup</button>
-</div>
-
-<!-- EMPRESA -->
-<div class="cfg-panel" style="margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:8px;">🏠 Empresa</p><div class="campo"><label>Nome do estabelecimento</label><input type="text" id="cfg-empresa-nome" placeholder="Di Casa Laranjinha" value="Di CASA LARANJINHA'S"></div><div class="campo"><label>CNPJ</label><input type="text" id="cfg-empresa-cnpj" placeholder="00.000.000/0001-00" value="44.686.412 0001-00"></div><div class="campo"><label>Cidade</label><input type="text" id="cfg-empresa-cidade" placeholder="Patos de Minas - MG" value="PATOS DE MINAS MG"></div><div class="campo"><label>Link direto para avaliação no Google ⭐</label><input type="url" id="cfg-empresa-google" placeholder="https://g.page/r/XXXXX/review" value="" style="font-size:11px;"><div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:8px;padding:8px;margin-top:6px;font-size:10px;line-height:1.6;color:var(--mu);"><p style="font-weight:700;color:var(--bl);margin-bottom:4px;">📍 Como pegar o link direto:</p><p>1. Acesse <strong>business.google.com</strong></p><p>2. Selecione seu negócio</p><p>3. Menu → <strong>"Pedir avaliações"</strong></p><p>4. Copie o link gerado</p><p style="margin-top:4px;">O link começa com <strong>g.page/r/</strong> e abre direto na tela de escrever ⭐</p></div></div><button onclick="salvarEmpresa()" class="bok" style="margin-top:4px;">💾 Salvar</button>
-</div><!-- DESTINATÁRIOS WHATSAPP -->
-<div id="cfg-wpp" class="cfg-panel" style="margin-bottom:10px;border-color:rgba(37,211,102,0.4);">
-<p style="font-weight:700;font-size:13px;margin-bottom:4px;">📱 Destinatários WhatsApp</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Recebem listas de compras, contas a pagar e tarefas automaticamente</p>
-
-<div style="display:flex;justify-content:space-between;align-items:center;padding:7px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
-<div>
-<p style="font-size:12px;font-weight:700;">Diogo Borges</p>
-<p style="font-size:10px;color:var(--mu);">34996853258 · compras,contas,preparo,dre</p>
-</div>
-<div style="display:flex;gap:4px;">
-<a href="https://wa.me/5534996853258?text=Ol%C3%A1Diogo%20Borges!%20%F0%9F%91%8B" target="_blank" style="padding:3px 8px;border-radius:5px;background:#25D366;color:#fff;font-size:11px;text-decoration:none;">✓</a>
-<button onclick="removerDestinatario(0)" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:11px;cursor:pointer;">✕</button>
-</div>
-</div>
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-top:6px;">
-<div class="campo"><label>Nome</label>
-<input type="text" id="dest-nome" placeholder="Ex: Diogo, Sócio..." style="background:var(--sf);border:1px solid var(--br);border-radius:7px;padding:8px;color:var(--tx);font-size:12px;width:100%;"></div>
-<div class="campo"><label>WhatsApp (com DDD)</label>
-<input type="tel" id="dest-wpp" placeholder="34999999999" style="background:var(--sf);border:1px solid var(--br);border-radius:7px;padding:8px;color:var(--tx);font-size:12px;width:100%;font-family:'Space Mono',monospace;"></div>
-<p style="font-size:10px;color:var(--mu);margin-bottom:5px;">Recebe quais relatórios:</p>
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-<input type="checkbox" id="dest-tipo-compras" checked="" style="accent-color:var(--bl);">
-🛒 Compras</label><label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-<input type="checkbox" id="dest-tipo-contas" checked="" style="accent-color:var(--bl);">
-💳 Contas a Pagar</label><label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-<input type="checkbox" id="dest-tipo-preparo" checked="" style="accent-color:var(--bl);">
-🔪 Pré-preparo</label><label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-<input type="checkbox" id="dest-tipo-dre" checked="" style="accent-color:var(--bl);">
-📊 DRE</label>
-</div>
-<button onclick="adicionarDestinatario()" style="width:100%;padding:9px;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Adicionar destinatário</button>
-</div>
-</div><!-- DADOS FISCAIS -->
-<div class="cfg-panel" style="margin-bottom:10px;border-color:rgba(68,136,255,0.3);">
-<p style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--bl);">🏢 Dados Fiscais — NF-e / NFC-e</p>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-<div><label class="lbl">CNPJ</label><input id="cfg-cnpj" class="inpm" placeholder="44.686.412/0001-00"></div>
-<div><label class="lbl">Inscrição Estadual</label><input id="cfg-ie" class="inpm" placeholder="IE"></div>
-<div style="grid-column:1/-1;"><label class="lbl">Razão Social</label><input id="cfg-razao" class="inpm" placeholder="Di Casa Laranjinha Restaurante"></div>
-<div><label class="lbl">CEP</label><input id="cfg-cep" class="inpm" placeholder="38700-000"></div>
-<div><label class="lbl">Número</label><input id="cfg-numero" class="inpm" placeholder="Nº"></div>
-<div style="grid-column:1/-1;"><label class="lbl">Logradouro</label><input id="cfg-logradouro" class="inpm" placeholder="Rua, Av..."></div>
-<div><label class="lbl">Bairro</label><input id="cfg-bairro" class="inpm" placeholder="Bairro"></div>
-<div><label class="lbl">Regime Tributário</label><select id="cfg-crt" class="inpm"><option value="1">1 — Simples Nacional</option><option value="2">2 — Simples Exc.</option><option value="3">3 — Normal</option></select></div>
-<div><label class="lbl">CSC NFC-e</label><input id="cfg-csc" class="inpm" placeholder="Do contador"></div>
-<div><label class="lbl">ID Token NFC-e</label><input id="cfg-cscid" class="inpm" placeholder="000001"></div>
-<div><label class="lbl">URL Backend</label><input id="cfg-backend-url" class="inpm" placeholder="https://gestaoerp.vercel.app"></div>
-<div><label class="lbl">Token API</label><input id="cfg-backend-token" class="inpm" placeholder="gestaoerp_diCasa_..."></div>
-<div style="grid-column:1/-1;border-top:1px solid var(--br);padding-top:8px;margin-top:4px;">
-<p style="font-size:10px;font-weight:700;color:var(--ye);margin-bottom:4px;">🔄 Auto-Deploy (GitHub)</p>
-</div>
-<div><label class="lbl">GitHub Token (PAT)</label><input id="cfg-gh-token" class="inpm" placeholder="ghp_xxxxxxxxxxxx" type="password"></div>
-<div><label class="lbl">Repositório</label><input id="cfg-gh-repo" class="inpm" placeholder="diogoborgesmg-eng/gestaoerp" value="diogoborgesmg-eng/gestaoerp"></div>
-</div>
-<button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
-<button onclick="publicarNoVercel()" id="btn-publicar" style="width: 100%; margin-top: 6px; padding: 11px; border-radius: 8px; border: 2px solid rgba(255, 204, 0, 0.5); background: rgba(68, 136, 255, 0.15); color: var(--ye); font-size: 13px; font-weight: 800; cursor: pointer;" disabled="">⟳ Enviando arquivo (1080KB → novo)...</button>
-<p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia para o GitHub → Vercel atualiza em ~1 min</p>
-</div>
-<!-- CHAVE API -->
-<div class="cfg-panel" style="margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">🔑 Chave API Anthropic</p><p style="font-size:11px;color:var(--mu);margin-bottom:10px;line-height:1.6;">Necessária para leitura de NF e análise IA.<br>Obtenha em <strong style="color:var(--bl);">console.anthropic.com</strong></p>
- <div class="ial ag" style="margin-bottom:8px;"><span>✅</span><span>Configurada: sk-ant-a••••rQAA</span></div>
- <div class="campo"><label>Chave API (sk-ant-...)</label><input type="password" id="cfg-key" placeholder="sk-ant-api03-..." autocomplete="off"></div><button class="bok" onclick="salvarCfg()" style="margin-top:4px;">💾 Salvar Chave</button>
- <button onclick="testarAPI()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.1);color:var(--bl);font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;" id="btn-teste">🧪 Testar Conexão</button>
- <div id="cfg-res" style="margin-top:8px;"></div>
-</div><!-- DICIONÁRIO DE CORREÇÕES -->
-<div class="cfg-panel" style="margin-bottom:10px;border-color:rgba(255,204,0,0.3);"><div class="row" style="margin-bottom:8px;"><p style="font-weight:700;font-size:13px;">✏️ Correções de Produtos</p><span style="font-size:11px;background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.3);color:var(--ye);padding:2px 8px;border-radius:5px;">0 salvas</span></div><p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Quando a IA lê errado, você corrige na revisão da NF e o sistema memoriza automaticamente.</p>
- <p style="font-size:11px;color:var(--mu);">Nenhuma correção salva ainda. Corrija nomes na revisão de NF.</p>
-</div><!-- IFOOD -->
-<div class="cfg-panel" style="border-color:rgba(255,136,0,0.3);margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">🛵 iFood</p>
- <div class="ial ay" style="margin-bottom:8px;"><span>⚠️</span><span>Não configurado</span></div>
- <div class="campo"><label>Client ID</label><input type="text" id="cfg-ifood-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value="" autocomplete="off"></div><div class="campo"><label>Client Secret</label><input type="password" id="cfg-ifood-secret" placeholder="Cole o client secret aqui" autocomplete="off"></div><button onclick="salvarIfood()" style="width:100%;padding:10px;border-radius:9px;border:none;background:#ff6900;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar iFood</button><div id="cfg-ifood-res" style="margin-top:8px;"></div>
-</div><!-- ANOTA AI -->
-<div class="cfg-panel" style="border-color:rgba(68,136,255,0.3);margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">📋 Anota Aí</p>
- <div class="ial ay" style="margin-bottom:8px;"><span>⚠️</span><span>Não configurado</span></div>
- <div class="campo"><label>Token API</label><input type="password" id="cfg-anotaai-token" placeholder="Token do painel Anota Aí" autocomplete="off"></div><button onclick="salvarAnotaai()" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar Anota Aí</button><div id="cfg-anotaai-res" style="margin-top:8px;"></div>
-</div><!-- STI3 -->
-<div class="cfg-panel" style="border-color:rgba(170,68,255,0.3);margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">🖥️ STi3</p><div class="ial ay"><span>💡</span><span>STi3: Relatórios → Vendas → Exportar Excel</span></div><label style="display:block;cursor:pointer;margin-top:8px;"><input type="file" accept=".xlsx,.xls,.csv" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"><div style="padding:10px;border-radius:9px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;text-align:center;">📂 Importar Relatório STi3</div></label><div id="cfg-sti3-res" style="margin-top:8px;"></div>
-</div><!-- CERTIFICADO DIGITAL -->
-<div id="cfg-cert" class="card" style="margin-bottom:10px;border-color:rgba(99,102,241,0.4);">
-<p style="font-weight:700;font-size:12px;margin-bottom:4px;">🔐 Certificados Digitais A1</p>
-<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Um por CNPJ — necessário para NFC-e e integração SEFAZ</p>
-<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 1</p>
-<span style="font-size:10px;color:var(--mu);">Não configurado</span>
-</div>
-
-
-<div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(1)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
-
-</div>
-<div id="cert-form-1" style="display:none;">
-<!-- Upload do arquivo .pfx -->
-<div id="cert-drop-1" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],1);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-1').click()">
- <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-1">Arraste ou toque para selecionar o arquivo .pfx</p>
- <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
- <input type="file" id="cert-file-1" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],1)">
-</div>
-<div id="cert-info-1" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-1"></p>
-</div>
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">🔑 Senha do certificado</label>
- <input type="password" id="cfg-cert-senha-1" placeholder="Digite a senha" class="inpm">
-</div>
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">CNPJ</label>
- <input type="text" id="cfg-cert-cnpj-1" placeholder="00.000.000/0001-00" class="inpm" style="font-size:10px;font-family:'Space Mono',monospace;" value="">
-</div>
-</div>
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<div style="flex:2;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-1" placeholder="Di Casa Laranjinha" class="inpm" value="">
-</div>
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
- <input type="date" id="cfg-cert-val-1" class="inpm" value="">
-</div>
-</div>
-<button onclick="salvarCertificado(1)" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(99,102,241,0.8);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">💾 Salvar Certificado 1</button>
-</div>
-</div><div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p style="font-size:11px;font-weight:700;">🔐 Certificado 2</p>
-<span style="font-size:10px;color:var(--mu);">Não configurado</span>
-</div>
-
-
-<div style="display:flex;gap:5px;margin-bottom:6px;">
-<button onclick="abrirCertificado(2)" style="flex:2;padding:6px;border-radius:7px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-size:10px;font-weight:700;cursor:pointer;">+ Configurar</button>
-
-</div>
-<div id="cert-form-2" style="display:none;">
-<!-- Upload do arquivo .pfx -->
-<div id="cert-drop-2" ondragover="event.preventDefault();this.style.borderColor='var(--pu)';this.style.background='rgba(170,68,255,0.1)';" ondragleave="this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';" ondrop="event.preventDefault();this.style.borderColor='rgba(170,68,255,0.3)';this.style.background='rgba(170,68,255,0.05)';certProcessarArquivo(event.dataTransfer.files[0],2);" style="border:2px dashed rgba(170,68,255,0.3);border-radius:10px;background:rgba(170,68,255,0.05);padding:14px;text-align:center;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('cert-file-2').click()">
- <p style="font-size:22px;margin-bottom:4px;">📂</p>
- <p style="font-size:12px;font-weight:700;color:var(--pu);" id="cert-file-label-2">Arraste ou toque para selecionar o arquivo .pfx</p>
- <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
- <input type="file" id="cert-file-2" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],2)">
-</div>
-<div id="cert-info-2" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
- <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-2"></p>
-</div>
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">🔑 Senha do certificado</label>
- <input type="password" id="cfg-cert-senha-2" placeholder="Digite a senha" class="inpm">
-</div>
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">CNPJ</label>
- <input type="text" id="cfg-cert-cnpj-2" placeholder="00.000.000/0001-00" class="inpm" style="font-size:10px;font-family:'Space Mono',monospace;" value="">
-</div>
-</div>
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<div style="flex:2;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Nome/Razão Social</label>
- <input type="text" id="cfg-cert-nome-2" placeholder="Di Casa Laranjinha" class="inpm" value="">
-</div>
-<div style="flex:1;">
- <label style="font-size:10px;color:var(--mu);display:block;margin-bottom:3px;">Validade</label>
- <input type="date" id="cfg-cert-val-2" class="inpm" value="">
-</div>
-</div>
-<button onclick="salvarCertificado(2)" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(99,102,241,0.8);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">💾 Salvar Certificado 2</button>
-</div>
-</div>
-<div class="ial ay" style="flex-direction:column;align-items:flex-start;gap:2px;">
-<span style="font-size:10px;font-weight:700;">📋 Converter .pfx → Base64:</span>
-<span style="font-size:10px;">Windows: <code>certutil -encode cert.pfx cert.txt</code></span>
-<span style="font-size:10px;">Mac/Linux: <code>base64 -i cert.pfx | tr -d '
-'</code></span>
-</div>
-</div>
-
-<!-- FISCAL -->
-<!-- FISCAL --> Controle Fiscal / NFC-e<p></p>
-<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Configure a meta de emissão de cupons para o mês</p>
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<div class="campo" style="flex:1;"><label>Meta mensal (%)</label>
-<input type="number" id="cfg-cupom-pct" value="0" min="0" max="100" step="5" class="inpm" style="font-size:14px;text-align:center;font-family:'Space Mono',monospace;"></div>
-<div class="campo" style="flex:1;"><label>Alíquota imposto (%)</label>
-<input type="number" id="cfg-cupom-aliq" value="6" min="0" max="50" step="0.5" class="inpm" style="font-size:14px;text-align:center;font-family:'Space Mono',monospace;"></div>
-</div>
-<button onclick="const p=document.getElementById('cfg-cupom-pct')?.value;const a=document.getElementById('cfg-cupom-aliq')?.value;if(p!==null)localStorage.setItem('erp_cupom_pct',p);if(a!==null)localStorage.setItem('erp_cupom_aliq',a);render();alert('✅ Configuração fiscal salva!');" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,106,0,0.7);color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px;">💾 Salvar configuração fiscal</button>
-
-<div class="ial ay" style="margin-top:8px;flex-direction:column;align-items:flex-start;gap:2px;">
-<span style="font-size:10px;font-weight:700;">⏳ Integração SEFAZ pendente:</span>
-<span style="font-size:10px;">• Certificado digital A1/A3</span>
-<span style="font-size:10px;">• Homologação MG SEFAZ</span>
-<span style="font-size:10px;">• Emissor NFC-e credenciado</span>
-</div>
-
-</div>
-
-<!-- SUPABASE SYNC -->
-<div class="card" style="margin-bottom:10px;border-color:rgba(62,207,142,0.4);">
-<p style="font-weight:700;font-size:12px;margin-bottom:6px;">☁️ Sincronização Supabase</p>
-<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Sincronize entre celular, tablet e computador em tempo real</p>
-<div class="campo"><label>URL do Supabase</label>
-<input type="url" id="cfg-sb-url" placeholder="https://xxx.supabase.co" value="" class="inp" style="font-size:11px;font-family:'Space Mono',monospace;">
-</div>
-<div class="campo"><label>Chave anon (public)</label>
-<input type="password" id="cfg-sb-key" placeholder="eyJ..." class="inp" style="font-size:11px;font-family:'Space Mono',monospace;">
-</div>
-<div style="display:flex;gap:6px;">
-<button onclick="(()=&gt;{const u=document.getElementById('cfg-sb-url')?.value?.trim();const k=document.getElementById('cfg-sb-key')?.value?.trim();if(!u||!k){alert('Preencha URL e chave!');return;}localStorage.setItem('erp_sb_url',u);localStorage.setItem('erp_sb_key',k);if(!localStorage.getItem('erp_sb_device'))localStorage.setItem('erp_sb_device','device_'+Date.now());render();})()" style="flex:2;padding:9px;border-radius:8px;border:none;background:#3ecf8e;color:#000;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
-<button onclick="testarConexaoSupabase()" style="flex:1;padding:9px;border-radius:8px;border:1px solid rgba(62,207,142,0.3);background:transparent;color:#3ecf8e;font-size:11px;cursor:pointer;">🔍 Testar</button>
-</div>
-<p id="sb-status" style="font-size:11px;color:var(--mu);margin-top:6px;text-align:center;"></p>
-<div class="ial ay" style="margin-top:6px;flex-direction:column;align-items:flex-start;gap:3px;">
-<span style="font-size:10px;font-weight:700;">📋 Passo a passo:</span>
-<span style="font-size:10px;">1. Acesse supabase.com (gratuito)</span>
-<span style="font-size:10px;">2. Crie um projeto</span>
-<span style="font-size:10px;">3. Cole URL e chave anon acima</span>
-<span style="font-size:10px;">4. Execute o SQL no editor do Supabase</span>
-</div>
-</div>
-
-<!-- SEGURANÇA PDV -->
-<div class="card" style="margin-bottom:10px;border-color:rgba(99,102,241,0.3);">
-<p style="font-weight:700;font-size:12px;margin-bottom:8px;">🔐 Segurança do PDV</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:8px;">PIN para proteger acesso ao modo Dono/Gerente no PDV</p>
-<div class="campo"><label>PIN de acesso (4-6 dígitos)</label>
-<input type="password" id="cfg-pdv-pin" placeholder="Definir PIN..." maxlength="6" pattern="[0-9]*" inputmode="numeric" class="inpm" style="font-size:18px;letter-spacing:4px;">
-</div>
-<div style="display:flex;gap:6px;">
-<button onclick="salvarPinPDV()" style="flex:1;padding:9px;border-radius:8px;border:none;background:rgba(99,102,241,0.8);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar PIN</button>
-
-</div>
-<div class="ial ay" style="margin-top:6px;"><span>⚠️</span><span>Sem PIN — qualquer perfil pode ver tudo</span></div>
-</div>
-<div class="card" style="margin-bottom:10px;">
-<p style="font-weight:700;font-size:12px;margin-bottom:8px;">💾 Backup e Dados</p>
-<div class="ial ay" style="margin-bottom:6px;"><span>⚠️</span><span>Nenhum backup ainda! Faça um agora.</span></div>
-<div style="display:flex;gap:6px;margin-bottom:6px;">
-<button onclick="exportarDados()" style="flex:2;padding:10px;border-radius:9px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);font-size:11px;font-weight:700;cursor:pointer;">📤 Backup JSON</button>
-<label style="flex:1;cursor:pointer;"><input type="file" accept=".json" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarDados(this)"><div style="padding:10px;border-radius:9px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;text-align:center;">📥 Restaurar</div></label>
-</div>
-<button onclick="verificarSaudeDados()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.08);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔍 Verificar saúde dos dados</button>
-<div style="background:rgba(255,51,102,0.05);border:1px solid rgba(255,51,102,0.2);border-radius:10px;padding:12px;margin-top:8px;">
-<p style="font-size:11px;font-weight:700;color:var(--re);margin-bottom:4px;">🗑️ Limpar Dados de Teste</p>
-<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Remove estoque, vendas e lançamentos. Mantém cardápio, fichas e configurações.</p>
-<button onclick="limparDadosTeste()" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;">🗑️ Limpar Estoque + Vendas + Contas</button>
-</div>
-<button onclick="enviarRelatorioSemanal()" style="flex:1;padding:9px;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">📲 Relatório Semanal</button>
-<button onclick="exportarRelatorioPDF()" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.1);color:var(--ye);font-size:11px;font-weight:700;cursor:pointer;">📊 Relatório (.txt)</button>
-<button onclick="pedirPermissaoNotificacao()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">🔔 Ativar notificações</button>
-</div>
-</div>
+<div class="main" id="main"></div>
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
 </div>
 <!-- MODAL PDV -->
@@ -392,11 +125,12 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <!-- BOTÃO FLUTUANTE VOZ PDV -->
 <div id="pdv-voz-flutuante" style="display:none;position:fixed;bottom:72px;right:14px;z-index:400;">
  <div id="voz-status-flutuante" style="display:none;position:absolute;right:62px;top:50%;transform:translateY(-50%);background:var(--sf);border:1px solid var(--br);border-radius:10px;padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--tx);max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
- <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()" style="width:54px;height:54px;border-radius:50%;border:2px solid var(--re);background:var(--sf);color:var(--re);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,51,102,0.35);">
+ <button id="btn-voz-flutuante" onclick="toggleVozFlutuante()"
+  style="width:54px;height:54px;border-radius:50%;border:2px solid var(--re);background:var(--sf);color:var(--re);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,51,102,0.35);">
   🎙️
  </button>
 </div>
-<div class="bnav"><div class="nis"><button class="ni" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
+<div class="bnav"><div class="nis"><button class="ni a" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
 </div></div><script>
 
 const MODEL ="claude-sonnet-4-6";
@@ -8415,7 +8149,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -10501,7 +10235,8 @@ function rDRE(){
 const _rhTotal=(cc["Funcionários/RH"]||0)+(cc["👥 Folha / Funcionário"]||0)+
  (cc["Folha / Funcionário"]||0)+(cc["folha"]||0)+(cc["💰 Folha CLT"]||0)+
  (cc["🗓️ Diária / Diarista"]||0)+(cc["💼 Freelancer / Autônomo"]||0)+
- (cc["Diária"]||0)+(cc["Freelancer"]||0)+(cc["Autônomo"]||0);
+ (cc["Diária"]||0)+(cc["Freelancer"]||0)+(cc["Autônomo"]||0)+
+ (cc["Entregador"]||0)+(cc["🛵 Entregador / Motoboy"]||0);
 const rhPct=r>0?(_rhTotal/r*100):0;
  // Alerta de anomalia — compara com média histórica do mesmo dia da semana
  const db=ldb();
@@ -10622,7 +10357,7 @@ ${itens.length>0?`<div style="border-top:1px solid var(--br);padding-top:8px;">$
 <div class="kpi"><p class="kl">Receita</p><p class="kv" style="color:#00ff88;">${brl(r)}</p><p class="ks">${rec.length} lanç.</p></div>
 <div class="kpi"><p class="kl">Custo</p><p class="kv" style="color:#ff3366;">${brl(c)}</p><p class="ks">${cus.length} lanç.</p></div>
 <div class="kpi"><p class="kl">CMV Geral</p><p class="kv" style="color:${cmvPct>35?'#ff3366':cmvPct>25?'#ffcc00':'#00ff88'};">${cmvPct.toFixed(1)}%</p><p class="ks">Meta ≤35%</p></div>
-<div class="kpi"><p class="kl">RH</p><p class="kv" style="color:${rhPct>30?'#ff3366':'#00ff88'};">${rhPct.toFixed(1)}%</p><p class="ks">Meta ≤30%</p></div>
+<div class="kpi"><p class="kl">RH</p><p class="kv" style="color:${(_rhTotal>0&&r===0)||rhPct>30?'#ff3366':'#00ff88'};">${r>0?rhPct.toFixed(1)+'%':(_rhTotal>0?brl(_rhTotal):'0,0%')}</p><p class="ks">${r>0?'Meta ≤30%':(_rhTotal>0?'sem receita':'Meta ≤30%')}</p></div>
 </div>
 
 ${isDiario&&rMes>0?`<div style="background:var(--sf2);border:1px solid var(--br);border-radius:10px;padding:8px 10px;margin-bottom:10px;cursor:pointer;" onclick="dreVista='mensal';render();">
@@ -15790,65 +15525,37 @@ async function processarOFX(bancoId, input){
    db.bancos[bIdx].extrato=[...lancamentos,...(db.bancos[bIdx].extrato||[])].slice(0,500);
   }
 
-  // ── LANÇAMENTO AUTOMÁTICO NO DRE COM CONCILIAÇÃO ──────
-  let novos=0, conciliados=0, ignorados=0;
+  // ── LANÇAMENTO AUTOMÁTICO NO DRE — ANTI-DUPLICAÇÃO ABSOLUTA ──
+  // Usa _ofxId único por transação — reimportando 100x nunca duplica
+  let novos=0, conciliados=0;
   const banco=(db.bancos||[])[bIdx];
 
-  lancamentos.forEach(l=>{
-   // Ignora transferências entre contas próprias e saldos
-   if(l.tipo==='transferencia')return;
-   if(!l.valor||l.valor===0)return;
-
-   // Verifica se já existe lançamento com mesmo valor e data próxima (±2 dias)
-   const [dd,mm,yyyy]=l.data.split('/');
-   const dataLanc=yyyy&&mm&&dd?yyyy+'-'+mm+'-'+dd:null;
-   if(!dataLanc){ignorados++;return;}
-
-   const diaKey=dd+'/'+mm+'/'+yyyy;
-   const diaData=db[diaKey]||{r:[],c:[]};
-
-   // Verifica duplicata: mesmo valor e mesma data
-   const jaExiste=[...(diaData.r||[]),...(diaData.c||[])].some(x=>
-    Math.abs(Number(x.v)-Math.abs(l.valor))<0.02 &&
-    (x._ofxId===l.id || x._banco===banco?.nome)
-   );
-
-   if(jaExiste){conciliados++;return;}
-
-   // Cria o lançamento
-   const descricao=(l.descricao||l.memo||'').substring(0,50);
-   const lanc={
-    id:l.id||uid(),
-    d:descricao,
-    v:Math.abs(l.valor),
-    cat:l.categoria||'Outros',
-    seg:'financeiro',
-    _banco:banco?.nome||'Banco',
-    _ofxId:l.id,
-    _dia:diaKey
-   };
-
-   if(!db[diaKey])db[diaKey]={r:[],c:[]};
-
-   if(l.valor>0){
-    // Entrada — mas NÃO lança vendas do PDV (já lançadas)
-    if(l.tipo==='pix_in'||l.tipo==='receita'){
-     if(!db[diaKey].r)db[diaKey].r=[];
-     db[diaKey].r.push({...lanc,seg:'receita_banco'});
-     novos++;
-    }
-   } else {
-    // Saída — lança como despesa
-    if(!db[diaKey].c)db[diaKey].c=[];
-    db[diaKey].c.push(lanc);
-    novos++;
-   }
+  // 1. Indexa TODOS os _ofxId já lançados em qualquer dia
+  const ofxJaLancados=new Set();
+  Object.keys(db).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k)).forEach(dia=>{
+   [...(db[dia]?.r||[]),...(db[dia]?.c||[])].forEach(x=>{if(x._ofxId)ofxJaLancados.add(x._ofxId);});
   });
 
+  // 2. Lança apenas os novos
+  lancamentos.forEach(l=>{
+   if(!l.id||ofxJaLancados.has(l.id)){conciliados++;return;}
+   if(l.tipo==='transferencia'||!l.valor||l.valor===0)return;
+   const parts=(l.data||'').split('/');
+   if(parts.length!==3)return;
+   const diaKey=parts[0]+'/'+parts[1]+'/'+parts[2];
+   if(!db[diaKey])db[diaKey]={r:[],c:[]};
+   const lanc={id:uid(),d:(l.descricao||l.memo||'').substring(0,50),
+    v:Math.abs(l.valor),cat:l.categoria||'Outros',
+    seg:l.tipo||'despesa',_banco:banco?.nome||'Banco',
+    _ofxId:l.id,_dia:diaKey};
+   if(l.valor>0&&(l.tipo==='pix_in'||l.tipo==='receita')){
+    db[diaKey].r.push({...lanc,seg:'receita_banco'});novos++;
+   }else if(l.valor<0){
+    db[diaKey].c.push(lanc);novos++;
+   }
+  });
   sdb(db);
-
-  // Mostra resumo da conciliação
-  const resumoConcil=`${novos} lançados no DRE · ${conciliados} já existiam · ${ignorados} ignorados`;
+  const resumoConcil=novos+' novos lançados · '+conciliados+' já existiam (nunca duplica)';
 
   if(resEl)resEl.innerHTML=`<div class="ial ag" style="margin-bottom:8px;">
    <span>✅</span><span style="font-weight:700;">${lancamentos.length} importados → ${novos||0} lançados no DRE</span>
@@ -16800,7 +16507,9 @@ function lancarExtraviado(ofxId,desc,valor,data){
   ['⚡ Energia / Água / Gás','energia'],
   ['📱 Telecom','telecom'],
   ['🔧 Manutenção','manutencao'],
-  ['🚗 Combustível','combustivel'],
+  ['🚗 Combustível / Frete','combustivel'],
+  ['🛵 Entregador / Motoboy','Entregador'],
+  ['📦 Delivery / iFood','delivery'],
   ['🎯 Marketing','marketing'],
   ['🔍 Outros','outros']
  ];
@@ -16854,8 +16563,192 @@ function confirmarLancExtrav(ofxId,desc,valor,data,catLabel,catId){
  render();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// BOT WHATSAPP — Recebe lançamentos do webhook
+// ═══════════════════════════════════════════════════════════════
+
+// Lança recibo recebido do bot WhatsApp
+function lancarReciboBot(dados){
+ if(!dados||!dados.valor)return;
+ const db=ldb();
+ const dia=dados.data||hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+
+ // Se tem juros, lança separado
+ if(dados.juros>0){
+  db[dia].c.push({
+   id:uid(),d:'Juros/Multa: '+dados.descricao,
+   v:dados.juros,cat:'Juros Bancários',seg:'juros',
+   _origem:'whatsapp_bot',_dia:dia
+  });
+ }
+
+ // Lança o pagamento principal
+ const catMap={
+  'Folha CLT':'Funcionários/RH','Diária':'Diária','Freelancer':'Freelancer',
+  'Entregador':'Entregador','Vale':'Vale Funcionário',
+  'Fornecedor':'Fornecedor','Energia':'Energia/Água/Gás',
+  'Juros':'Juros Bancários','IOF':'IOF','Outros':'Outros'
+ };
+
+ db[dia].c.push({
+  id:uid(),
+  d:(dados.destinatario?dados.destinatario+' — ':'')+dados.descricao,
+  v:dados.valor,
+  cat:catMap[dados.categoria]||dados.categoria||'Outros',
+  seg:dados.tipo||'pix_out',
+  _origem:'whatsapp_bot',
+  _dia:dia,
+  obs:dados.obs||''
+ });
+
+ sdb(db);
+
+ // Notificação visual
+ const notif=document.createElement('div');
+ notif.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 16px;border-radius:10px;z-index:999;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
+ notif.textContent='✅ WhatsApp: R$'+dados.valor.toFixed(2).replace('.',',')+' lançado!';
+ document.body.appendChild(notif);
+ setTimeout(()=>notif.remove(),4000);
+ render();
+}
+
+// Verifica webhook periodicamente (polling simples)
+async function verificarBotWhatsapp(){
+ try{
+  const df=gDadosFiscais();
+  const backendUrl=df.backendUrl||'https://gestaoerp.vercel.app';
+  const token=df.backendToken||'gestaoerp_diCasa_44686412';
+  const db=ldb();
+  const ultimaVerif=db._botUltVerif||'';
+  const agora=new Date().toISOString();
+
+  const r=await fetch(backendUrl+'/api/bot/pendentes?desde='+encodeURIComponent(ultimaVerif),{
+   headers:{'x-api-token':token}
+  });
+  if(!r.ok)return;
+  const data=await r.json();
+
+  if(data.lancamentos?.length>0){
+   data.lancamentos.forEach(l=>lancarReciboBot(l));
+   db._botUltVerif=agora;
+   sdb(db);
+  }
+ }catch(e){}
+}
+
+// Roda a verificação a cada 30 segundos quando o sistema está aberto
+setInterval(verificarBotWhatsapp, 30000);
+
+function rBotWhatsapp(){
+ const df=gDadosFiscais();
+ const db=ldb();
+ const backendUrl=df.backendUrl||'https://gestaoerp.vercel.app';
+ const lancamentosBot=(()=>{
+  let total=0,count=0;
+  Object.keys(db).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k)).forEach(dia=>{
+   [...(db[dia]?.c||[])].filter(l=>l._origem==='whatsapp_bot').forEach(l=>{total+=Number(l.v);count++;});
+  });
+  return{total,count};
+ })();
+
+ return`<div class="si">
+<p style="font-weight:800;font-size:15px;margin-bottom:4px;">🤖 Bot WhatsApp</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Encaminhe recibos para o grupo → lança automaticamente no sistema</p>
+
+<!-- Status -->
+<div class="card" style="margin-bottom:10px;">
+ <div style="display:flex;align-items:center;gap:10px;">
+  <span style="font-size:28px;">📱</span>
+  <div>
+   <p style="font-size:13px;font-weight:700;">Webhook: ${backendUrl}/api/webhook/whatsapp</p>
+   <p style="font-size:10px;color:var(--mu);">Configure na Evolution API como Webhook Global URL</p>
+  </div>
+ </div>
+</div>
+
+<!-- Estatísticas -->
+<div class="kg" style="margin-bottom:10px;">
+ <div class="kpi"><p class="kl">Lançados via Bot</p><p class="kv" style="color:var(--gr);">${lancamentosBot.count}</p><p class="ks">recibos</p></div>
+ <div class="kpi"><p class="kl">Total</p><p class="kv" style="color:var(--re);">${brl(lancamentosBot.total)}</p><p class="ks">processado</p></div>
+</div>
+
+<!-- Como configurar -->
+<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🛠️ Como configurar (15 min, grátis)</p>
+ ${[
+  ['1','Acesse railway.app → crie conta com GitHub'],
+  ['2','Deploy "EvolutionAPI/evolution-api"'],
+  ['3','Variável: WEBHOOK_GLOBAL_URL = '+backendUrl+'/api/webhook/whatsapp'],
+  ['4','Escaneie QR Code com WhatsApp do restaurante'],
+  ['5','Crie grupo "Di Casa — Lançamentos" e adicione o bot'],
+  ['6','Encaminhe qualquer comprovante → lançado automaticamente!']
+ ].map(([n,t])=>`<div style="display:flex;gap:8px;margin-bottom:6px;">
+  <span style="background:var(--bl);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${n}</span>
+  <span style="font-size:11px;color:var(--mu);">${t}</span>
+ </div>`).join('')}
+</div>
+
+<!-- Categorias automáticas -->
+<div class="card" style="margin-bottom:8px;">
+ <p style="font-size:12px;font-weight:700;margin-bottom:6px;">📂 Classificação automática</p>
+ ${[
+  ['PIX para pessoa física','💼 Folha/Diária/Freelancer'],
+  ['PIX obs: entregador/motoboy','🛵 Entregador'],
+  ['PIX obs: vale/adiantamento','💵 Vale Funcionário'],
+  ['Boleto com CNPJ','📦 Fornecedor'],
+  ['CEMIG/COPASA/Gás','⚡ Energia'],
+  ['Juros/multa no comprovante','💰 Juros (lança separado)'],
+ ].map(([de,para])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+  <span style="font-size:10px;color:var(--mu);">${de}</span>
+  <span style="font-size:10px;color:var(--tx);font-weight:700;">${para}</span>
+ </div>`).join('')}
+</div>
+
+<!-- Teste manual -->
+<div class="card">
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🧪 Testar lançamento manual</p>
+ <textarea id="bot-teste-txt" style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:11px;height:80px;resize:none;" placeholder="Cole o texto do comprovante aqui..."></textarea>
+ <button onclick="testarBotManual()" style="width:100%;margin-top:6px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📤 Testar análise</button>
+ <div id="bot-teste-resultado" style="margin-top:8px;"></div>
+</div>
+</div>`;
+}
+
+async function testarBotManual(){
+ const txt=document.getElementById('bot-teste-txt')?.value?.trim();
+ const res=document.getElementById('bot-teste-resultado');
+ if(!txt){alert('Cole o texto do comprovante');return;}
+ if(res)res.innerHTML='<div class="ial ay"><span>⟳</span><span>Analisando...</span></div>';
+
+ try{
+  const df=gDadosFiscais();
+  const r=await fetch((df.backendUrl||'https://gestaoerp.vercel.app')+'/api/recibo/analisar',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+   body:JSON.stringify({texto:txt})
+  });
+  const data=await r.json();
+  if(data.lancamento){
+   const l=data.lancamento;
+   if(res)res.innerHTML=`<div class="ial ag" style="margin-bottom:6px;"><span>✅</span><span><b>R$ ${l.valor.toFixed(2)}</b> — ${l.categoria}</span></div>
+    <div class="card" style="font-size:11px;">
+     <p><b>Destinatário:</b> ${l.destinatario||'—'}</p>
+     <p><b>Tipo:</b> ${l.tipo}</p>
+     <p><b>Juros:</b> R$ ${(l.juros||0).toFixed(2)}</p>
+     <p><b>Data:</b> ${l.data}</p>
+     <button onclick="lancarReciboBot(${JSON.stringify(l).replace(/"/g,"'")})" style="width:100%;margin-top:8px;padding:8px;border-radius:7px;border:none;background:var(--gr);color:#000;font-size:11px;font-weight:800;cursor:pointer;">✅ Lançar no sistema</button>
+    </div>`;
+  }else{
+   if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>Não identificou pagamento</span></div>';
+  }
+ }catch(e){
+  if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>'+e.message+'</span></div>';
+ }
+}
+
 render();
 
 </script>
-
-
+</body>
+</html>
