@@ -3792,161 +3792,187 @@ function sCardapioPDV(c){const d=ldb();d.cardapioPDV=c;sdb(d);}
 
 function rPDV(){
  const mesas=gMesas();
- const livres=mesas.filter(m=>m.status==="livre").length;
- const ocupadas=mesas.filter(m=>m.status==="ocupada").length;
- const contaPedida=mesas.filter(m=>m.status==="conta").length;
- const totalAberto=mesas.filter(m=>m.status!=="livre").reduce((a,m)=>a+(m.comanda||[]).reduce((b,i)=>b+i.val*i.qtd,0),0);
- const promos=gPromos();
- const cardapio=gCardapioPDV();
- const agora=new Date();
- const hora=agora.getHours()+agora.getMinutes()/60;
- const diaSemana=agora.getDay();
- const promosAtivas=promos.filter(p=>{
- if(!p.ativo)return false;
- const ok=!p.dias?.length||p.dias.includes(diaSemana);
- const hok=(!p.hIni&&!p.hFim)||(hora>=p.hIni&&hora<p.hFim);
- return ok&&hok;
- });
- const db=ldb();
- const vendHoje=db._pdvVendas?.[hj()]||[];
- const totalHoje=vendHoje.reduce((a,v)=>a+v.total,0);
+ const livres=mesas.filter(m=>m.status==='livre').length;
+ const ocupadas=mesas.filter(m=>m.status==='ocupada').length;
+ const conta=mesas.filter(m=>m.status==='conta').length;
+ const vendHoje=calcVendasHoje();
 
- const nomesPerfil={dono:"👑 Dono",gerente:"🎯 Gerente",garcom:"🍽️ Garçom",caixa:"💰 Caixa"};
- return`<div class="si">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-<div style="display:flex;align-items:center;gap:8px;">
-<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:18px;">🍽️</div>
-<div><p style="font-weight:800;font-size:15px;">PDV</p>
-<p style="font-size:11px;color:var(--mu);">${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</p></div>
-</div>
-<div style="display:flex;gap:5px;">
-<button onclick="trocarPerfilPDV()" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.12);color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer;">${nomesPerfil[_pdvPerfil]}</button>
-<button onclick="verHistoricoComandas()" style="padding:5px 8px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;" title="Histórico de vendas">📋</button>
-<button onclick="abrirConfigPDV()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">⚙️</button>
-<button onclick="_pdvModoVisual=!_pdvModoVisual;render();" style="padding:5px 10px;border-radius:7px;border:1px solid ${_pdvModoVisual?'rgba(0,255,136,0.5)':'var(--br)'};background:${_pdvModoVisual?'rgba(0,255,136,0.15)':'var(--sf2)'};color:${_pdvModoVisual?'var(--gr)':'var(--mu)'};font-size:11px;font-weight:700;cursor:pointer;" title="Modo Painel Visual">🛒</button>
-</div>
-</div>
-<div class="kg" style="margin-bottom:10px;">
-<div class="kpi"><p class="kl">Livres</p><p class="kv" style="color:#00ff88;">${livres}</p><p class="ks">mesas</p></div>
-<div class="kpi"><p class="kl">Ocupadas</p><p class="kv" style="color:#ffcc00;">${ocupadas}</p><p class="ks">mesas</p></div>
-<div class="kpi"><p class="kl">Conta</p><p class="kv" style="color:#ff3366;">${contaPedida}</p><p class="ks">pedindo</p></div>
-${podeVerRelatorios()?`<div class="kpi" onclick="verRelatorioGarcom()" style="cursor:pointer;"><p class="kl">Vendas hoje</p><p class="kv" style="color:#f59e0b;">${brl(totalHoje)}</p><p class="ks">${vendHoje.length} contas</p></div>`:`<div class="kpi"><p class="kl">Total</p><p class="kv" style="color:var(--mu);">🔒</p><p class="ks">restrito</p></div>`}
-</div>
-${(()=>{const ativas=promos.filter(p=>{if(!p.ativo)return false;const ok=!p.dias?.length||p.dias.includes(diaSemana);const hok=(!p.hIni&&!p.hFim)||(hora>=p.hIni&&hora<p.hFim);return ok&&hok;});if(!ativas.length)return"";return`<div class="ial ag" style="margin-bottom:8px;"><span>🎉</span><span><strong>${ativas.length} promoção(ões) ativas:</strong> ${ativas.map(p=>p.nome+""+brl(p.preco)).join(",")}</span></div>`;})()}
-<!-- FILTRO DE MESAS -->
-${mesas.length>12?`<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">
-<button onclick="filtrarMesasPDV('todas')" id="btn-mesa-todas" style="padding:5px 10px;border-radius:6px;border:2px solid var(--bl);background:rgba(68,136,255,0.15);color:var(--bl);font-size:10px;font-weight:700;cursor:pointer;">Todas (${mesas.length})</button>
-<button onclick="filtrarMesasPDV('ocupadas')" id="btn-mesa-ocupadas" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">🍽️ Ocupadas (${mesas.filter(m=>m.status!=="livre").length})</button>
-<button onclick="filtrarMesasPDV('livres')" id="btn-mesa-livres" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">✅ Livres (${mesas.filter(m=>m.status==="livre").length})</button>
-<button onclick="filtrarMesasPDV('conta')" id="btn-mesa-conta" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">🧾 Conta (${mesas.filter(m=>m.status==="conta").length})</button>
-</div>`:""}
+ return`<div style="background:var(--sf);min-height:100vh;">
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-<p class="lbl" style="margin:0;">🗒️ Comandas</p>
-<button onclick="abrirBuscaComanda()" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">🔍 Buscar #</button>
-</div>
-<div id="pdv-mapa-mesas" style="display:grid;grid-template-columns:repeat(${mesas.length>100?6:mesas.length>50?5:mesas.length>20?4:3},1fr);gap:${mesas.length>30?'5px':'8px'};margin-bottom:12px;${mesas.length>60?'max-height:420px;overflow-y:auto;padding-right:4px;':''}"> ${mesas.map(m=>{
- const total=(m.comanda||[]).reduce((a,i)=>a+i.val*i.qtd,0);
- // Calcular tempo de ocupação
- let tempo="";let alertaTempo=false;
- if(m.abertura&&m.status!=="livre"){
- const agora=new Date();
- const [hh,mm]=m.abertura.split(':').map(Number);
- const aberturaMins=hh*60+mm;
- const agoraMins=agora.getHours()*60+agora.getMinutes();
- const diffMins=agoraMins-aberturaMins;
- if(diffMins>0){
- const h=Math.floor(diffMins/60);const min=diffMins%60;
- tempo=h>0?(h+'h'+String(min).padStart(2,'0')):(min+'min');
- alertaTempo=diffMins>120;// mais de 2h
- }
- }
- const cor=m.status==="livre"?"rgba(0,255,136,0.12)":m.status==="conta"?"rgba(255,51,102,0.18)":alertaTempo?"rgba(255,106,0,0.18)":"rgba(255,204,0,0.12)";
- const borda=m.status==="livre"?"rgba(0,255,136,0.3)":m.status==="conta"?"rgba(255,51,102,0.5)":alertaTempo?"rgba(255,106,0,0.6)":"rgba(255,204,0,0.3)";
- const icone=m.status==="livre"?"✅":m.status==="conta"?"🧾":alertaTempo?"⏰":"🍽️";
- const pad=mesas.length>100?"5px 3px":mesas.length>50?"7px 4px":"10px 6px";
- const fIcon=mesas.length>100?"10px":mesas.length>50?"12px":"14px";
- const fNome=mesas.length>100?"8px":mesas.length>50?"9px":"11px";
- const showInfo=mesas.length<=100;
- const clickFn = _pdvModoVisual ? 'abrirPainelVisual' : 'abrirMesa';
-let html='<button onclick="'+clickFn+'('+m.id+')" data-mesa-id="'+m.id+'" style="padding:'+pad+';border-radius:10px;border:2px solid '+borda+';background:'+cor+';cursor:pointer;text-align:center;">';
- html+='<p style="font-size:'+fIcon+';margin-bottom:2px;">'+icone+'</p>';
- html+='<p style="font-size:'+fNome+';font-weight:700;color:var(--tx);">'+m.nome+'</p>';
- if(m.mesa)html+='<p style="font-size:9px;color:#f59e0b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍'+m.mesa+'</p>';
- if(showInfo&&m.garcom)html+='<p style="font-size:9px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+m.garcom+'</p>';
- if(showInfo&&tempo)html+='<p style="font-size:9px;color:'+(alertaTempo?"#ff6a00":"var(--mu)")+';">'+tempo+'</p>';
- if(showInfo&&total>0)html+='<p style="font-size:11px;font-weight:700;color:#f59e0b;">'+brl(total)+'</p>';
- if(m.status==="conta")html+='<p style="font-size:8px;color:#ff3366;font-weight:700;">CONTA!</p>';
- html+='</button>';
- return html;}).join("")}
-</div>
-<div class="card" style="margin-bottom:10px;border-color:rgba(245,158,11,0.3);">
-<div class="row" style="margin-bottom:8px;">
-<p style="font-weight:700;font-size:13px;">🎉 Promoções por Período</p>
-<button onclick="abrirAddPromo()" style="padding:4px 10px;border-radius:6px;border:none;background:var(--ye);color:#000;font-size:11px;font-weight:700;cursor:pointer;">+ Nova</button>
-</div>
-${promos.length===0?`<p style="font-size:11px;color:var(--mu);">Cadastre promoções com horário e dias</p>`:""}
-${promos.map((p,i)=>{
- const diasNomes=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
- const ativa=p.ativo&&((!p.dias?.length||p.dias.includes(diaSemana))&&((!p.hIni&&!p.hFim)||(hora>=p.hIni&&hora<p.hFim)));
- return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--br);">
-<div>
-<div style="display:flex;align-items:center;gap:5px;">
-<span style="width:7px;height:7px;border-radius:50%;background:${ativa?'#00ff88':'rgba(255,255,255,0.15)'};display:inline-block;"></span>
-<p style="font-size:12px;font-weight:700;">${p.nome}</p></div>
-<p style="font-size:10px;color:var(--mu);">${p.hIni!==undefined?String(Math.floor(p.hIni)).padStart(2,"0")+"h–"+String(Math.floor(p.hFim)).padStart(2,"0")+"h":""} ${p.dias?.map(d=>diasNomes[d]).join(",")||"todo dia"}</p>
-<p style="font-size:10px;color:var(--mu);">Normal: ${brl(p.precoNormal)} → <strong style="color:#f59e0b;">${brl(p.preco)}</strong> (-${p.precoNormal>0?((1-p.preco/p.precoNormal)*100).toFixed(0):0}%)</p>
-</div>
-<div style="display:flex;gap:4px;">
-<button onclick="togglePromo(${i})" style="padding:3px 7px;border-radius:5px;border:1px solid ${p.ativo?'rgba(0,255,136,0.3)':'var(--br)'};background:${p.ativo?'rgba(0,255,136,0.1)':'transparent'};color:${p.ativo?'#00ff88':'var(--mu)'};font-size:10px;cursor:pointer;">${p.ativo?"ON":"OFF"}</button>
-<button onclick="removerPromo(${i})" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">✕</button>
-</div></div>`;}).join("")}
-</div>
-${podeVerRelatorios()?`<div class="card" style="margin-bottom:10px;border-color:rgba(245,158,11,0.3);">
-<p class="lbl">🧾 Controle Fiscal — ${hj()}</p>
-${(()=>{
+ <!-- HEADER PDV -->
+ <div style="background:#1a1a2e;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid rgba(255,51,102,0.3);">
+  <div style="display:flex;align-items:center;gap:10px;">
+   <span style="font-size:22px;">🍽️</span>
+   <div>
+    <p style="font-weight:900;font-size:14px;color:#fff;letter-spacing:1px;">DI CASA LARANJINHA</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.5);">Sistema PDV</p>
+   </div>
+  </div>
+  <div style="display:flex;gap:6px;">
+   <div style="text-align:center;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:4px 8px;">
+    <p style="font-size:18px;font-weight:900;color:#00ff88;">${livres}</p>
+    <p style="font-size:9px;color:rgba(255,255,255,0.5);">Livres</p>
+   </div>
+   <div style="text-align:center;background:rgba(255,204,0,0.1);border:1px solid rgba(255,204,0,0.3);border-radius:8px;padding:4px 8px;">
+    <p style="font-size:18px;font-weight:900;color:#ffcc00;">${ocupadas}</p>
+    <p style="font-size:9px;color:rgba(255,255,255,0.5);">Ocup.</p>
+   </div>
+   <div style="text-align:center;background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:8px;padding:4px 8px;">
+    <p style="font-size:18px;font-weight:900;color:#ff3366;">${conta}</p>
+    <p style="font-size:9px;color:rgba(255,255,255,0.5);">Conta</p>
+   </div>
+   <div style="text-align:center;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:8px;padding:4px 8px;">
+    <p style="font-size:14px;font-weight:900;color:#4488ff;">${brl(vendHoje)}</p>
+    <p style="font-size:9px;color:rgba(255,255,255,0.5);">Hoje</p>
+   </div>
+  </div>
+ </div>
+
+ <!-- MODO SELEÇÃO -->
+ ${window._pdvModo==='lancar'?rPDVLancar():rPDVComandas()}
+ </div>`;
+}
+
+function rPDVComandas(){
+ const mesas=gMesas();
+ const filtro=window._pdvFiltro||'todas';
+ const lista=filtro==='ocupadas'?mesas.filter(m=>m.status==='ocupada'):
+              filtro==='conta'?mesas.filter(m=>m.status==='conta'):
+              filtro==='livres'?mesas.filter(m=>m.status==='livre'):mesas;
+
+ return`
+ <!-- FILTROS -->
+ <div style="display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#111;">
+  ${[['todas','Todas',mesas.length],['ocupadas','🍽️ Ocupadas',mesas.filter(m=>m.status==='ocupada').length],['conta','💳 Conta',mesas.filter(m=>m.status==='conta').length],['livres','✅ Livres',mesas.filter(m=>m.status==='livre').length]].map(([id,lbl,cnt])=>
+   `<button onclick="window._pdvFiltro='${id}';render()" style="padding:7px 14px;border-radius:20px;border:none;background:${filtro===id?'#ff3366':'rgba(255,255,255,0.08)'};color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">${lbl} (${cnt})</button>`
+  ).join('')}
+  <div style="flex:1"></div>
+  <button onclick="window._pdvBusca=prompt('Número da comanda:');if(window._pdvBusca){const m=gMesas().find(x=>x.id===parseInt(window._pdvBusca));if(m)abrirPDVComanda(m.id);else alert('Comanda '+window._pdvBusca+' não existe');}" style="padding:7px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#fff;font-size:11px;cursor:pointer;">🔍 Buscar #</button>
+ </div>
+
+ <!-- GRID COMANDAS -->
+ <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:10px 12px;">
+  ${lista.map(m=>{
+   const cor=m.status==='conta'?'#ff3366':m.status==='ocupada'?'#ffcc00':'#00ff88';
+   const bg=m.status==='conta'?'rgba(255,51,102,0.15)':m.status==='ocupada'?'rgba(255,204,0,0.15)':'rgba(0,255,136,0.08)';
+   const total=(m.comanda||[]).reduce((a,i)=>a+Number(i.val||0)*Number(i.qtd||1),0);
+   return`<button onclick="abrirPDVComanda(${m.id})" style="background:${bg};border:2px solid ${cor};border-radius:10px;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;">
+    <span style="font-size:10px;color:${cor};">${m.status==='conta'?'💳':m.status==='ocupada'?'🍽️':'✅'}</span>
+    <span style="font-size:11px;font-weight:800;color:#fff;">${m.id}</span>
+    ${total>0?`<span style="font-size:8px;color:${cor};font-weight:700;">${brl(total)}</span>`:''}
+   </button>`;
+  }).join('')}
+ </div>`;
+}
+
+function rPDVLancar(){
+ const comanda=window._pdvComanda;
+ if(!comanda)return'<p style="padding:20px;color:rgba(255,255,255,0.4);">Selecione uma comanda</p>';
+ const prods=gCardapioPDV();
+ const cats=['Todos',...new Set(prods.map(p=>p.cat||'outros'))];
+ const catAtiva=window._pdvCat||'Todos';
+ const filtrados=catAtiva==='Todos'?prods:prods.filter(p=>p.cat===catAtiva);
+ const m=gMesas().find(x=>x.id===comanda);
+ if(!m)return'';
+ const itens=m.comanda||[];
+ const total=itens.reduce((a,i)=>a+Number(i.val||0)*Number(i.qtd||1),0);
+
+ return`
+ <!-- HEADER COMANDA -->
+ <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#111;border-bottom:1px solid rgba(255,255,255,0.08);">
+  <button onclick="window._pdvModo=null;window._pdvComanda=null;render()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#fff;font-size:11px;cursor:pointer;">← Voltar</button>
+  <div style="text-align:center;">
+   <p style="font-size:14px;font-weight:900;color:#fff;">Comanda ${comanda}</p>
+   <p style="font-size:10px;color:rgba(255,255,255,0.4);">${itens.length} item(ns) · ${brl(total)}</p>
+  </div>
+  <button onclick="fecharContaPDV(${comanda})" style="padding:6px 12px;border-radius:8px;border:none;background:#ff3366;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">💳 Fechar</button>
+ </div>
+
+ <div style="display:flex;height:calc(100vh - 120px);">
+  <!-- LADO ESQUERDO: produtos -->
+  <div style="flex:1;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.08);">
+   <!-- Categorias -->
+   <div style="display:flex;gap:5px;padding:8px;overflow-x:auto;background:#0d0d1a;position:sticky;top:0;z-index:5;">
+    ${cats.map(cat=>`<button onclick="window._pdvCat='${cat}';render()" style="padding:5px 12px;border-radius:15px;border:none;background:${catAtiva===cat?'#ff3366':'rgba(255,255,255,0.08)'};color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">${cat}</button>`).join('')}
+   </div>
+   <!-- Grid produtos -->
+   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;">
+    ${filtrados.length===0?'<p style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.3);padding:20px;">Cadastre produtos em Cadastros</p>':
+    filtrados.map(p=>`<button onclick="adicionarItemPDV(${comanda},'${(p.nome||'').replace(/'/g,"\\'")}',${p.preco||0})" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+     ${p.foto?`<img src="${p.foto}" style="width:100%;height:60px;object-fit:cover;border-radius:6px;margin-bottom:4px;">`:'<div style="width:100%;height:60px;background:rgba(255,255,255,0.05);border-radius:6px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;font-size:24px;">🍽️</div>'}
+     <p style="font-size:10px;color:#fff;font-weight:700;margin-bottom:2px;line-height:1.2;">${p.nome}</p>
+     <p style="font-size:11px;color:#00ff88;font-weight:800;">${brl(p.preco||0)}</p>
+    </button>`).join('')}
+   </div>
+  </div>
+
+  <!-- LADO DIREITO: pedido -->
+  <div style="width:180px;display:flex;flex-direction:column;background:#0d0d1a;">
+   <div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <p style="font-size:11px;font-weight:700;color:#fff;">Pedido</p>
+   </div>
+   <div style="flex:1;overflow-y:auto;padding:6px;">
+    ${itens.length===0?'<p style="text-align:center;color:rgba(255,255,255,0.3);font-size:11px;padding:10px;">Adicione produtos</p>':
+    itens.map((item,i)=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;padding:4px;background:rgba(255,255,255,0.04);border-radius:6px;">
+     <div style="flex:1;min-width:0;">
+      <p style="font-size:9px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nome}</p>
+      <p style="font-size:9px;color:#00ff88;">${brl(Number(item.val||0)*Number(item.qtd||1))}</p>
+     </div>
+     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <button onclick="alterarQtdPDV(${comanda},${i},1)" style="width:18px;height:18px;border-radius:4px;border:none;background:rgba(0,255,136,0.2);color:#00ff88;font-size:12px;cursor:pointer;line-height:1;">+</button>
+      <span style="font-size:10px;font-weight:700;color:#fff;">${item.qtd||1}</span>
+      <button onclick="alterarQtdPDV(${comanda},${i},-1)" style="width:18px;height:18px;border-radius:4px;border:none;background:rgba(255,51,102,0.2);color:#ff3366;font-size:12px;cursor:pointer;line-height:1;">-</button>
+     </div>
+    </div>`).join('')}
+   </div>
+   <!-- Total e botões -->
+   <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.08);">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+     <span style="font-size:11px;color:rgba(255,255,255,0.6);">Total</span>
+     <span style="font-size:13px;font-weight:900;color:#00ff88;">${brl(total)}</span>
+    </div>
+    <button onclick="fecharContaPDV(${comanda})" style="width:100%;padding:10px;border-radius:8px;border:none;background:#ff3366;color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💳 Fechar Conta</button>
+   </div>
+  </div>
+ </div>`;
+}
+
+function abrirPDVComanda(id){
+ window._pdvModo='lancar';
+ window._pdvComanda=id;
+ window._pdvCat='Todos';
+ render();
+}
+
+function adicionarItemPDV(comandaId, nome, preco){
  const db=ldb();
- const stats=db._cupomStats?.[hj()]||{total:0,comCupom:0,semCupom:0,totalCupom:0};
- const pctMeta=parseFloat(localStorage.getItem("erp_cupom_pct")||0);
- const pctAtual=stats.total>0?(stats.comCupom/stats.total*100):0;
- const aliq=parseFloat(localStorage.getItem("erp_cupom_aliq")||6);
- const impostoEst=stats.totalCupom*(aliq/100);
- if(!stats.total)return`<p style="font-size:11px;color:var(--mu);">Nenhuma venda fechada hoje</p>
-${pctMeta?"":`<button onclick="const v=prompt('Meta de emissão (% das vendas):','10');if(v){localStorage.setItem('erp_cupom_pct',v);render();}" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(245,158,11,0.3);background:transparent;color:#f59e0b;font-size:11px;cursor:pointer;margin-top:4px;">⚙️ Definir meta de emissão</button>`}`;
- const corBarra=pctAtual>=pctMeta?"#00ff88":"#f59e0b";
- return`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-<span>${stats.comCupom} com cupom · ${stats.semCupom} sem</span>
-<span style="color:${corBarra};font-weight:700;">${pctAtual.toFixed(0)}%${pctMeta?" / meta "+pctMeta+"%":""}</span>
-</div>
-<div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-bottom:6px;position:relative;">
-<div style="height:6px;background:${corBarra};border-radius:3px;width:${Math.min(100,pctAtual)}%;"></div>
-${pctMeta?`<div style="position:absolute;top:0;left:${Math.min(98,pctMeta)}%;width:2px;height:6px;background:rgba(255,255,255,0.4);"></div>`:""}
-</div>
-<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);">
-<span>Total c/ cupom: ${brl(stats.totalCupom)}</span>
-<span>Imposto estimado (${aliq}%): <strong style="color:#ff6a00;">${brl(impostoEst)}</strong></span>
-</div>
-<button onclick="const v=prompt('Meta de emissão % do mês:',localStorage.getItem('erp_cupom_pct')||'10');if(v!==null){localStorage.setItem('erp_cupom_pct',v);const a=prompt('Alíquota de imposto (%):',localStorage.getItem('erp_cupom_aliq')||'6');if(a!==null)localStorage.setItem('erp_cupom_aliq',a);render();}" style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:1px solid rgba(245,158,11,0.3);background:transparent;color:#f59e0b;font-size:10px;cursor:pointer;">⚙️ Meta: ${pctMeta||"—"}% · Alíquota: ${aliq}%</button>`;
-})()}
-</div>`:""}
-${(()=>{
- const db=ldb();const vendHoje=db._pdvVendas?.[hj()]||[];
- const total=vendHoje.reduce((a,v)=>a+v.total,0);
- if(!vendHoje.length)return`<p style="font-size:11px;color:var(--mu);">Nenhuma venda fechada hoje</p>`;
- const porPgto={};
- vendHoje.forEach(v=>{const p=v.pgto||"Outros";porPgto[p]=(porPgto[p]||0)+v.total;});
- return`<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:6px;">
-<span>${vendHoje.length} conta(s)</span><span style="color:#00ff88;">${brl(total)}</span>
-</div>
-${Object.entries(porPgto).map(([p,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--mu);">
-<span>${p}</span><span>${brl(v)}</span>
-</div>`).join("")}
-<div style="display:flex;gap:6px;margin-top:8px;">
-<button onclick="lancarVendasPDVnoDRE()" style="flex:2;padding:9px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">⚡ Lançar no DRE</button>
-<button onclick="imprimirRelatorioDia()" style="flex:1;padding:9px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:11px;cursor:pointer;">🖨️</button>
-</div>`;
-})()}
-</div>`;
+ if(!db.mesas)db.mesas=gMesas();
+ const idx=db.mesas.findIndex(m=>m.id===comandaId);
+ if(idx<0)return;
+ if(db.mesas[idx].status==='livre'){
+  db.mesas[idx].status='ocupada';
+  db.mesas[idx].abertura=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+ }
+ if(db.mesas[idx].status==='conta'){alert('Conta já pedida! Reabra a comanda.');return;}
+ if(!db.mesas[idx].comanda)db.mesas[idx].comanda=[];
+ // Se já tem o item, incrementa
+ const existente=db.mesas[idx].comanda.find(i=>i.nome===nome);
+ if(existente){existente.qtd=(existente.qtd||1)+1;}
+ else{db.mesas[idx].comanda.push({id:uid(),nome,val:preco,qtd:1,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});}
+ sdb(db);render();
+}
+
+function alterarQtdPDV(comandaId, itemIdx, delta){
+ const db=ldb();
+ if(!db.mesas)db.mesas=gMesas();
+ const midx=db.mesas.findIndex(m=>m.id===comandaId);
+ if(midx<0)return;
+ const itens=db.mesas[midx].comanda||[];
+ if(!itens[itemIdx])return;
+ itens[itemIdx].qtd=(itens[itemIdx].qtd||1)+delta;
+ if(itens[itemIdx].qtd<=0)itens.splice(itemIdx,1);
+ db.mesas[midx].comanda=itens;
+ sdb(db);render();
 }
 
 function imprimirRelatorioDia(){
