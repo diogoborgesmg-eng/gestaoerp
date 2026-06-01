@@ -16822,9 +16822,20 @@ async function lerFotoRecibo(input){
      role: 'user',
      content: [
       {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
-      {type:'text',text:`Analise este comprovante de pagamento. Retorne APENAS JSON:
-{"valor":0.00,"juros":0.00,"descricao":"","destinatario":"","tipo":"pix|boleto|ted|dinheiro","categoria":"Folha CLT|Diária|Freelancer|Entregador|Vale|Fornecedor|Aluguel|Energia|Telecom|Juros|IOF|Outros","data":"DD/MM/AAAA","obs":""}
-Regras: pessoa física=Folha/Diária; CNPJ=Fornecedor; obs entregador=Entregador; obs vale=Vale; se não conseguir ler retorne {"erro":"nao_identificado"}`}
+      {type:'text',text:`Leia este comprovante e extraia SOMENTE o que está escrito nele. NÃO invente, NÃO suponha, NÃO complete informações ausentes.
+
+Retorne APENAS JSON com o que conseguir ler:
+{"valor":0.00,"juros":0.00,"descricao":"COPIE O TEXTO DO COMPROVANTE","destinatario":"NOME EXATO DO COMPROVANTE","tipo":"pix|boleto|ted|dinheiro","categoria":"Folha CLT|Diária|Freelancer|Entregador|Vale|Fornecedor|Aluguel|Energia|Telecom|Juros|IOF|Outros","data":"DD/MM/AAAA","obs":"observacao do pix se houver"}
+
+REGRAS ABSOLUTAS:
+- valor: número exato que aparece no comprovante. Se não encontrar: 0
+- destinatario: nome EXATO como aparece. Se não encontrar: ""
+- data: data EXATA do comprovante. Se não encontrar: ""
+- juros: apenas se aparecer explicitamente no comprovante. Senão: 0
+- obs: copie a observação/descrição do PIX se houver
+- categoria: deduza pelo tipo (pessoa física=Folha CLT, empresa=Fornecedor, obs entregador=Entregador, obs vale=Vale)
+- Se a imagem não for um comprovante: {"erro":"nao_identificado"}
+- NUNCA invente dados que não estão visíveis na imagem`}
      ]
     }]
    })
