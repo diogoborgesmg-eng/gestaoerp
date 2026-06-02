@@ -17086,13 +17086,8 @@ function rPedidoCompra(){
  <p style="font-size:12px;font-weight:700;color:var(--bl);margin-bottom:8px;">📋 Selecionar fornecedores para cotação</p>
  <p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Selecione um ou mais — se múltiplos, o sistema compara os preços automaticamente</p>
  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-  ${(db.fornecedores||[]).length===0?'<p style="font-size:11px;color:var(--mu);">Cadastre fornecedores em Cadastros → Fornecedores</p>':
-  (db.fornecedores||[]).map(f=>{
-   const sel=(window._fornSel||[]).includes(f.id);
-   return`<button onclick="toggleFornSel('${f.id}')" style="padding:6px 12px;border-radius:20px;border:2px solid ${sel?'var(--gr)':\'rgba(255,255,255,0.15)\'};background:${sel?'rgba(0,255,136,0.1)\':\'rgba(255,255,255,0.04)\'};color:${sel?'var(--gr)\':\'var(--mu)\'};font-size:11px;font-weight:700;cursor:pointer;">
-    ${sel?'✅ ':''} ${f.nome}
-   </button>`;}).join('')}
- </div>
+  ${(()=>{const fs=db.fornecedores||[];if(!fs.length)return'<p style="font-size:11px;color:var(--mu);">Cadastre fornecedores em Cadastros</p>';return fs.map(f=>{const sel=(window._fornSel||[]).includes(f.id);const cor=sel?'#00ff88':'rgba(255,255,255,0.2)';const bg=sel?'rgba(0,255,136,0.1)':'transparent';return'<button onclick="toggleFornSel(\''+f.id+'\')" style="padding:6px 12px;border-radius:20px;border:2px solid '+cor+';background:'+bg+';color:'+(sel?'#00ff88':'rgba(255,255,255,0.6)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(sel?'✅ ':'')+f.nome+'</button>';}).join('');})()}
+</div>
  ${(window._fornSel||[]).length>0?`<button onclick="criarCotacaoMulti()" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">🚀 Criar pedido e disparar para ${(window._fornSel||[]).length} fornecedor(es)</button>`:''}
 </div>
 
