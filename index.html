@@ -16800,6 +16800,11 @@ async function lerFotoRecibo(input){
  const file = input.files[0];
  if(!file) return;
 
+ // Se for XML de NF-e — processa diretamente
+ if(file.name.toLowerCase().endsWith('.xml')||file.type.includes('xml')){
+  lerXMLNFe(file);input.value='';return;
+ }
+
  // Mostra loading
  const overlay = document.createElement('div');
  overlay.id = 'recibo-overlay';
@@ -16978,6 +16983,7 @@ async function consultarNFesSEFAZ(){
 }
 
 function mostrarInstrucoesSEFAZ(cnpj){
+ const df=gDadosFiscais();
  const div=document.createElement('div');
  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
  div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;">
@@ -16986,32 +16992,34 @@ function mostrarInstrucoesSEFAZ(cnpj){
    <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
   </div>
 
-  <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:12px;padding:14px;margin-bottom:12px;">
-   <p style="font-size:13px;font-weight:700;color:var(--bl);margin-bottom:8px;">🔐 Certificado configurado ✅</p>
-   <p style="font-size:11px;color:var(--mu);">CNPJ: ${cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5')}</p>
-   <p style="font-size:11px;color:var(--mu);margin-top:4px;">UF: MG — SEFAZ Minas Gerais</p>
-  </div>
-
   <div style="background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.3);border-radius:12px;padding:14px;margin-bottom:12px;">
-   <p style="font-size:12px;font-weight:700;color:var(--ye);margin-bottom:8px;">⚠️ Integração direta com SEFAZ</p>
-   <p style="font-size:11px;color:var(--mu);line-height:1.7;">A consulta automática de NF-e requer comunicação via SOAP com certificado A1 — isso precisa rodar no servidor, não no navegador (bloqueio de CORS).<br><br>O backend Vercel precisa ser atualizado com a biblioteca de NF-e para MG.</p>
+   <p style="font-size:12px;font-weight:700;color:var(--ye);margin-bottom:6px;">⚠️ Consulta automática</p>
+   <p style="font-size:11px;color:var(--mu);line-height:1.6;">A consulta automática de NF-e requer comunicação via SOAP com certificado digital. O backend precisa ser atualizado para suportar autenticação mTLS com certificado A1.</p>
   </div>
 
-  <p style="font-size:12px;font-weight:700;margin-bottom:10px;">📥 Como puxar NF-e agora (funciona hoje):</p>
+  <p style="font-size:12px;font-weight:700;margin-bottom:10px;">📥 Importar NF-e agora:</p>
 
-  ${[
-   ['Portal da NF-e MG','Acesse nfe.fazenda.mg.gov.br → Consultar NF-e → Destinatário → informa seu CNPJ + certificado','https://nfe.fazenda.mg.gov.br'],
-   ['SEFAZ Nacional','nfe.fazenda.gov.br → Consulta destinatário → baixa XML das notas','https://nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa'],
-   ['Importar XML no sistema','Após baixar os XMLs, use o botão 📁 para importar cada NF-e no sistema',''],
-  ].map(([titulo,desc,link])=>`<div class="card" style="margin-bottom:8px;">
-   <p style="font-size:12px;font-weight:700;margin-bottom:4px;">${titulo}</p>
-   <p style="font-size:11px;color:var(--mu);margin-bottom:${link?'8px':'0'};">${desc}</p>
-   ${link?`<a href="${link}" target="_blank" style="display:block;padding:8px;border-radius:7px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);color:var(--bl);font-size:11px;font-weight:700;text-align:center;text-decoration:none;">Abrir →</a>`:''}
-  </div>`).join('')}
+  <div class="card" style="margin-bottom:8px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:4px;">1. Baixar XML da SEFAZ</p>
+   <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Acesse o portal, faça login com certificado e baixe os XMLs das NF-e recebidas</p>
+   <a href="https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa" target="_blank"
+    style="display:block;padding:10px;border-radius:8px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);color:var(--bl);font-size:12px;font-weight:700;text-align:center;text-decoration:none;">
+    🔗 Portal NF-e Nacional
+   </a>
+  </div>
 
-  <div class="card" style="margin-top:8px;border-color:rgba(0,255,136,0.3);">
-   <p style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:4px;">🚀 Integração automática</p>
-   <p style="font-size:11px;color:var(--mu);">Para puxar automaticamente sem portal, preciso atualizar o backend com a biblioteca NF-e para Node.js. Disponível quando o servidor Evolution (bot) estiver funcionando.</p>
+  <div class="card" style="margin-bottom:8px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:4px;">2. Importar XML no sistema</p>
+   <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Use o botão 📁 para selecionar o arquivo XML da NF-e</p>
+   <button onclick="this.closest('[style*=inset]').remove();document.getElementById('arquivo-input')?.click()"
+    style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">
+    📁 Importar XML agora
+   </button>
+  </div>
+
+  <div class="card" style="border-color:rgba(0,255,136,0.3);">
+   <p style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:4px;">🚀 Consulta automática — em breve</p>
+   <p style="font-size:11px;color:var(--mu);">Quando o servidor Evolution (bot) estiver rodando, configuro a consulta automática com seu certificado A1. Todas as NF-e vão para a fila automaticamente.</p>
   </div>
  </div>`;
  div.onclick=e=>{if(e.target===div)div.remove();};
@@ -17624,6 +17632,75 @@ function aprovarMelhorCotacao(grupoId){
  document.querySelector('[style*="inset:0"]')?.remove();
  render();
  alert('✅ Pedidos aprovados e WhatsApp disparado para cada fornecedor!');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LEITURA DE XML NF-e — processa e adiciona à fila
+// ═══════════════════════════════════════════════════════════════
+function lerXMLNFe(file){
+ const reader=new FileReader();
+ reader.onload=function(e){
+  try{
+   const parser=new DOMParser();
+   const xml=parser.parseFromString(e.target.result,'text/xml');
+
+   // Extrai dados da NF-e
+   const get=(tag)=>xml.querySelector(tag)?.textContent||'';
+   const getAll=(tag)=>Array.from(xml.querySelectorAll(tag));
+
+   const chave=get('infNFe')?.getAttribute?.('Id')?.replace('NFe','')||get('chNFe')||'';
+   const numero=get('nNF');
+   const serie=get('serie');
+   const dataEmissao=get('dhEmi')||get('dEmi');
+   const valorTotal=parseFloat(get('vNF')||'0');
+   const emitCNPJ=get('emit CNPJ')||get('CNPJ');
+   const emitNome=get('emit xNome')||get('xNome');
+   const natOp=get('natOp');
+
+   // Extrai itens
+   const itens=getAll('det').map(det=>({
+    nome:det.querySelector('xProd')?.textContent||'',
+    qtd:parseFloat(det.querySelector('qCom')?.textContent||'0'),
+    unidade:det.querySelector('uCom')?.textContent||'un',
+    valorUnit:parseFloat(det.querySelector('vUnCom')?.textContent||'0'),
+    valorTotal:parseFloat(det.querySelector('vProd')?.textContent||'0'),
+    ncm:det.querySelector('NCM')?.textContent||''
+   }));
+
+   if(!valorTotal&&!itens.length){
+    alert('Arquivo XML inválido ou não é uma NF-e');return;
+   }
+
+   // Adiciona à fila de NF
+   const db=ldb();
+   if(!db.filaNF)db.filaNF=[];
+
+   // Verifica se já existe
+   if(chave&&db.filaNF.some(n=>n.chave===chave)){
+    alert('Esta NF-e já está na fila! Chave: '+chave.slice(-6));return;
+   }
+
+   const nf={
+    id:uid(),chave,numero,serie,
+    data:dataEmissao?.slice(0,10)||hj(),
+    emitente:emitNome,emitCNPJ,
+    natureza:natOp,
+    valorTotal,itens,
+    status:'pendente',
+    importadoEm:new Date().toISOString()
+   };
+
+   db.filaNF.push(nf);
+   sdb(db);
+
+   alert(`✅ NF-e importada!\n\nEmitente: ${emitNome}\nNF: ${numero} · Série ${serie}\nValor: R$ ${valorTotal.toFixed(2).replace('.',',')}\n${itens.length} item(ns)\n\nAcesse a aba 📥 Fila NF para revisar.`);
+   ir('fila');
+
+  }catch(err){
+   alert('Erro ao ler XML: '+err.message);
+  }
+ };
+ reader.readAsText(file,'ISO-8859-1');
 }
 
 render();
