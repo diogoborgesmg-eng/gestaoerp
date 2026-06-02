@@ -35,7 +35,7 @@ async function enviarWpp(numero, texto) {
       { number: numero, text: texto },
       { apikey: EVOLUTION_KEY }
     );
-    console.log('Resposta envio:', JSON.stringify(r).substring(0, 100));
+    console.log('Resposta:', JSON.stringify(r).substring(0, 100));
   } catch(e) { console.error('Erro enviar:', e.message); }
 }
 
@@ -62,89 +62,79 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
-
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Webhook WhatsApp ativo ✅', versao: '2.0', instancia: INSTANCE }));
+    res.end(JSON.stringify({ status: 'Webhook WhatsApp ativo ✅', versao: '3.0' }));
     return;
   }
 
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
+    // Responde imediatamente
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+
     try {
-      console.log('=== REQUISIÇÃO RECEBIDA ===');
-      console.log('Body bruto:', body.substring(0, 500));
-
       const data = JSON.parse(body);
-      console.log('Evento:', data.event);
-      console.log('Data keys:', Object.keys(data.data || {}));
-
-      // Responde imediatamente
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true }));
-
-      // Processar de forma assíncrona
       const evento = data.event || '';
+      console.log('=== EVENTO:', evento, '===');
 
-      // Aceitar variações do evento de mensagem
-      if (!evento.includes('message') && !evento.includes('MESSAGE')) {
-        console.log('Evento ignorado:', evento);
+      // Só processa mensagens
+      if (evento !== 'messages.upsert') {
+        console.log('Ignorado:', evento);
         return;
       }
 
-      // Tentar pegar a mensagem de diferentes estruturas
-      const msg = data.data || data;
-      const fromMe = msg.key?.fromMe || msg.fromMe;
-      if (fromMe) { console.log('Mensagem própria, ignorando'); return; }
+      // A Evolution API v2 manda as mensagens em data.data ou data.data.messages
+      let msgs = [];
+      if (Array.isArray(data.data)) {
+        msgs = data.data;
+      } else if (data.data?.messages) {
+        msgs = data.data.messages;
+      } else if (data.data) {
+        msgs = [data.data];
+      }
 
-      const numero = msg.key?.remoteJid || msg.remoteJid;
-      const tipo = msg.messageType || msg.type || '';
+      console.log('Total mensagens:', msgs.length);
 
-      console.log('Número:', numero, '| Tipo:', tipo);
+      for (const msg of msgs) {
+        const fromMe = msg.key?.fromMe;
+        if (fromMe) { console.log('Própria, skip'); continue; }
 
-      if (!numero) { console.log('Sem número, ignorando'); return; }
+        const numero = msg.key?.remoteJid;
+        const tipo = msg.messageType || '';
+        console.log('De:', numero, '| Tipo:', tipo);
 
-      // Texto
-      if (tipo.includes('conversation') || tipo.includes('text') || tipo.includes('extendedText')) {
-        const txt = (
-          msg.message?.conversation ||
-          msg.message?.extendedTextMessage?.text ||
-          msg.body || ''
-        ).toLowerCase();
+        if (!numero) continue;
 
-        console.log('Texto recebido:', txt);
         const isGrupo = numero.endsWith('@g.us');
-        if (isGrupo && !txt.includes('ajuda') && !txt.includes('bot')) return;
 
-        await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de recibo ou comprovante* que analiso na hora!');
-      }
-      // Imagem
-      else if (tipo.includes('image') || tipo.includes('Image')) {
-        await enviarWpp(numero, '🔍 Analisando documento... um momento.');
-        const base64 = msg.message?.imageMessage?.base64 || msg.message?.base64 || msg.base64;
-        if (!base64) {
-          await enviarWpp(numero, '❌ Não consegui acessar a imagem. Tente reenviar.');
-          return;
+        // Texto
+        if (tipo === 'conversation' || tipo === 'extendedTextMessage') {
+          const txt = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').toLowerCase();
+          console.log('Texto:', txt);
+          if (isGrupo && !txt.includes('ajuda') && !txt.includes('bot')) continue;
+          await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de recibo ou comprovante* que analiso na hora!');
         }
-        const analise = await analisarImagem(base64, 'image/jpeg');
-        await enviarWpp(numero, `📋 *Análise do Documento*\n\n${analise}\n\n_Di Casa Laranjinha - GestaoERP_ ✅`);
-      } else {
-        console.log('Tipo não tratado:', tipo);
+        // Imagem
+        else if (tipo === 'imageMessage') {
+          await enviarWpp(numero, '🔍 Analisando documento...');
+          const base64 = msg.message?.imageMessage?.base64 || msg.message?.base64;
+          if (!base64) { await enviarWpp(numero, '❌ Imagem não acessível. Tente reenviar.'); continue; }
+          const analise = await analisarImagem(base64, 'image/jpeg');
+          await enviarWpp(numero, `📋 *Análise*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
+        } else {
+          console.log('Tipo não tratado:', tipo);
+        }
       }
-
     } catch(e) {
-      console.error('Erro geral:', e.message);
-      if (!res.headersSent) {
-        res.writeHead(500);
-        res.end(JSON.stringify({ erro: e.message }));
-      }
+      console.error('Erro:', e.message);
     }
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ Webhook WhatsApp v2 rodando na porta ${PORT}`);
-  console.log(`📱 Instância: ${INSTANCE}`);
-  console.log(`🔑 API Key: ${ANTHROPIC_KEY ? 'configurada ✅' : 'NÃO CONFIGURADA ❌'}`);
+  console.log(`✅ Webhook v3 rodando na porta ${PORT}`);
+  console.log(`🔑 API Key: ${ANTHROPIC_KEY ? '✅' : '❌ NÃO CONFIGURADA'}`);
 });
