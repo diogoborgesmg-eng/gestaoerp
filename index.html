@@ -109,7 +109,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." 
  oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''"
  onblur="this.placeholder='🔍 Buscar...';setTimeout(()=>{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)"
- style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+ style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('pedido')">📋 Pedido Compra</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
 <div class="main" id="main"></div>
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
@@ -8195,7 +8195,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -17042,6 +17042,279 @@ function mostrarNotasRecebidas(notas){
  </div>`;
  div.onclick=e=>{if(e.target===div)div.remove();};
  document.body.appendChild(div);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PEDIDO DE COMPRA — geração automática + envio fornecedor
+// ═══════════════════════════════════════════════════════════════
+
+function rPedidoCompra(){
+ const db=ldb();
+ const est=db.est||[];
+ const compras=db.pedidosCompra||[];
+ const forn=db.fornecedores||[];
+
+ // Gera sugestões baseado no estoque mínimo
+ const sugestoes=est.filter(e=>Number(e.q||0)<=Number(e.min||0)*1.2).map(e=>({
+  id:e.id,nome:e.n,qtdAtual:Number(e.q||0),
+  minimo:Number(e.min||0),
+  sugerido:Math.max(Number(e.min||0)*3-Number(e.q||0),1),
+  unidade:e.u||'kg',
+  custoUlt:Number(e.cu||0),
+  fornecedor:e.fornecedores?.[0]||''
+ }));
+
+ // Agrupa por fornecedor
+ const porForn={};
+ sugestoes.forEach(s=>{
+  const f=s.fornecedor||'Sem fornecedor';
+  if(!porForn[f])porForn[f]=[];
+  porForn[f].push(s);
+ });
+
+ return`<div class="si">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+ <div>
+  <p style="font-weight:800;font-size:15px;">🛒 Pedido de Compra</p>
+  <p style="font-size:11px;color:var(--mu);">Sugestão semanal baseada no estoque</p>
+ </div>
+ <button onclick="gerarPedidoIA()" style="padding:8px 12px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🤖 Gerar com IA</button>
+</div>
+
+${sugestoes.length===0?`
+<div class="card" style="text-align:center;padding:20px;">
+ <p style="font-size:24px;margin-bottom:8px;">✅</p>
+ <p style="font-size:13px;font-weight:700;">Estoque OK!</p>
+ <p style="font-size:11px;color:var(--mu);">Nenhum item abaixo do mínimo</p>
+ <p style="font-size:10px;color:var(--mu);margin-top:8px;">Configure o estoque mínimo em Estoque → editar produto</p>
+</div>`:`
+
+<!-- Itens sugeridos por fornecedor -->
+${Object.entries(porForn).map(([fornNome,itens])=>`
+<div class="card" style="margin-bottom:10px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:13px;font-weight:800;">🏭 ${fornNome}</p>
+  <button onclick="enviarPedidoFornecedor('${fornNome.replace(/'/g,"\\'")}')" 
+   style="padding:5px 10px;border-radius:6px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:10px;font-weight:700;cursor:pointer;">
+   📱 Enviar WhatsApp
+  </button>
+ </div>
+ ${itens.map(item=>`
+ <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+  <div style="flex:1;">
+   <p style="font-size:12px;font-weight:700;">${item.nome}</p>
+   <p style="font-size:10px;color:var(--mu);">Estoque: ${item.qtdAtual}${item.unidade} · Mín: ${item.minimo}${item.unidade} · Último: ${brl(item.custoUlt)}/${item.unidade}</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+   <input type="number" value="${item.sugerido}" min="0" step="0.5"
+    onchange="atualizarQtdPedido('${item.id}',this.value)"
+    style="width:60px;padding:4px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:12px;text-align:center;"/>
+   <span style="font-size:10px;color:var(--mu);">${item.unidade}</span>
+  </div>
+ </div>`).join('')}
+ <div style="border-top:1px solid var(--br);padding-top:8px;margin-top:4px;">
+  <button onclick="gerarPedidoFornecedor('${fornNome.replace(/'/g,"\\'")}')" 
+   style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">
+   ✅ Gerar Pedido para ${fornNome}
+  </button>
+ </div>
+</div>`).join('')}
+`}
+
+<!-- Pedidos em andamento -->
+${compras.filter(c=>c.status!=='concluido').length>0?`
+<p style="font-size:12px;font-weight:700;margin-top:12px;margin-bottom:8px;">📋 Pedidos em andamento</p>
+${compras.filter(c=>c.status!=='concluido').map(c=>`
+<div class="card" style="margin-bottom:8px;border-color:${c.status==='aguardando_cotacao'?'rgba(255,204,0,0.3)':c.status==='aprovado'?'rgba(0,255,136,0.3)':'var(--br)'};">
+ <div style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+   <p style="font-size:12px;font-weight:700;">${c.fornecedor}</p>
+   <p style="font-size:10px;color:var(--mu);">${c.data} · ${c.itens?.length||0} itens · ${brl(c.totalCotado||0)}</p>
+   <p style="font-size:10px;color:${c.status==='aguardando_cotacao'?'var(--ye)':c.status==='aprovado'?'var(--gr)':'var(--mu)'};">
+    ${c.status==='aguardando_cotacao'?'⏳ Aguardando cotação':c.status==='aprovado'?'✅ Aprovado — aguardando NF':c.status}
+   </p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;">
+   ${c.status==='aguardando_cotacao'?`<button onclick="abrirCotacao('${c.id}')" style="padding:5px 8px;border-radius:6px;border:none;background:rgba(255,204,0,0.15);color:var(--ye);font-size:10px;cursor:pointer;">💰 Cotação</button>`:''}
+   ${c.status==='cotado'?`<button onclick="aprovarPedido('${c.id}')" style="padding:5px 8px;border-radius:6px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:10px;font-weight:700;cursor:pointer;">✅ Aprovar</button>`:''}
+  </div>
+ </div>
+</div>`).join('')}
+`:''}
+</div>`;
+}
+
+function atualizarQtdPedido(itemId, novaQtd){
+ if(!window._pedidoTemp)window._pedidoTemp={};
+ window._pedidoTemp[itemId]=parseFloat(novaQtd)||0;
+}
+
+function gerarPedidoFornecedor(fornNome){
+ const db=ldb();
+ const est=db.est||[];
+ const sugestoes=est.filter(e=>(e.fornecedores?.[0]||'Sem fornecedor')===fornNome&&Number(e.q||0)<=Number(e.min||0)*1.2);
+ if(!sugestoes.length){alert('Nenhum item para este fornecedor');return;}
+
+ const pedido={
+  id:uid(),
+  fornecedor:fornNome,
+  data:hj(),
+  status:'aguardando_cotacao',
+  itens:sugestoes.map(e=>({
+   id:e.id,nome:e.n,
+   qtd:(window._pedidoTemp?.[e.id])||Math.max(Number(e.min||0)*3-Number(e.q||0),1),
+   unidade:e.u||'kg',
+   custoUlt:Number(e.cu||0),
+   custoNovo:0
+  })),
+  totalSolicitado:0,
+  totalCotado:0
+ };
+
+ if(!db.pedidosCompra)db.pedidosCompra=[];
+ db.pedidosCompra.push(pedido);
+ sdb(db);
+ window._pedidoTemp={};
+ alert(`✅ Pedido gerado para ${fornNome}!\n${pedido.itens.length} itens · Aguardando cotação`);
+ render();
+}
+
+function enviarPedidoFornecedor(fornNome){
+ const db=ldb();
+ const est=db.est||[];
+ const itens=est.filter(e=>(e.fornecedores?.[0]||'Sem fornecedor')===fornNome&&Number(e.q||0)<=Number(e.min||0)*1.2);
+ if(!itens.length){alert('Nenhum item para este fornecedor');return;}
+
+ // Gera mensagem para WhatsApp
+ const linhas=[
+  `*Pedido de Compra — Di Casa Laranjinha*`,
+  `📅 ${hj()}`,
+  ``,
+  `*Itens:*`,
+  ...itens.map(e=>{
+   const qtd=(window._pedidoTemp?.[e.id])||Math.max(Number(e.min||0)*3-Number(e.q||0),1);
+   return`• ${e.n}: *${qtd} ${e.u||'kg'}* (último: ${brl(Number(e.cu||0))}/${e.u||'kg'})`;
+  }),
+  ``,
+  `Por favor, envie cotação com valores atualizados.`,
+  `_Aguardamos confirmação para aprovação._`
+ ];
+
+ const msg=encodeURIComponent(linhas.join('\n'));
+ const forn=(db.fornecedores||[]).find(f=>f.nome===fornNome);
+ const tel=forn?.whatsapp||forn?.telefone||'';
+ const telLimpo=tel.replace(/\D/g,'');
+
+ if(telLimpo){
+  window.open(`https://wa.me/55${telLimpo}?text=${msg}`,'_blank');
+ }else{
+  // Copia para área de transferência
+  navigator.clipboard?.writeText(decodeURIComponent(msg)).then(()=>{
+   alert(`📋 Mensagem copiada!\n\nCole no WhatsApp do fornecedor ${fornNome}`);
+  }).catch(()=>{
+   alert(`Mensagem para ${fornNome}:\n\n${decodeURIComponent(msg)}`);
+  });
+ }
+
+ // Gera o pedido automaticamente
+ gerarPedidoFornecedor(fornNome);
+}
+
+function abrirCotacao(pedidoId){
+ const db=ldb();
+ const pedido=(db.pedidosCompra||[]).find(p=>p.id===pedidoId);
+ if(!pedido)return;
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <p style="font-weight:800;font-size:14px;">💰 Cotação — ${pedido.fornecedor}</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Preencha os valores da cotação do fornecedor:</p>
+  ${pedido.itens.map((item,i)=>`
+  <div style="background:var(--sf2);border-radius:8px;padding:10px;margin-bottom:8px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">${item.nome} — ${item.qtd} ${item.unidade}</p>
+   <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:var(--mu);">R$/</span>
+    <input type="number" id="cot-${i}" placeholder="${item.custoUlt.toFixed(2)}" step="0.01"
+     style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:13px;"/>
+    <span style="font-size:10px;color:var(--mu);">${item.unidade}</span>
+   </div>
+   ${item.custoUlt>0?`<p style="font-size:9px;color:var(--mu);margin-top:4px;">Último: ${brl(item.custoUlt)}/${item.unidade}</p>`:''}
+  </div>`).join('')}
+  <button onclick="salvarCotacao('${pedidoId}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px;">✅ Salvar Cotação</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarCotacao(pedidoId){
+ const db=ldb();
+ const idx=(db.pedidosCompra||[]).findIndex(p=>p.id===pedidoId);
+ if(idx<0)return;
+ const pedido=db.pedidosCompra[idx];
+ let total=0;
+ pedido.itens.forEach((item,i)=>{
+  const val=parseFloat(document.getElementById('cot-'+i)?.value||0);
+  item.custoNovo=val||item.custoUlt;
+  total+=item.custoNovo*item.qtd;
+ });
+ pedido.totalCotado=total;
+ pedido.status='cotado';
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+
+ // Verifica divergência de preço > 10%
+ const divergencias=pedido.itens.filter(item=>item.custoUlt>0&&Math.abs(item.custoNovo-item.custoUlt)/item.custoUlt>0.1);
+ if(divergencias.length>0){
+  alert(`⚠️ Divergência de preço detectada!\n\n${divergencias.map(d=>`• ${d.nome}: último ${brl(d.custoUlt)} → cotado ${brl(d.custoNovo)} (${((d.custoNovo-d.custoUlt)/d.custoUlt*100).toFixed(1)}%)`).join('\n')}\n\nVerifique antes de aprovar!`);
+ }
+ render();
+}
+
+function aprovarPedido(pedidoId){
+ const db=ldb();
+ const idx=(db.pedidosCompra||[]).findIndex(p=>p.id===pedidoId);
+ if(idx<0)return;
+ if(!confirm(`Aprovar pedido para ${db.pedidosCompra[idx].fornecedor}?\n\nTotal: ${brl(db.pedidosCompra[idx].totalCotado)}`))return;
+ db.pedidosCompra[idx].status='aprovado';
+ db.pedidosCompra[idx].dataAprovacao=hj();
+ sdb(db);
+ render();
+ alert('✅ Pedido aprovado! Aguardando NF do fornecedor.');
+}
+
+async function gerarPedidoIA(){
+ const db=ldb();
+ const est=db.est||[];
+ if(!est.length){alert('Cadastre produtos no estoque primeiro.');return;}
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:600;display:flex;align-items:center;justify-content:center;';
+ div.innerHTML='<div style="text-align:center;color:#fff;"><p style="font-size:32px;">🤖</p><p style="font-size:14px;font-weight:700;margin-top:8px;">IA analisando estoque...</p></div>';
+ document.body.appendChild(div);
+
+ try{
+  const d=await claudeAPI({model:MODEL,max_tokens:600,messages:[{role:'user',content:
+   'Analise este estoque de restaurante e sugira quantidades para compra semanal:\n'+
+   JSON.stringify(est.map(e=>({nome:e.n,qtdAtual:e.q,minimo:e.min,unidade:e.u,consumoSemanal:e.min||1})))+
+   '\nRetorne JSON: [{"id":"...","nome":"...","qtdSugerida":0,"justificativa":"..."}]'
+  }]});
+  const raw=(d.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const sugestoes=JSON.parse(raw.match(/\[[\s\S]*\]/)?.[0]||'[]');
+  div.remove();
+  if(sugestoes.length){
+   window._pedidoTemp={};
+   sugestoes.forEach(s=>{window._pedidoTemp[s.id]=s.qtdSugerida;});
+   alert(`🤖 IA sugeriu quantidades para ${sugestoes.length} itens!\nRevise e ajuste antes de gerar o pedido.`);
+   render();
+  }
+ }catch(e){
+  div.remove();
+  alert('Erro: '+e.message);
+ }
 }
 
 render();
