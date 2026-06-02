@@ -17149,7 +17149,7 @@ function atualizarQtdPedido(itemId, novaQtd){
  window._pedidoTemp[itemId]=parseFloat(novaQtd)||0;
 }
 
-function gerarPedidoFornecedor(fornNome){
+function gerarPedidoFornecedor(fornNome,silencioso=false){
  const db=ldb();
  const est=db.est||[];
  const sugestoes=est.filter(e=>(e.fornecedores?.[0]||'Sem fornecedor')===fornNome&&Number(e.q||0)<=Number(e.min||0)*1.2);
@@ -17185,39 +17185,31 @@ function enviarPedidoFornecedor(fornNome){
  const itens=est.filter(e=>(e.fornecedores?.[0]||'Sem fornecedor')===fornNome&&Number(e.q||0)<=Number(e.min||0)*1.2);
  if(!itens.length){alert('Nenhum item para este fornecedor');return;}
 
- // Gera mensagem para WhatsApp
- const linhas=[
-  `*Pedido de Compra — Di Casa Laranjinha*`,
-  `📅 ${hj()}`,
-  ``,
-  `*Itens:*`,
-  ...itens.map(e=>{
-   const qtd=(window._pedidoTemp?.[e.id])||Math.max(Number(e.min||0)*3-Number(e.q||0),1);
-   return`• ${e.n}: *${qtd} ${e.u||'kg'}* (último: ${brl(Number(e.cu||0))}/${e.u||'kg'})`;
-  }),
-  ``,
-  `Por favor, envie cotação com valores atualizados.`,
-  `_Aguardamos confirmação para aprovação._`
- ];
+ // Gera pedido primeiro
+ const pedidoId=gerarPedidoFornecedor(fornNome,true);
+ if(!pedidoId)return;
 
- const msg=encodeURIComponent(linhas.join('\n'));
+ // Gera link único para o fornecedor preencher
+ const baseUrl=window.location.origin+window.location.pathname;
+ const link=baseUrl+'?cotacao='+pedidoId;
+
  const forn=(db.fornecedores||[]).find(f=>f.nome===fornNome);
- const tel=forn?.whatsapp||forn?.telefone||'';
- const telLimpo=tel.replace(/\D/g,'');
+ const tel=(forn?.whatsapp||forn?.telefone||'').replace(/\D/g,'');
 
- if(telLimpo){
-  window.open(`https://wa.me/55${telLimpo}?text=${msg}`,'_blank');
+ const pedido=(db.pedidosCompra||[]).find(p=>p.id===pedidoId);
+ const resumo=pedido?.itens?.map(i=>`• ${i.nome}: ${i.qtd} ${i.unidade}`).join('\n')||'';
+
+ const msg=`*Pedido de Compra — Di Casa Laranjinha*\n📅 ${hj()}\n\n*Itens solicitados:*\n${resumo}\n\n👆 *Preencha sua cotação no link abaixo:*\n${link}\n\n_Após sua confirmação, enviaremos a aprovação._`;
+
+ if(tel){
+  window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(msg),'_blank');
  }else{
-  // Copia para área de transferência
-  navigator.clipboard?.writeText(decodeURIComponent(msg)).then(()=>{
-   alert(`📋 Mensagem copiada!\n\nCole no WhatsApp do fornecedor ${fornNome}`);
+  navigator.clipboard?.writeText(msg).then(()=>{
+   alert('📋 Link copiado!\n\nCole no WhatsApp do fornecedor:\n\n'+link);
   }).catch(()=>{
-   alert(`Mensagem para ${fornNome}:\n\n${decodeURIComponent(msg)}`);
+   prompt('Copie o link para enviar ao fornecedor:',link);
   });
  }
-
- // Gera o pedido automaticamente
- gerarPedidoFornecedor(fornNome);
 }
 
 function abrirCotacao(pedidoId){
@@ -17316,6 +17308,143 @@ async function gerarPedidoIA(){
   alert('Erro: '+e.message);
  }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// PÁGINA DE COTAÇÃO — fornecedor preenche pelo link
+// ═══════════════════════════════════════════════════════════════
+function verificarCotacaoURL(){
+ const params=new URLSearchParams(window.location.search);
+ const cotacaoId=params.get('cotacao');
+ if(!cotacaoId)return;
+
+ // Mostra tela de cotação em vez do sistema
+ const db=ldb();
+ const pedido=(db.pedidosCompra||[]).find(p=>p.id===cotacaoId);
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0d0d1a;z-index:9999;overflow-y:auto;';
+
+ if(!pedido){
+  div.innerHTML=`<div style="padding:20px;text-align:center;color:#fff;margin-top:40px;">
+   <p style="font-size:32px;margin-bottom:8px;">❌</p>
+   <p style="font-size:16px;font-weight:700;">Pedido não encontrado</p>
+   <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;">O link pode ter expirado ou já foi respondido.</p>
+  </div>`;
+  document.body.appendChild(div);
+  return;
+ }
+
+ if(pedido.status==='cotado'||pedido.status==='aprovado'||pedido.status==='concluido'){
+  div.innerHTML=`<div style="padding:20px;text-align:center;color:#fff;margin-top:40px;">
+   <p style="font-size:32px;margin-bottom:8px;">✅</p>
+   <p style="font-size:16px;font-weight:700;">Cotação já recebida!</p>
+   <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;">Aguardando aprovação do Di Casa Laranjinha.</p>
+  </div>`;
+  document.body.appendChild(div);
+  return;
+ }
+
+ div.innerHTML=`<div style="max-width:520px;margin:0 auto;padding:16px;">
+  <!-- Header -->
+  <div style="text-align:center;padding:20px 0 16px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:16px;">
+   <p style="font-size:24px;margin-bottom:4px;">🍽️</p>
+   <p style="font-weight:900;font-size:16px;color:#fff;">Di Casa Laranjinha</p>
+   <p style="font-size:12px;color:rgba(255,255,255,0.5);">Pedido de Compra — ${hj()}</p>
+  </div>
+
+  <div style="background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:12px;margin-bottom:16px;">
+   <p style="font-size:13px;font-weight:700;color:#4488ff;margin-bottom:4px;">📋 Instruções</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.6;">Preencha o <strong style="color:#fff;">preço unitário</strong> de cada item abaixo. Após confirmar, enviaremos a aprovação para faturamento.</p>
+  </div>
+
+  <!-- Itens -->
+  <p style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">Itens do pedido:</p>
+  ${pedido.itens.map((item,i)=>`
+  <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;margin-bottom:8px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <p style="font-size:13px;font-weight:700;color:#fff;">${item.nome}</p>
+    <span style="font-size:12px;color:rgba(255,255,255,0.6);">${item.qtd} ${item.unidade}</span>
+   </div>
+   ${item.custoUlt>0?`<p style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;">Último preço: R$ ${item.custoUlt.toFixed(2).replace('.',',')}</p>`:''}
+   <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:13px;color:rgba(255,255,255,0.6);">R$</span>
+    <input type="number" id="forn-cot-${i}" placeholder="0,00" step="0.01" min="0"
+     style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:14px;"
+     inputmode="decimal"/>
+    <span style="font-size:12px;color:rgba(255,255,255,0.4);">/${item.unidade}</span>
+   </div>
+  </div>`).join('')}
+
+  <!-- Total estimado -->
+  <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:10px;padding:12px;margin:12px 0;" id="forn-total-box">
+   <p style="font-size:12px;color:rgba(255,255,255,0.6);">Total estimado</p>
+   <p style="font-size:18px;font-weight:900;color:#00ff88;" id="forn-total">R$ —</p>
+  </div>
+
+  <button onclick="confirmarCotacaoFornecedor('${cotacaoId}')" 
+   style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#00cc66,#00ff88);color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">
+   ✅ Confirmar Cotação
+  </button>
+  <p style="font-size:10px;color:rgba(255,255,255,0.3);text-align:center;">Após confirmar, aguarde a aprovação do Di Casa Laranjinha</p>
+ </div>`;
+
+ // Atualiza total em tempo real
+ const inputs=div.querySelectorAll('input[id^="forn-cot-"]');
+ inputs.forEach((inp,i)=>{
+  inp.addEventListener('input',()=>{
+   let total=0;
+   inputs.forEach((inp2,j)=>{
+    total+=(parseFloat(inp2.value)||0)*pedido.itens[j].qtd;
+   });
+   const el=div.querySelector('#forn-total');
+   if(el)el.textContent='R$ '+total.toFixed(2).replace('.',',');
+  });
+ });
+
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function confirmarCotacaoFornecedor(pedidoId){
+ const db=ldb();
+ const idx=(db.pedidosCompra||[]).findIndex(p=>p.id===pedidoId);
+ if(idx<0){alert('Pedido não encontrado');return;}
+
+ const pedido=db.pedidosCompra[idx];
+ let total=0;
+ let algumVazio=false;
+
+ pedido.itens.forEach((item,i)=>{
+  const val=parseFloat(document.getElementById('forn-cot-'+i)?.value||0);
+  if(!val)algumVazio=true;
+  item.custoNovo=val;
+  total+=val*item.qtd;
+ });
+
+ if(algumVazio){
+  if(!confirm('Alguns itens estão sem preço. Confirmar mesmo assim?'))return;
+ }
+
+ pedido.totalCotado=total;
+ pedido.status='cotado';
+ pedido.dataCotacao=hj();
+ sdb(db);
+
+ // Mostra confirmação para o fornecedor
+ document.querySelector('[style*="z-index:9999"]').innerHTML=`
+  <div style="max-width:520px;margin:0 auto;padding:40px 16px;text-align:center;color:#fff;">
+   <p style="font-size:48px;margin-bottom:16px;">✅</p>
+   <p style="font-size:20px;font-weight:900;margin-bottom:8px;">Cotação enviada!</p>
+   <p style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:20px;">Aguardando aprovação do Di Casa Laranjinha.<br>Você receberá uma mensagem com a confirmação.</p>
+   <div style="background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:16px;">
+    <p style="font-size:12px;color:rgba(255,255,255,0.6);">Total da cotação</p>
+    <p style="font-size:24px;font-weight:900;color:#00ff88;">R$ ${total.toFixed(2).replace('.',',')}</p>
+   </div>
+  </div>`;
+}
+
+// Roda ao carregar a página
+setTimeout(verificarCotacaoURL, 100);
 
 render();
 
