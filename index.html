@@ -12701,6 +12701,8 @@ ${Object.entries(porCat).map(([cat,itens])=>`
 ${itens.map(it=>{
  const falta=Math.max(0,(it.min||0)*3-it.q);
  const selecionado=sel.includes(it.id);
+ const consumoDia=it.consumoDiario||0;
+ const diasEstoque=consumoDia>0?(it.q/consumoDia):null;
  return`<div class="card" style="margin-bottom:5px;border-color:${selecionado?'rgba(68,136,255,0.4)':it.prio===1?'rgba(255,51,102,0.3)':it.prio===2?'rgba(255,204,0,0.3)':'var(--br)'};background:${selecionado?'rgba(68,136,255,0.08)':it.prio===1?'rgba(255,51,102,0.05)':'var(--sf)'};">
 <div style="display:flex;align-items:center;gap:8px;">
 <input type="checkbox" ${selecionado?"checked":""} onchange="toggleCompraItem('${it.id}')"
