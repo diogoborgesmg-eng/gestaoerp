@@ -17078,7 +17078,22 @@ function rPedidoCompra(){
   <p style="font-weight:800;font-size:15px;">🛒 Pedido de Compra</p>
   <p style="font-size:11px;color:var(--mu);">Sugestão semanal baseada no estoque</p>
  </div>
- <button onclick="gerarPedidoIA()" style="padding:8px 12px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🤖 Gerar com IA</button>
+ <button onclick="gerarPedidoIA()" style="padding:8px 12px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🤖 IA</button>
+</div>
+
+<!-- Seleção de fornecedores para cotação -->
+<div class="card" style="margin-bottom:12px;border-color:rgba(68,136,255,0.3);">
+ <p style="font-size:12px;font-weight:700;color:var(--bl);margin-bottom:8px;">📋 Selecionar fornecedores para cotação</p>
+ <p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Selecione um ou mais — se múltiplos, o sistema compara os preços automaticamente</p>
+ <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+  ${(db.fornecedores||[]).length===0?'<p style="font-size:11px;color:var(--mu);">Cadastre fornecedores em Cadastros → Fornecedores</p>':
+  (db.fornecedores||[]).map(f=>{
+   const sel=(window._fornSel||[]).includes(f.id);
+   return`<button onclick="toggleFornSel('${f.id}')" style="padding:6px 12px;border-radius:20px;border:2px solid ${sel?'var(--gr)':\'rgba(255,255,255,0.15)\'};background:${sel?'rgba(0,255,136,0.1)\':\'rgba(255,255,255,0.04)\'};color:${sel?'var(--gr)\':\'var(--mu)\'};font-size:11px;font-weight:700;cursor:pointer;">
+    ${sel?'✅ ':''} ${f.nome}
+   </button>`;}).join('')}
+ </div>
+ ${(window._fornSel||[]).length>0?`<button onclick="criarCotacaoMulti()" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">🚀 Criar pedido e disparar para ${(window._fornSel||[]).length} fornecedor(es)</button>`:''}
 </div>
 
 ${sugestoes.length===0?`
@@ -17131,7 +17146,7 @@ ${compras.filter(c=>c.status!=='concluido').map(c=>`
    <p style="font-size:12px;font-weight:700;">${c.fornecedor}</p>
    <p style="font-size:10px;color:var(--mu);">${c.data} · ${c.itens?.length||0} itens · ${brl(c.totalCotado||0)}</p>
    <p style="font-size:10px;color:${c.status==='aguardando_cotacao'?'var(--ye)':c.status==='aprovado'?'var(--gr)':'var(--mu)'};">
-    ${c.status==='aguardando_cotacao'?'⏳ Aguardando cotação':c.status==='aprovado'?'✅ Aprovado — aguardando NF':c.status}
+    ${c.status==='aguardando_cotacao'?'⏳ Aguardando cotação':c.status==='cotado'?'💰 Cotação recebida!':c.status==='aprovado'?'✅ Aprovado — aguardando NF':c.status}
    </p>
   </div>
   <div style="display:flex;flex-direction:column;gap:4px;">
@@ -17445,6 +17460,176 @@ function confirmarCotacaoFornecedor(pedidoId){
 
 // Roda ao carregar a página
 setTimeout(verificarCotacaoURL, 100);
+
+function toggleFornSel(fornId){
+ if(!window._fornSel)window._fornSel=[];
+ const idx=window._fornSel.indexOf(fornId);
+ if(idx>=0)window._fornSel.splice(idx,1);
+ else window._fornSel.push(fornId);
+ render();
+}
+
+function criarCotacaoMulti(){
+ const db=ldb();
+ const fornIds=window._fornSel||[];
+ if(!fornIds.length){alert('Selecione pelo menos um fornecedor');return;}
+
+ // Pega itens a comprar
+ const est=db.est||[];
+ const itensComprar=est.filter(e=>Number(e.q||0)<=Number(e.min||0)*1.2);
+ if(!itensComprar.length){alert('Nenhum item abaixo do estoque mínimo');return;}
+
+ // Cria um pedido por fornecedor
+ const pedidoIds=[];
+ if(!db.pedidosCompra)db.pedidosCompra=[];
+
+ fornIds.forEach(fId=>{
+  const forn=db.fornecedores.find(f=>f.id===fId);
+  if(!forn)return;
+  const pedido={
+   id:uid(),
+   fornecedor:forn.nome,
+   fornecedorId:fId,
+   data:hj(),
+   status:'aguardando_cotacao',
+   grupoId:window._grupoId||(window._grupoId=uid()),
+   itens:itensComprar.map(e=>({
+    id:e.id,nome:e.n,
+    qtd:(window._pedidoTemp?.[e.id])||Math.max(Number(e.min||0)*3-Number(e.q||0),1),
+    unidade:e.u||'kg',
+    custoUlt:Number(e.cu||0),
+    custoNovo:0
+   }))
+  };
+  db.pedidosCompra.push(pedido);
+  pedidoIds.push({id:pedido.id,forn});
+ });
+
+ sdb(db);
+ window._fornSel=[];
+ window._pedidoTemp={};
+ window._grupoId=null;
+
+ // Dispara WhatsApp para cada fornecedor
+ let disparados=0;
+ pedidoIds.forEach(({id,forn},i)=>{
+  setTimeout(()=>{
+   const tel=(forn.whatsapp||forn.telefone||'').replace(/\D/g,'');
+   const baseUrl=window.location.origin+window.location.pathname;
+   const link=baseUrl+'?cotacao='+id;
+   const resumo=db.pedidosCompra.find(p=>p.id===id)?.itens.map(i=>`• ${i.nome}: ${i.qtd} ${i.unidade} (último: R$${i.custoUlt.toFixed(2)})`).join('\n')||'';
+   const msg=`*Pedido de Compra — Di Casa Laranjinha*\n📅 ${hj()}\n\n*Itens:*\n${resumo}\n\n👆 *Preencha sua cotação:*\n${link}\n\n_Comparando cotações. Melhor preço leva o pedido!_`;
+
+   if(tel){
+    window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(msg),'_blank');
+   }
+   disparados++;
+   if(disparados===pedidoIds.length){
+    render();
+    alert(`✅ Pedido criado e enviado para ${pedidoIds.length} fornecedor(es)!\n\nAguardando cotações...`);
+   }
+  },i*1500); // 1.5s entre cada para não bloquear
+ });
+}
+
+// Compara cotações do mesmo grupo e mostra o melhor preço
+function compararCotacoes(grupoId){
+ const db=ldb();
+ const pedidos=(db.pedidosCompra||[]).filter(p=>p.grupoId===grupoId&&p.status==='cotado');
+ if(!pedidos.length){alert('Nenhuma cotação recebida ainda');return;}
+
+ // Para cada item, encontra o menor preço
+ const itensNomes=[...new Set(pedidos.flatMap(p=>p.itens.map(i=>i.nome)))];
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">📊 Comparação de Cotações</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Tabela de comparação -->
+  <div style="overflow-x:auto;">
+   <table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <thead>
+     <tr style="background:rgba(255,255,255,0.05);">
+      <th style="padding:8px;text-align:left;color:var(--mu);">Produto</th>
+      ${pedidos.map(p=>`<th style="padding:8px;text-align:center;color:var(--bl);">${p.fornecedor}</th>`).join('')}
+      <th style="padding:8px;text-align:center;color:var(--gr);">✅ Melhor</th>
+     </tr>
+    </thead>
+    <tbody>
+     ${itensNomes.map(nome=>{
+      const precos=pedidos.map(p=>({forn:p.fornecedor,preco:p.itens.find(i=>i.nome===nome)?.custoNovo||0}));
+      const validos=precos.filter(x=>x.preco>0);
+      const melhor=validos.length?validos.reduce((a,b)=>a.preco<b.preco?a:b):null;
+      return`<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+       <td style="padding:8px;font-weight:600;">${nome}</td>
+       ${precos.map(p=>`<td style="padding:8px;text-align:center;color:${melhor&&p.forn===melhor.forn&&p.preco>0?'var(--gr)':'var(--tx)'};">${p.preco>0?'R$ '+p.preco.toFixed(2).replace('.',','):'—'}</td>`).join('')}
+       <td style="padding:8px;text-align:center;font-weight:800;color:var(--gr);">${melhor?melhor.forn+'<br>R$ '+melhor.preco.toFixed(2).replace('.',','):'—'}</td>
+      </tr>`;
+     }).join('')}
+    </tbody>
+   </table>
+  </div>
+
+  <!-- Totais por fornecedor -->
+  <p style="font-size:12px;font-weight:700;margin-top:14px;margin-bottom:8px;">💰 Total por fornecedor:</p>
+  ${pedidos.map(p=>`<div style="display:flex;justify-content:space-between;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:6px;">
+   <span style="font-size:12px;font-weight:700;">${p.fornecedor}</span>
+   <span style="font-size:13px;font-weight:800;color:var(--re);">${brl(p.totalCotado)}</span>
+  </div>`).join('')}
+
+  <button onclick="aprovarMelhorCotacao('${grupoId}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:10px;">✅ Aprovar melhor preço por item</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function aprovarMelhorCotacao(grupoId){
+ const db=ldb();
+ const pedidos=(db.pedidosCompra||[]).filter(p=>p.grupoId===grupoId&&p.status==='cotado');
+ if(!pedidos.length)return;
+
+ // Para cada item, aprova o fornecedor com menor preço
+ const itensNomes=[...new Set(pedidos.flatMap(p=>p.itens.map(i=>i.nome)))];
+ const aprovados={};// fornecedorId -> [itens aprovados]
+
+ itensNomes.forEach(nome=>{
+  const opcoes=pedidos.map(p=>({
+   pedidoId:p.id,forn:p.fornecedor,
+   item:p.itens.find(i=>i.nome===nome)
+  })).filter(x=>x.item?.custoNovo>0);
+  if(!opcoes.length)return;
+  const melhor=opcoes.reduce((a,b)=>a.item.custoNovo<b.item.custoNovo?a:b);
+  if(!aprovados[melhor.pedidoId])aprovados[melhor.pedidoId]=[];
+  aprovados[melhor.pedidoId].push(melhor.item);
+ });
+
+ // Aprova cada pedido com os itens selecionados e envia WhatsApp
+ Object.entries(aprovados).forEach(([pedidoId,itensAprov])=>{
+  const pedIdx=(db.pedidosCompra||[]).findIndex(p=>p.id===pedidoId);
+  if(pedIdx<0)return;
+  db.pedidosCompra[pedIdx].status='aprovado';
+  db.pedidosCompra[pedIdx].dataAprovacao=hj();
+  db.pedidosCompra[pedIdx].itensAprovados=itensAprov;
+
+  const pedido=db.pedidosCompra[pedIdx];
+  const forn=(db.fornecedores||[]).find(f=>f.nome===pedido.fornecedor);
+  const tel=(forn?.whatsapp||forn?.telefone||'').replace(/\D/g,'');
+  const total=itensAprov.reduce((a,i)=>a+i.custoNovo*i.qtd,0);
+  const resumo=itensAprov.map(i=>`• ${i.nome}: ${i.qtd} ${i.unidade} × R$${i.custoNovo.toFixed(2)} = R$${(i.custoNovo*i.qtd).toFixed(2)}`).join('\n');
+  const msg=`✅ *APROVADO — Di Casa Laranjinha*\n📅 ${hj()}\n\n*Pode faturar os seguintes itens:*\n${resumo}\n\n*Total: R$ ${total.toFixed(2).replace('.',',')}*\n\nObrigado!`;
+
+  if(tel)window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(msg),'_blank');
+ });
+
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ render();
+ alert('✅ Pedidos aprovados e WhatsApp disparado para cada fornecedor!');
+}
 
 render();
 
