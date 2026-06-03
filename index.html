@@ -367,7 +367,14 @@ async function adicionarPorChave(){
  headers:{"Content-Type":"application/json"},
  body:JSON.stringify({chave,certPfx:cert.pfxBase64,certSenha:cert.senha,cnpj:cert.info.cnpj})
  });
- if(!rsp.ok)throw new Error("Backend SEFAZ indisponível ("+rsp.status+") — integração em implementação");
+ if(!rsp.ok){
+    // Backend SEFAZ indisponível — tenta consulta pública da NF-e
+    const chNFe=alert.info?.chave||'';
+    if(chNFe){
+      window.open('https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=7PhJ+gAVw2g=&nfe='+chNFe,'_blank');
+    }
+    throw new Error("Use o botão 📁 para importar o XML da NF-e, ou acesse o portal SEFAZ pelo link que foi aberto.");
+   }
  const dados=await rsp.json();
  if(dados.erro)throw new Error(dados.erro);
  const idx=fila.findIndex(f=>f.id===item.id);
