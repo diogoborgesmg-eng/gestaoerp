@@ -15086,7 +15086,13 @@ function abrirFormFornecedor(id){
    <div><label class="lbl">CNPJ</label><input id="ff-cnpj" class="inpm" placeholder="00.000.000/0001-00" style="font-family:'Space Mono',monospace;" value="${forn?.cnpj||''}" onblur="buscarDadosCNPJForn(this.value)"/></div>
    <div style="display:flex;gap:8px;">
     <div style="flex:1;"><label class="lbl">Telefone</label><input id="ff-tel" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.tel||''}"/></div>
-    <div style="flex:1;"><label class="lbl">WhatsApp</label><input id="ff-wpp" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.wpp||''}"/></div>
+    <div style="flex:1;">
+    <label class="lbl">WhatsApp</label>
+    <div style="display:flex;gap:5px;">
+     <input id="ff-wpp" class="inpm" placeholder="34 9xxxx-xxxx" style="flex:1;" value="${forn?.whatsapp||forn?.wpp||''}"/>
+     <button type="button" onclick="buscarContatoWpp()" style="padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:16px;cursor:pointer;flex-shrink:0;" title="Buscar nos contatos">👤</button>
+    </div>
+   </div>
    </div>
    <div><label class="lbl">Endereço</label><input id="ff-end" class="inpm" placeholder="Rua, Av..." value="${forn?.end||''}"/></div>
    <div style="display:flex;gap:8px;">
@@ -17817,6 +17823,42 @@ async function buscarDadosCNPJForn(cnpj){
    setTimeout(()=>{if(nomeEl){nomeEl.placeholder='Ex: Distribuidora São José';nomeEl.style.borderColor='';}},3000);
   }
  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUSCAR CONTATO — acessa agenda do celular
+// ═══════════════════════════════════════════════════════════════
+async function buscarContatoWpp(){
+ const wppEl=document.getElementById('ff-wpp');
+ if(!wppEl)return;
+
+ // API de Contatos (funciona no Chrome Android)
+ if('contacts' in navigator && 'ContactsManager' in window){
+  try{
+   const props=['name','tel'];
+   const opts={multiple:false};
+   const contatos=await navigator.contacts.select(props,opts);
+   if(contatos.length>0){
+    const contato=contatos[0];
+    const tel=(contato.tel?.[0]||'').replace(/\D/g,'').replace(/^55/,'');
+    wppEl.value=tel;
+    // Preenche nome se estiver vazio
+    const nomeEl=document.getElementById('ff-nome');
+    if(nomeEl&&!nomeEl.value&&contato.name?.[0]){
+     nomeEl.value=contato.name[0];
+    }
+   }
+   return;
+  }catch(e){
+   // API não disponível — usa fallback
+  }
+ }
+
+ // Fallback: abre teclado numérico para digitar
+ wppEl.focus();
+ wppEl.type='tel';
+ wppEl.setAttribute('inputmode','tel');
+ alert('Toque no campo e digite o número.\n\nDica: copie o número do WhatsApp e cole aqui.');
 }
 
 render();
