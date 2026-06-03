@@ -18514,7 +18514,7 @@ function abrirFormProdutoComFoto(prod,imgB64,mimeType){
  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
  div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-   <p style="font-weight:800;font-size:14px;">📦 Novo Produto</p>
+   <div style="display:flex;justify-content:space-between;align-items:center;"><p style="font-weight:800;font-size:14px;">📦 Novo Produto</p><button onclick="this.closest('[style*=inset]').remove();abrirCadastroPorFoto()" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:11px;font-weight:700;cursor:pointer;">📷 Por foto</button></div>
    <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
   </div>
 
