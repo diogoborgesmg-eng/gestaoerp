@@ -15083,7 +15083,7 @@ function abrirFormFornecedor(id){
   </div>
   <div style="display:flex;flex-direction:column;gap:8px;">
    <div><label class="lbl">Nome / Razão Social*</label><input id="ff-nome" class="inpm" placeholder="Ex: Frigorífico São José" value="${forn?.n||forn?.nome||''}"/></div>
-   <div><label class="lbl">CNPJ</label><input id="ff-cnpj" class="inpm" placeholder="00.000.000/0001-00" style="font-family:'Space Mono',monospace;" value="${forn?.cnpj||''}"/></div>
+   <div><label class="lbl">CNPJ</label><input id="ff-cnpj" class="inpm" placeholder="00.000.000/0001-00" style="font-family:'Space Mono',monospace;" value="${forn?.cnpj||''}" onblur="buscarDadosCNPJForn(this.value)"/></div>
    <div style="display:flex;gap:8px;">
     <div style="flex:1;"><label class="lbl">Telefone</label><input id="ff-tel" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.tel||''}"/></div>
     <div style="flex:1;"><label class="lbl">WhatsApp</label><input id="ff-wpp" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.wpp||''}"/></div>
@@ -17746,6 +17746,68 @@ function liberarMesaPDV(comandaId){
  sdb(db);
  window._pdvModo=null;window._pdvComanda=null;
  render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUSCA CNPJ FORNECEDOR — preenche dados automaticamente
+// ═══════════════════════════════════════════════════════════════
+async function buscarDadosCNPJForn(cnpj){
+ const c=cnpj.replace(/\D/g,'');
+ if(c.length!==14)return;
+
+ // Mostra loading no campo nome
+ const nomeEl=document.getElementById('ff-nome');
+ if(nomeEl)nomeEl.placeholder='🔍 Buscando...';
+
+ try{
+  const resp=await fetch('https://publica.cnpj.ws/cnpj/'+c);
+  if(!resp.ok)throw new Error('CNPJ não encontrado');
+  const d=await resp.json();
+
+  // Preenche os campos
+  const set=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=val;};
+
+  // Nome/Razão Social
+  set('ff-nome', d.razao_social||d.nome_fantasia||'');
+
+  // Endereço
+  const end=d.estabelecimento;
+  if(end){
+   set('ff-end', (end.tipo_logradouro?end.tipo_logradouro+' ':'')+end.logradouro+', '+end.numero);
+   set('ff-bairro', end.bairro||'');
+   set('ff-cidade', end.cidade?.nome||'');
+   set('ff-uf', end.estado?.sigla||'');
+   set('ff-cep', end.cep?.replace(/(\d{5})(\d{3})/,'$1-$2')||'');
+  }
+
+  // Telefone principal
+  const tel=end?.ddd1&&end?.telefone1?'('+end.ddd1+') '+end.telefone1:'';
+  set('ff-tel', tel);
+
+  // Mostra alerta de sucesso
+  if(nomeEl)nomeEl.style.borderColor='var(--gr)';
+  setTimeout(()=>{if(nomeEl)nomeEl.style.borderColor='';},2000);
+
+ }catch(e){
+  // Tenta segunda API
+  try{
+   const resp2=await fetch('https://receitaws.com.br/v1/cnpj/'+c);
+   if(!resp2.ok)throw new Error('');
+   const d2=await resp2.json();
+   const set=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=val;};
+   set('ff-nome', d2.nome||d2.fantasia||'');
+   const end2=d2.municipio?d2.logradouro+', '+d2.numero:'';
+   set('ff-end', end2);
+   set('ff-bairro', d2.bairro||'');
+   set('ff-cidade', d2.municipio||'');
+   set('ff-uf', d2.uf||'');
+   set('ff-cep', d2.cep||'');
+   set('ff-tel', d2.telefone||'');
+  }catch(e2){
+   if(nomeEl){nomeEl.placeholder='CNPJ não encontrado — preencha manualmente';nomeEl.style.borderColor='var(--re)';}
+   setTimeout(()=>{if(nomeEl){nomeEl.placeholder='Ex: Distribuidora São José';nomeEl.style.borderColor='';}},3000);
+  }
+ }
 }
 
 render();
