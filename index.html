@@ -15132,7 +15132,8 @@ function salvarFornecedor(id){
   tel:document.getElementById('ff-tel')?.value?.trim()||'',wpp:document.getElementById('ff-wpp')?.value?.trim()||'',
   email:document.getElementById('ff-email')?.value?.trim()||'',categoria:document.getElementById('ff-cat')?.value||'',
   obs:document.getElementById('ff-obs')?.value?.trim()||'',prazo:document.getElementById('ff-prazo')?.value?.trim()||'',
-  diaEntrega:document.getElementById('ff-dia')?.value?.trim()||'',dt:hj()};
+  diaEntrega:document.getElementById('ff-dia')?.value?.trim()||'',dt:hj()},
+  end:document.getElementById('ff-end')?.value?.trim()||'',bairro:document.getElementById('ff-bairro')?.value?.trim()||'',cidade:document.getElementById('ff-cidade')?.value?.trim()||'',uf:document.getElementById('ff-uf')?.value?.trim()||'',cep:document.getElementById('ff-cep')?.value?.trim()||'',nome:nome};
  if(id){const idx=db.forn.findIndex(f=>f.id===id);if(idx>=0)db.forn[idx]=dados;else db.forn.push(dados);}
  else db.forn.push(dados);
  sdb(db);
