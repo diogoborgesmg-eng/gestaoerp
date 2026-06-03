@@ -8533,6 +8533,7 @@ ${t==="compras"?"🛒 Compras":t==="contas"?"💳 Contas a Pagar":t==="preparo"?
 <div style="grid-column:1/-1;"><label class="lbl">Logradouro</label><input id="cfg-logradouro" class="inpm" placeholder="Rua, Av..."/></div>
 <div><label class="lbl">Bairro</label><input id="cfg-bairro" class="inpm" placeholder="Bairro"/></div>
 <div><label class="lbl">Regime Tributário</label><select id="cfg-crt" class="inpm"><option value="1">1 — Simples Nacional</option><option value="2">2 — Simples Exc.</option><option value="3">3 — Normal</option></select></div>
+<div><label class="lbl">Chave PIX</label><input id="cfg-chave-pix" class="inpm" placeholder="CNPJ, CPF, e-mail ou telefone" value="${_df.chavePix||df.cnpj||''}" onchange="const d=gDadosFiscais();d.chavePix=this.value;sDadosFiscais(d);"/></div>
 <div><label class="lbl">CSC NFC-e</label><input id="cfg-csc" class="inpm" placeholder="Do contador"/></div>
 <div><label class="lbl">ID Token NFC-e</label><input id="cfg-cscid" class="inpm" placeholder="000001"/></div>
 <div><label class="lbl">URL Backend</label><input id="cfg-backend-url" class="inpm" placeholder="https://gestaoerp.vercel.app"/></div>
@@ -17739,17 +17740,233 @@ function fecharContaPDV(comandaId){
  const itens=m.comanda||[];
  const total=itens.reduce((a,i)=>a+Number(i.val||0)*Number(i.qtd||1),0);
  if(!itens.length){alert('Comanda vazia!');return;}
- if(!confirm('Fechar Comanda '+comandaId+'?\nTotal: R$ '+total.toFixed(2).replace('.',',')))return;
+
+ // Abre tela de checkout completa
+ abrirCheckoutPDV(comandaId, m, itens, total);
+}
+
+function abrirCheckoutPDV(comandaId, m, itens, total){
+ const df=gDadosFiscais();
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0d0d1a;z-index:700;overflow-y:auto;';
+
+ div.innerHTML=`<div style="max-width:520px;margin:0 auto;padding:14px 14px 40px;">
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <div>
+    <p style="font-weight:900;font-size:16px;color:#fff;">🧾 Comanda ${comandaId}</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${m.abertura||''} · ${itens.length} item(ns)</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">← Voltar</button>
+  </div>
+
+  <!-- Itens -->
+  <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;margin-bottom:12px;">
+   ${itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <span style="font-size:12px;color:#fff;">${i.qtd||1}x ${i.nome}</span>
+    <span style="font-size:12px;color:#fff;font-weight:700;">${brl(Number(i.val||0)*Number(i.qtd||1))}</span>
+   </div>`).join('')}
+   <div style="display:flex;justify-content:space-between;padding:10px 0 0;margin-top:4px;">
+    <span style="font-size:15px;font-weight:900;color:#fff;">TOTAL</span>
+    <span style="font-size:18px;font-weight:900;color:#00ff88;">${brl(total)}</span>
+   </div>
+  </div>
+
+  <!-- Forma de pagamento -->
+  <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);margin-bottom:10px;">Forma de pagamento:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+   ${[
+    ['💳 Crédito','credito','#4488ff'],
+    ['💳 Débito','debito','#8844ff'],
+    ['📱 PIX','pix','#00ff88'],
+    ['💵 Dinheiro','dinheiro','#ffcc00'],
+    ['🎫 Voucher','voucher','#ff8844'],
+    ['📋 Fiado','fiado','#ff4466'],
+   ].map(([lbl,id,cor])=>`<button onclick="selecionarPagamento('${id}','${cor}',${total},${comandaId})"
+    style="padding:14px;border-radius:10px;border:2px solid ${cor}40;background:${cor}15;color:${cor};font-size:13px;font-weight:800;cursor:pointer;">
+    ${lbl}
+   </button>`).join('')}
+  </div>
+
+  <!-- Divisão de conta -->
+  <button onclick="dividirConta(${comandaId},${total})"
+   style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">
+   👥 Dividir conta
+  </button>
+ </div>`;
+
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function selecionarPagamento(tipo,cor,total,comandaId){
+ if(tipo==='pix'){
+  document.querySelector('[style*="z-index:700"]')?.remove();
+  abrirPIXQRCode(comandaId, total);
+  return;
+ }
+ // Confirma pagamento
+ if(!confirm('Confirmar pagamento?\n\nForma: '+tipo.toUpperCase()+'\nValor: R$ '+total.toFixed(2).replace('.',',')))return;
+ confirmarPagamentoPDV(comandaId, tipo, total);
+ document.querySelector('[style*="z-index:700"]')?.remove();
+}
+
+function confirmarPagamentoPDV(comandaId, tipo, total, obs){
+ const db=ldb();
+ if(!db.mesas)db.mesas=gMesas();
+ const mIdx=db.mesas.findIndex(x=>x.id===comandaId);
+ if(mIdx<0)return;
+ const m=db.mesas[mIdx];
+
  // Lança no DRE
  const dia=hj();
  if(!db[dia])db[dia]={r:[],c:[]};
- db[dia].r.push({id:uid(),d:'Comanda '+comandaId+' — '+itens.length+' item(ns)',v:total,cat:'Vendas PDV',seg:'vendas',_comanda:comandaId});
- // Fecha a comanda
+ db[dia].r.push({
+  id:uid(),
+  d:'Comanda '+comandaId+(obs?' — '+obs:''),
+  v:total,
+  cat:'Vendas PDV',
+  seg:tipo,
+  _comanda:comandaId,
+  _pgto:tipo
+ });
+
+ // Libera a mesa
  m.status='livre';m.comanda=[];m.abertura=null;m.mesa='';
  sdb(db);
  window._pdvModo=null;window._pdvComanda=null;
  render();
- alert('✅ Comanda '+comandaId+' fechada!\nR$ '+total.toFixed(2).replace('.',','));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PIX QR CODE — sem maquininha, sem taxa
+// ═══════════════════════════════════════════════════════════════
+function gerarPixEMV(chave,nome,cidade,valor,txid){
+ // Gera payload PIX EMV padrão BACEN — gratuito, sem operadora
+ const pixKey=chave.replace(/[^0-9a-zA-Z@._-]/g,'');
+ const merchantName=nome.substring(0,25).replace(/[^a-zA-Z0-9 ]/g,'');
+ const merchantCity=cidade.substring(0,15).replace(/[^a-zA-Z ]/g,'');
+ const amount=valor.toFixed(2);
+ const id=(txid||uid().substring(0,25)).replace(/[^a-zA-Z0-9]/g,'');
+
+ const pad=(id,val)=>{const s=String(val);return id+String(s.length).padStart(2,'0')+s;};
+ const gui='BR.GOV.BCB.PIX';
+ const pixInfo=pad('00',pixKey)+pad('02',id.substring(0,25));
+ const mai=pad('00',gui)+pad('01',pixInfo);
+ const body=
+  pad('00','01')+
+  pad('26',mai)+
+  pad('52','0000')+
+  pad('53','986')+
+  pad('54',amount)+
+  pad('58','BR')+
+  pad('59',merchantName)+
+  pad('60',merchantCity)+
+  pad('62',pad('05',id.substring(0,25)))+
+  '6304';
+ // CRC16
+ let crc=0xFFFF;
+ for(let i=0;i<body.length;i++){
+  crc^=body.charCodeAt(i)<<8;
+  for(let j=0;j<8;j++)crc=crc&0x8000?(crc<<1)^0x1021:(crc<<1);
+  crc&=0xFFFF;
+ }
+ return body+crc.toString(16).toUpperCase().padStart(4,'0');
+}
+
+async function abrirPIXQRCode(comandaId, total){
+ const df=gDadosFiscais();
+ const chavePix=df.chavePix||df.cnpj?.replace(/\D/g,'')||'';
+
+ if(!chavePix){
+  // Pede a chave pix
+  const chave=prompt('Chave PIX do restaurante:\n(CNPJ, CPF, e-mail ou telefone)');
+  if(!chave)return;
+  const d=gDadosFiscais();d.chavePix=chave;sDadosFiscais(d);
+  abrirPIXQRCode(comandaId,total);return;
+ }
+
+ const txid='DCMDA'+String(comandaId)+Date.now().toString(36).toUpperCase();
+ const payload=gerarPixEMV(chavePix,'Di Casa Laranjinha','Patos de Minas',total,txid);
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0d0d1a;z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+
+ div.innerHTML=`<div style="text-align:center;max-width:340px;width:100%;">
+  <p style="font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">📱 PIX — Comanda ${comandaId}</p>
+  <p style="font-size:24px;font-weight:900;color:#00ff88;margin-bottom:16px;">${brl(total)}</p>
+
+  <!-- QR Code via API gratuita -->
+  <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;display:inline-block;">
+   <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}"
+    width="220" height="220" style="display:block;border-radius:8px;" alt="QR Code PIX"/>
+  </div>
+
+  <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:12px;">Chave: ${chavePix}</p>
+
+  <!-- Copia código -->
+  <button onclick="navigator.clipboard?.writeText('${payload}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar código PIX',2000)"
+   style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:#00ff88;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px;">
+   📋 Copiar código PIX
+  </button>
+
+  <!-- Confirmar manualmente -->
+  <button onclick="confirmarPagamentoPDV(${comandaId},'pix',${total},'PIX');this.closest('[style*=inset]').remove();"
+   style="width:100%;padding:12px;border-radius:10px;border:none;background:#00ff88;color:#000;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px;">
+   ✅ Confirmar recebimento
+  </button>
+
+  <button onclick="this.closest('[style*=inset]').remove()"
+   style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">
+   ← Voltar
+  </button>
+ </div>`;
+
+ document.body.appendChild(div);
+
+ // Verifica pagamento automaticamente (polling a cada 5s)
+ verificarPixRecebido(txid,total,comandaId,div);
+}
+
+async function verificarPixRecebido(txid,total,comandaId,overlayEl){
+ // Tenta verificar via backend (Stone/C6 webhook)
+ // Se o banco tiver webhook configurado, a confirmação é automática
+ const df=gDadosFiscais();
+ const maxTentativas=36; // 3 minutos
+ let tentativas=0;
+
+ const check=setInterval(async()=>{
+  tentativas++;
+  if(tentativas>maxTentativas||!document.body.contains(overlayEl)){
+   clearInterval(check);return;
+  }
+  try{
+   const resp=await fetch((df.backendUrl||'https://gestaoerp.vercel.app')+'/api/pix/verificar',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+    body:JSON.stringify({txid,valor:total})
+   });
+   const data=await resp.json();
+   if(data.pago){
+    clearInterval(check);
+    overlayEl.remove();
+    confirmarPagamentoPDV(comandaId,'pix',total,'PIX confirmado automaticamente');
+    // Notificação
+    const n=document.createElement('div');
+    n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#00ff88;color:#000;padding:12px 20px;border-radius:12px;z-index:999;font-size:14px;font-weight:900;';
+    n.textContent='✅ PIX recebido! Mesa liberada!';
+    document.body.appendChild(n);
+    setTimeout(()=>n.remove(),4000);
+   }
+  }catch(e){}
+ },5000);
+}
+
+function dividirConta(comandaId,total){
+ const n=parseInt(prompt('Dividir em quantas pessoas?','2')||'0');
+ if(!n||n<2)return;
+ const porPessoa=total/n;
+ alert(`💰 ${n} pessoas\nR$ ${porPessoa.toFixed(2).replace('.',',')} por pessoa`);
 }
 
 function liberarMesaPDV(comandaId){
