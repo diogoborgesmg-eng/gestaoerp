@@ -12593,7 +12593,7 @@ function rCompras(){
  });
  // Sugestão de compra = consumo médio × 15 dias - estoque atual
  const calcSugestao=(e)=>{
- const diasEstoque=15;
+ const diasEstoque=7;
  const consumo=consumoMedio[e.id]||0;
  if(consumo>0)return Math.max(0,(consumo*diasEstoque)-e.q);
  return Math.max(0,(e.min||0)*3-e.q);
@@ -12630,10 +12630,14 @@ function rCompras(){
  const consumoDiario=consumoSem/7;
  const diasEstoque=consumoDiario>0?estoqueAtual/consumoDiario:999;
  return{nome,consumoSem,consumoDiario,estoqueAtual,diasEstoque,unid:item?.u||"un",temNoEstoque:!!item};
- }).filter(s=>s.diasEstoque<15).sort((a,b)=>a.diasEstoque-b.diasEstoque);
- const criticos=est.filter(e=>e.min>0&&e.q<=e.min).map(e=>({...e,prio:1,label:"🚨 Crítico",sugestao:calcSugestao(e)}));
- const baixos=est.filter(e=>e.min>0&&e.q>e.min&&e.q<=e.min*2).map(e=>({...e,prio:2,label:"⚠️ Baixo",sugestao:calcSugestao(e)}));
- const sem_min=est.filter(e=>(!e.min||e.min===0)&&e.q<5).map(e=>({...e,prio:3,label:"📌 Atenção",sugestao:calcSugestao(e)}));
+ }).filter(s=>s.diasEstoque<7).sort((a,b)=>a.diasEstoque-b.diasEstoque);
+ const enriquece=(e,prio,label)=>{
+  const cDia=consumoMedio[e.id]||0;
+  return{...e,prio,label,sugestao:calcSugestao(e),consumoDiario:cDia};
+ };
+ const criticos=est.filter(e=>e.min>0&&e.q<=e.min).map(e=>enriquece(e,1,"🚨 Crítico"));
+ const baixos=est.filter(e=>e.min>0&&e.q>e.min&&e.q<=e.min*2).map(e=>enriquece(e,2,"⚠️ Baixo"));
+ const sem_min=est.filter(e=>(!e.min||e.min===0)&&e.q<5).map(e=>enriquece(e,3,"📌 Atenção"));
  const manuais=(db._comprasManuais||[]);
  const buscaComp=(db._compBusca||"").toLowerCase();
  const filtrarItem=it=>!buscaComp||it.n?.toLowerCase().includes(buscaComp);
@@ -12683,6 +12687,7 @@ function rCompras(){
 <span class="st">🛒 Compras</span>
 <div style="display:flex;gap:5px;align-items:center;">
 ${verificarAlertasEstoque().length>0?`<button onclick="dispararAlertasWpp()" style="padding:4px 8px;border-radius:6px;border:none;background:#25D366;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">📱 Alertar ${verificarAlertasEstoque().length}</button>`:""}
+<button onclick="abrirModalPedidoCompra()" style="padding:4px 8px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--gr),#00cc70);color:#000;font-size:10px;font-weight:700;cursor:pointer;">📋 Pedido</button>
 <button onclick="addItemManualCompras()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);font-size:10px;cursor:pointer;">+ Item</button>
 ${manuais.length>0?`<button onclick="limparManuaisCompras()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;cursor:pointer;">🗑️</button>`:""}
 ${lista.length>0?`<button onclick="toggleTodosCompras()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;cursor:pointer;">${todosSelect?"☑️":"☐"}</button>`:""}
@@ -12719,7 +12724,8 @@ style="width:65px;background:var(--sf);border:1px solid rgba(68,136,255,0.3);bor
 :`<p style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:${it.prio===1?'var(--re)':it.prio===2?'var(--ye)':'var(--tx)'};">${falta.toFixed(1)} ${it.u}</p>
 <p style="font-size:10px;color:var(--mu);">≈ ${brl(falta*(it.cu||0))}</p>
 ${diasEstoque!==null?`<p style="font-size:9px;color:${diasEstoque<=3?'#ff3366':diasEstoque<=7?'#ffcc00':'var(--mu)'};">⏱ ${diasEstoque}d de estoque</p>`:""}
-${consumoDia>0?`<p style="font-size:9px;color:var(--mu);">~${consumoDia.toFixed(2)}${it.u}/dia</p>`:""}`}
+${consumoDia>0?`<p style="font-size:9px;color:var(--mu);">~${consumoDia.toFixed(2)}${it.u}/dia</p>`:""}
+${(()=>{const inf=calcInflacaoItem(it);if(inf==null)return "";const cor=inf>5?"#ff3366":inf>0?"#f59e0b":"#00ff88";return`<p style="font-size:9px;font-weight:700;color:${cor};">${inf>0?`▲ +${inf.toFixed(1)}%`:`▼ ${inf.toFixed(1)}%`}</p>`;})()}`}
 </div>
 </div>
 </div>
@@ -12831,6 +12837,219 @@ function editarQtdCompra(id,novaQtd){
  if(!db._comprasManuais)return;
  const item=db._comprasManuais.find(it=>it.id===id);
  if(item){item.min=parseFloat(novaQtd)||item.min;sdb(db);}
+}
+
+// ============================================================
+// MÓDULO PEDIDO DE COMPRA + CONFERÊNCIA NF — v2
+// ============================================================
+function gPedidosCompra(){const d=ldb();if(!d.pedidosCompra)d.pedidosCompra=[];return d.pedidosCompra;}
+function sPedidosCompra(p){const d=ldb();d.pedidosCompra=p;sdb(d);}
+
+function calcInflacaoItem(e){
+ const cuAtual=e.cu||0;const lotes=e.lotes||[];
+ let cuAnterior=e.cuAnterior||0;
+ if(lotes.length>=2){cuAnterior=lotes[lotes.length-2].cuPorUn||lotes[lotes.length-2].cuPorCx||0;}
+ if(!cuAnterior||!cuAtual)return null;
+ return((cuAtual-cuAnterior)/cuAnterior)*100;
+}
+
+function calcVolumeSugerido(e){
+ const consumoDia=consumoMedio[e.id]||((e.s||[]).filter(s=>{if(!s.dt)return false;const[d,m,y]=s.dt.split('/');return(new Date()-new Date(y,m-1,d))/(1000*60*60*24)<=30;}).reduce((a,s)=>a+s.q,0)/30);
+ if(consumoDia>0)return Math.max(0,(consumoDia*7)-e.q);
+ return Math.max(0,(e.min||0)*1.5-e.q);
+}
+
+function abrirModalPedidoCompra(pedidoId){
+ const db=ldb();const est=gest();
+ const forns=[...new Set((db.contasPagar||[]).map(c=>c.forn).filter(Boolean))];
+ const pedido=pedidoId?gPedidosCompra().find(p=>p.id===pedidoId):null;
+ const selCompr=db._comprasSel||[];
+ let itensModal=[];
+ if(pedido){
+  itensModal=pedido.itens;
+ } else {
+  const criticos=est.filter(e=>e.min>0&&e.q<=e.min);
+  const baixos=est.filter(e=>e.min>0&&e.q>e.min&&e.q<=e.min*2);
+  const sem_min=est.filter(e=>(!e.min||e.min===0)&&e.q<5);
+  const manuais=(db._comprasManuais||[]);
+  const listaCompleta=[...criticos,...baixos,...sem_min,...manuais];
+  const itensFiltrados=selCompr.length>0?listaCompleta.filter(it=>selCompr.includes(it.id)):listaCompleta;
+  itensModal=itensFiltrados.map(it=>{
+   const e=est.find(x=>x.id===it.id)||it;
+   const vol=parseFloat(calcVolumeSugerido(e).toFixed(2));
+   const inflacao=calcInflacaoItem(e);
+   return{idEst:it.id,nome:it.n,unid:it.u||'un',qtdPedida:vol,precoUnit:e.cu||0,cuAnterior:e.cuAnterior||0,inflacao};
+  });
+ }
+ const htmlItens=itensModal.map((it,i)=>{
+  const infPct=it.inflacao;
+  const infCor=infPct==null?'var(--mu)':infPct>5?'#ff3366':infPct>0?'#f59e0b':'#00ff88';
+  const infLabel=infPct==null?'sem hist.':infPct>0?`▲ +${infPct.toFixed(1)}%`:`▼ ${infPct.toFixed(1)}%`;
+  const infBg=infPct==null?'transparent':infPct>5?'rgba(255,51,102,0.1)':infPct>0?'rgba(245,158,11,0.1)':'rgba(0,255,136,0.1)';
+  return`<div id="pc-item-${i}" style="background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:8px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;"><div style="flex:1;"><p style="font-size:12px;font-weight:700;">${it.nome}</p><p style="font-size:10px;color:var(--mu);">Última: <span style="font-family:'Space Mono',monospace;">${it.cuAnterior>0?brl(it.cuAnterior):'—'}</span> → Hoje: <span style="font-family:'Space Mono',monospace;color:var(--tx);">${it.precoUnit>0?brl(it.precoUnit):'—'}</span></p></div><span style="font-size:10px;font-weight:700;color:${infCor};padding:2px 7px;background:${infBg};border-radius:10px;white-space:nowrap;">${infLabel}</span></div><div style="display:grid;grid-template-columns:1fr 80px 90px 28px;gap:5px;align-items:center;"><p style="font-size:10px;color:var(--mu);">Vol. (${it.unid})</p><input type="number" value="${it.qtdPedida}" id="pc-qtd-${i}" step="0.01" min="0" style="background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:5px 7px;color:var(--tx);font-size:12px;text-align:right;" oninput="atualizarTotalPedido()"/><input type="number" value="${it.precoUnit||''}" placeholder="R$ unit" id="pc-preco-${i}" step="0.01" min="0" style="background:var(--sf);border:1px solid rgba(0,255,136,0.3);border-radius:6px;padding:5px 7px;color:var(--gr);font-size:12px;font-family:'Space Mono',monospace;text-align:right;" oninput="atualizarTotalPedido()"/><button onclick="remItemPedido(${i})" style="width:26px;height:26px;background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:6px;color:var(--re);font-size:13px;cursor:pointer;">×</button></div><input type="hidden" id="pc-nome-${i}" value="${it.nome}"/><input type="hidden" id="pc-idest-${i}" value="${it.idEst||''}"/><input type="hidden" id="pc-unid-${i}" value="${it.unid||'un'}"/></div>`;
+ }).join('');
+ const aviso=selCompr.length>0?`${itensModal.length} item(s) selecionado(s)`:itensModal.length>0?`${itensModal.length} itens críticos/baixos`:'Nenhum item na lista';
+ const html=`<div style="padding:15px;"><p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:4px;">📋 ${pedido?'Editar':'Novo'} Pedido de Compra</p><p style="font-size:10px;color:var(--bl);margin-bottom:10px;">${aviso} · sugestão p/ 7 dias</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;"><div><p style="font-size:10px;color:var(--mu);margin-bottom:3px;">Fornecedor</p><select id="pc-forn" style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:7px 9px;color:var(--tx);font-size:12px;"><option value="">Selecionar...</option>${forns.map(f=>`<option value="${f}" ${pedido?.fornecedor===f?'selected':''}>${f}</option>`).join('')}<option value="__novo">+ Novo</option></select></div><div><p style="font-size:10px;color:var(--mu);margin-bottom:3px;">Entrega Prevista</p><input type="date" id="pc-data" value="${pedido?.dataEntrega||''}" style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:7px 9px;color:var(--tx);font-size:12px;"/></div></div><div id="pc-forn-novo" style="display:none;margin-bottom:10px;"><input type="text" id="pc-forn-txt" placeholder="Nome do fornecedor" style="width:100%;background:var(--sf2);border:1px solid rgba(68,136,255,0.4);border-radius:8px;padding:7px 9px;color:var(--tx);font-size:12px;"/></div><p style="font-size:10px;color:var(--mu);margin-bottom:6px;">Itens — Vol. p/ 7 dias · Preço atual · Variação</p><div id="pc-itens-lista">${htmlItens}</div><div style="display:flex;gap:6px;margin-bottom:10px;"><button onclick="addItemPedido()" style="flex:1;padding:7px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:8px;color:var(--bl);font-size:11px;cursor:pointer;">+ Item manual</button></div><div style="background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><p style="font-size:11px;color:var(--mu);">Total do Pedido</p><p id="pc-total-val" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--gr);">R$ 0,00</p></div><textarea id="pc-obs" placeholder="Prazo de pagamento, condições..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:11px;resize:none;height:50px;margin-bottom:10px;">${pedido?.obs||''}</textarea><div style="display:flex;gap:6px;"><button onclick="fecharModalFila()" style="flex:1;padding:10px;background:var(--sf2);border:1px solid var(--br);border-radius:8px;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button><button onclick="salvarPedidoCompra('${pedidoId||''}')" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gr),#00cc70);border:none;border-radius:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar e Enviar WhatsApp</button></div></div>`;
+ const m=document.getElementById('modal-fila');
+ m.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;"><div style="background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:92vh;overflow-y:auto;">${html}</div></div>`;
+ m.style.display='block';
+ document.getElementById('pc-forn').addEventListener('change',function(){document.getElementById('pc-forn-novo').style.display=this.value==='__novo'?'block':'none';});
+ setTimeout(atualizarTotalPedido,50);
+}
+
+function atualizarTotalPedido(){
+ let total=0,i=0;
+ while(document.getElementById(`pc-qtd-${i}`)){
+  total+=(parseFloat(document.getElementById(`pc-qtd-${i}`).value||0))*(parseFloat(document.getElementById(`pc-preco-${i}`).value||0));
+  i++;
+ }
+ const el=document.getElementById('pc-total-val');if(el)el.textContent=brl(total);
+}
+
+function addItemPedido(){
+ const div=document.getElementById('pc-itens-lista');let i=0;
+ while(document.getElementById(`pc-item-${i}`))i++;
+ const novo=document.createElement('div');novo.id=`pc-item-${i}`;
+ novo.style.cssText='background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:8px;margin-bottom:6px;';
+ novo.innerHTML=`<div style="display:grid;grid-template-columns:1fr 80px 90px 28px;gap:5px;align-items:center;"><input type="text" placeholder="Nome" id="pc-nome-${i}" style="background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:5px 7px;color:var(--tx);font-size:12px;"/><input type="number" placeholder="Qtd" id="pc-qtd-${i}" step="0.01" min="0" style="background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:5px 7px;color:var(--tx);font-size:12px;text-align:right;" oninput="atualizarTotalPedido()"/><input type="number" placeholder="R$ unit" id="pc-preco-${i}" step="0.01" min="0" style="background:var(--sf);border:1px solid rgba(0,255,136,0.3);border-radius:6px;padding:5px 7px;color:var(--gr);font-size:12px;font-family:'Space Mono',monospace;text-align:right;" oninput="atualizarTotalPedido()"/><button onclick="remItemPedido(${i})" style="width:26px;height:26px;background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:6px;color:var(--re);font-size:13px;cursor:pointer;">×</button></div><input type="hidden" id="pc-idest-${i}" value=""/><input type="hidden" id="pc-unid-${i}" value="un"/>`;
+ div.appendChild(novo);
+}
+
+function remItemPedido(i){const el=document.getElementById(`pc-item-${i}`);if(el){el.remove();atualizarTotalPedido();}}
+
+function salvarPedidoCompra(pedidoId){
+ const fornSel=document.getElementById('pc-forn')?.value;
+ const forn=fornSel==='__novo'?(document.getElementById('pc-forn-txt')?.value?.trim()||''):fornSel;
+ if(!forn){alert('Selecione ou informe o fornecedor!');return;}
+ const dataEntrega=document.getElementById('pc-data')?.value||'';
+ const obs=document.getElementById('pc-obs')?.value||'';
+ const itens=[];let i=0;
+ while(document.getElementById(`pc-qtd-${i}`)){
+  const nomeEl=document.getElementById(`pc-nome-${i}`);
+  const nome=nomeEl?.value?.trim()||nomeEl?.getAttribute('value')||'';
+  const qtd=parseFloat(document.getElementById(`pc-qtd-${i}`)?.value||0);
+  const preco=parseFloat(document.getElementById(`pc-preco-${i}`)?.value||0);
+  const idEst=document.getElementById(`pc-idest-${i}`)?.value||'';
+  const unid=document.getElementById(`pc-unid-${i}`)?.value||'un';
+  if(nome&&qtd>0)itens.push({idEst,nome,unid,qtdPedida:qtd,precoUnit:preco,total:qtd*preco});
+  i++;
+ }
+ if(!itens.length){alert('Adicione ao menos um item com quantidade!');return;}
+ const pedidos=gPedidosCompra();
+ const totalPedido=itens.reduce((a,it)=>a+it.total,0);
+ let pedidoSalvo;
+ if(pedidoId){
+  const p=pedidos.find(x=>x.id===pedidoId);
+  if(p){Object.assign(p,{fornecedor:forn,dataEntrega,obs,itens,total:totalPedido,updatedAt:hj()});pedidoSalvo=p;}
+ } else {
+  pedidoSalvo={id:uid(),fornecedor:forn,dataEntrega,obs,itens,total:totalPedido,status:'aguardando_nf',criadoEm:hj(),updatedAt:hj()};
+  pedidos.push(pedidoSalvo);
+ }
+ sPedidosCompra(pedidos);fecharModalFila();render();
+ if(confirm(`Pedido salvo!\nEnviar para ${forn} via WhatsApp?`)){window.open(`https://wa.me/?text=${gerarWppPedidoCompra(pedidoSalvo)}`,'_blank');}
+}
+
+function gerarWppPedidoCompra(p){
+ const emp=JSON.parse(localStorage.getItem('erp_empresa')||'{}');
+ let txt=`📋 *PEDIDO DE COMPRA*\n`;
+ if(emp.nome)txt+=`🏠 ${emp.nome}\n`;
+ txt+=`📅 ${p.criadoEm}`;if(p.dataEntrega)txt+=` · 🚚 ${p.dataEntrega}`;
+ txt+=`\n${'─'.repeat(28)}\n\n`;
+ p.itens.forEach(it=>{txt+=`• *${it.nome}*: ${it.qtdPedida} ${it.unid}`;if(it.precoUnit>0)txt+=` × ${brl(it.precoUnit)} = *${brl(it.total)}*`;txt+='\n';});
+ txt+=`\n${'─'.repeat(28)}\n💰 *Total: ${brl(p.total)}*\n`;
+ if(p.obs)txt+=`\n📝 ${p.obs}`;
+ return encodeURIComponent(txt);
+}
+
+function abrirConferenciaNF(pedidoId){
+ const pedido=gPedidosCompra().find(p=>p.id===pedidoId);if(!pedido)return;
+ const html=`<div style="padding:15px;"><p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:5px;">🔍 Conferência de NF</p><p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Pedido: <strong style="color:var(--tx);">${pedido.fornecedor}</strong> · ${pedido.criadoEm} · <strong style="color:var(--gr);">${brl(pedido.total)}</strong></p><div style="background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;margin-bottom:10px;"><p style="font-size:10px;color:var(--mu);margin-bottom:8px;">📷 Foto da NF para conferência automática por IA</p><div style="display:flex;gap:8px;margin-bottom:8px;"><label style="flex:1;padding:10px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:8px;color:var(--bl);font-size:11px;text-align:center;cursor:pointer;">📷 Câmera<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoNF('${pedidoId}',this)"/></label><label style="flex:1;padding:10px;background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:8px;color:var(--bl);font-size:11px;text-align:center;cursor:pointer;">🖼️ Galeria<input type="file" accept="image/*" style="display:none;" onchange="processarFotoNF('${pedidoId}',this)"/></label></div><p style="font-size:10px;color:var(--mu);margin-bottom:5px;">Ou total manual:</p><input type="number" id="nf-total-manual" placeholder="R$ Total da NF" step="0.01" style="width:100%;background:var(--sf);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:8px;color:var(--gr);font-size:14px;font-family:'Space Mono',monospace;text-align:right;margin-bottom:8px;"/><button onclick="conferirNFManual('${pedidoId}')" style="width:100%;padding:10px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;">🔍 Conferir Total</button></div><div id="nf-resultado"></div><button onclick="fecharModalFila()" style="width:100%;padding:9px;background:var(--sf2);border:1px solid var(--br);border-radius:8px;color:var(--mu);font-size:12px;cursor:pointer;margin-top:8px;">Fechar</button></div>`;
+ const m=document.getElementById('modal-fila');
+ m.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;"><div style="background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-height:90vh;overflow-y:auto;">${html}</div></div>`;
+ m.style.display='block';
+}
+
+async function processarFotoNF(pedidoId,input){
+ const file=input.files[0];if(!file)return;
+ const pedido=gPedidosCompra().find(p=>p.id===pedidoId);if(!pedido)return;
+ const res=document.getElementById('nf-resultado');
+ res.innerHTML='<div style="text-align:center;padding:20px;"><div style="width:30px;height:30px;border:3px solid var(--bl);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;"></div><p style="font-size:11px;color:var(--mu);">Analisando NF...</p></div>';
+ try{
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+  const itensPedStr=pedido.itens.map(it=>`• ${it.nome}: ${it.qtdPedida}${it.unid} × R$${it.precoUnit.toFixed(2)}`).join('\n');
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:`Analise esta NF. Pedido:\n${itensPedStr}\nTotal pedido: R$${pedido.total.toFixed(2)}\nResponda SOMENTE JSON sem markdown:\n{"totalNF":0,"numeroNF":"","itensNF":[{"nome":"","qtd":0,"precoUnit":0,"total":0}]}`}]}]})});
+  const data=await resp.json();
+  const txt=data.content.map(i=>i.text||'').join('').replace(/\`\`\`json|\`\`\`/g,'').trim();
+  mostrarResultadoConferencia(pedidoId,JSON.parse(txt),false);
+ }catch(e){res.innerHTML=`<div style="background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:8px;padding:10px;"><p style="color:var(--re);font-size:12px;">❌ Erro: ${e.message}</p></div>`;}
+}
+
+function conferirNFManual(pedidoId){
+ const pedido=gPedidosCompra().find(p=>p.id===pedidoId);if(!pedido)return;
+ const totalNF=parseFloat(document.getElementById('nf-total-manual')?.value||0);
+ if(!totalNF){alert('Informe o total da NF!');return;}
+ mostrarResultadoConferencia(pedidoId,{totalNF,itensNF:[],numeroNF:''},true);
+}
+
+function mostrarResultadoConferencia(pedidoId,nfData,modoSimples){
+ const pedido=gPedidosCompra().find(p=>p.id===pedidoId);if(!pedido)return;
+ const dif=nfData.totalNF-pedido.total;const ok=Math.abs(dif)<0.10;
+ const divergencias=[];
+ if(!ok)divergencias.push(`Total: pedido ${brl(pedido.total)} × NF ${brl(nfData.totalNF)} → dif. ${brl(Math.abs(dif))}`);
+ if(!modoSimples&&nfData.itensNF?.length>0){
+  pedido.itens.forEach(ip=>{
+   const ni=nfData.itensNF.find(x=>x.nome.toLowerCase().includes(ip.nome.toLowerCase().substring(0,5)));
+   if(!ni)divergencias.push(`"${ip.nome}" não encontrado na NF`);
+   else{if(Math.abs(ni.precoUnit-ip.precoUnit)>0.01)divergencias.push(`"${ip.nome}": pedido ${brl(ip.precoUnit)} × NF ${brl(ni.precoUnit)}`);
+   if(Math.abs(ni.qtd-ip.qtdPedida)>0.01)divergencias.push(`"${ip.nome}": qtd pedida ${ip.qtdPedida} × NF ${ni.qtd}`);}
+  });
+ }
+ const cor=ok?'#00ff88':'#ff3366';
+ document.getElementById('nf-resultado').innerHTML=`<div style="background:${ok?'rgba(0,255,136,0.05)':'rgba(255,51,102,0.05)'};border:1px solid ${ok?'rgba(0,255,136,0.3)':'rgba(255,51,102,0.3)'};border-radius:8px;padding:12px;margin-bottom:10px;"><p style="font-size:14px;font-weight:700;color:${cor};margin-bottom:8px;">${ok?'✅ NF OK':'❌ DIVERGÊNCIA'}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;"><div style="background:var(--sf2);border-radius:6px;padding:7px;text-align:center;"><p style="font-size:9px;color:var(--mu);">Pedido</p><p style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;">${brl(pedido.total)}</p></div><div style="background:var(--sf2);border-radius:6px;padding:7px;text-align:center;"><p style="font-size:9px;color:var(--mu);">NF</p><p style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:${cor};">${brl(nfData.totalNF)}</p></div></div>${divergencias.length>0?`<div>${divergencias.map(d=>`<p style="font-size:10px;color:var(--re);padding:3px 0;border-bottom:1px solid var(--br);">⚠️ ${d}</p>`).join('')}</div>`:''}</div><div style="display:flex;gap:6px;">${!ok?`<button onclick="alertarDivergenciaWpp('${pedidoId}',${JSON.stringify(divergencias).replace(/'/g,"\'")})" style="flex:1;padding:10px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.4);border-radius:8px;color:#25D366;font-size:11px;font-weight:700;cursor:pointer;">📱 Alertar Fornecedor</button>`:''}<button onclick="confirmarEntradaPedido('${pedidoId}',${nfData.totalNF})" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gr),#00cc70);border:none;border-radius:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">✅ Confirmar Entrada</button></div>`;
+ const pedidos=gPedidosCompra();const p=pedidos.find(x=>x.id===pedidoId);
+ if(p){p.conferencia={totalNF:nfData.totalNF,divergencias,conferidoEm:hj(),ok};sPedidosCompra(pedidos);}
+}
+
+function alertarDivergenciaWpp(pedidoId,divergencias){
+ const pedido=gPedidosCompra().find(p=>p.id===pedidoId);if(!pedido)return;
+ const emp=JSON.parse(localStorage.getItem('erp_empresa')||'{}');
+ let txt=`⚠️ *DIVERGÊNCIA NA NOTA FISCAL*\n`;
+ if(emp.nome)txt+=`🏠 ${emp.nome}\n`;
+ txt+=`📅 ${hj()} · ${pedido.fornecedor}\n${'─'.repeat(28)}\n`;
+ txt+=`💰 Pedido: ${brl(pedido.total)}`;if(pedido.conferencia)txt+=` · NF: ${brl(pedido.conferencia.totalNF)}`;
+ txt+=`\n\n*Divergências:*\n${divergencias.map(d=>`❌ ${d}`).join('\n')}\n\nFavor verificar e reemitir NF.`;
+ window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+}
+
+function confirmarEntradaPedido(pedidoId,totalNF){
+ const pedidos=gPedidosCompra();const p=pedidos.find(x=>x.id===pedidoId);if(!p)return;
+ p.status='recebido';p.totalNF=totalNF;p.recebidoEm=hj();sPedidosCompra(pedidos);
+ const est=gest();let atualizados=0;
+ p.itens.forEach(it=>{
+  if(!it.idEst)return;const e=est.find(x=>x.id===it.idEst);
+  if(e){const cuAnterior=e.cu||0;if(!e.lotes)e.lotes=[];
+   e.lotes.push({qtdCx:it.qtdPedida,qtdUn:it.qtdPedida,cuPorCx:it.precoUnit,cuPorUn:it.precoUnit,dt:hj(),nf:`Pedido #${p.id.substring(0,6)}`});
+   e.q=(e.q||0)+it.qtdPedida;e.cuAnterior=cuAnterior;if(it.precoUnit>0)e.cu=it.precoUnit;atualizados++;}
+ });
+ sest(est);fecharModalFila();render();
+ alert(`✅ Entrada confirmada!\n${atualizados} item(s) no estoque atualizados.`);
+}
+
+function cancelarPedidoCompra(id){
+ if(!confirm('Cancelar este pedido?'))return;
+ const pedidos=gPedidosCompra();const p=pedidos.find(x=>x.id===id);
+ if(p){p.status='cancelado';sPedidosCompra(pedidos);render();}
+}
+
+function rPedidosCompraLista(){
+ const pedidos=gPedidosCompra().filter(p=>p.status!=='cancelado').sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||''));
+ if(!pedidos.length)return'<p style="font-size:11px;color:var(--mu);text-align:center;padding:10px 0;">Selecione itens acima e toque em 📋 Pedido para criar.</p>';
+ return pedidos.map(p=>{
+  const stCor=p.status==='recebido'?'#00ff88':'#f59e0b';
+  const stLabel=p.status==='recebido'?'✅ Recebido':'⏳ Aguard. NF';
+  const temDiv=p.conferencia&&!p.conferencia.ok;
+  return`<div class="card" style="margin-bottom:8px;${temDiv?'border-color:rgba(255,51,102,0.4);':p.status==='recebido'?'border-color:rgba(0,255,136,0.15);':''}"><div class="row" style="margin-bottom:5px;"><div><p style="font-size:12px;font-weight:700;">${p.fornecedor||'Sem fornecedor'}</p><p style="font-size:10px;color:var(--mu);">${p.criadoEm}${p.dataEntrega?' · Entrega: '+p.dataEntrega:''} · ${p.itens.length} itens</p></div><div style="text-align:right;"><p style="font-size:10px;font-weight:700;color:${stCor};">${stLabel}</p><p style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;">${brl(p.total)}</p></div></div>${temDiv?`<p style="font-size:10px;color:var(--re);margin-bottom:6px;">⚠️ ${p.conferencia.divergencias.length} divergência(s)</p>`:''}<div style="display:flex;gap:5px;">${p.status==='aguardando_nf'?`<button onclick="abrirConferenciaNF('${p.id}')" style="flex:2;padding:7px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:7px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer;">🔍 Conferir NF</button>`:''}<button onclick="abrirModalPedidoCompra('${p.id}')" style="flex:1;padding:7px;background:var(--sf2);border:1px solid var(--br);border-radius:7px;color:var(--mu);font-size:11px;cursor:pointer;">✏️</button><button onclick="window.open('https://wa.me/?text='+gerarWppPedidoCompra(gPedidosCompra().find(x=>x.id===${JSON.stringify(p.id)})),'_blank')" style="flex:1;padding:7px;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:7px;color:#25D366;font-size:11px;cursor:pointer;">📱</button><button onclick="cancelarPedidoCompra('${p.id}')" style="flex:1;padding:7px;background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.2);border-radius:7px;color:var(--re);font-size:11px;cursor:pointer;">🗑️</button></div></div>`;
+ }).join('');
 }
 
 function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
