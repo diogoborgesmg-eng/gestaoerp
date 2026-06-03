@@ -15088,6 +15088,15 @@ function abrirFormFornecedor(id){
     <div style="flex:1;"><label class="lbl">Telefone</label><input id="ff-tel" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.tel||''}"/></div>
     <div style="flex:1;"><label class="lbl">WhatsApp</label><input id="ff-wpp" class="inpm" placeholder="34 9xxxx-xxxx" value="${forn?.wpp||''}"/></div>
    </div>
+   <div><label class="lbl">Endereço</label><input id="ff-end" class="inpm" placeholder="Rua, Av..." value="${forn?.end||''}"/></div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">Bairro</label><input id="ff-bairro" class="inpm" placeholder="Bairro" value="${forn?.bairro||''}"/></div>
+    <div style="flex:1;"><label class="lbl">Cidade</label><input id="ff-cidade" class="inpm" placeholder="Cidade" value="${forn?.cidade||''}"/></div>
+   </div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;"><label class="lbl">UF</label><input id="ff-uf" class="inpm" placeholder="MG" value="${forn?.uf||''}"/></div>
+    <div style="flex:2;"><label class="lbl">CEP</label><input id="ff-cep" class="inpm" placeholder="38700-000" value="${forn?.cep||''}"/></div>
+   </div>
    <div><label class="lbl">E-mail</label><input id="ff-email" class="inpm" placeholder="contato@fornecedor.com" value="${forn?.email||''}"/></div>
    <div><label class="lbl">Categoria</label>
     <select id="ff-cat" class="inpm">
