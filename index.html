@@ -14298,7 +14298,20 @@ function atualizarData(){
 atualizarData();
 setInterval(atualizarData,60000);
 if('serviceWorker' in navigator){
- navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW:',e));
+ navigator.serviceWorker.register('/sw.js').then(reg=>{
+    // Verifica atualização
+    reg.update();
+    reg.addEventListener('updatefound',()=>{
+      const newSW=reg.installing;
+      newSW.addEventListener('statechange',()=>{
+        if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+          // Nova versão disponível — atualiza automaticamente
+          newSW.postMessage('SKIP_WAITING');
+          window.location.reload();
+        }
+      });
+    });
+  }).catch(e=>console.warn('SW:',e));
  navigator.serviceWorker.addEventListener('message', async e=>{
  if(e.data?.type==='SHARE_FILE'){
  await receberCompartilhamento(e.data.base64,e.data.mimeType||'image/jpeg',e.data.name||'arquivo.jpg');
