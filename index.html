@@ -18086,61 +18086,164 @@ async function buscarContatoWpp(){
 
 function rFechamentoCaixa(){
  const db=ldb();
+ const turno=window._turnoSel||'almoco';
+ const turnos={
+  almoco:{nome:'🌞 Almoço',ini:'10:00',fim:'15:00'},
+  janta:{nome:'🌙 Janta',ini:'18:00',fim:'23:00'}
+ };
+ const t=turnos[turno];
+ const dataHoje=new Date().toISOString().slice(0,10);
+ const dataFc=window._fcData||dataHoje;
+ const [ano,mes,dia]=dataFc.split('-');
+ const diaKey=dia+'/'+mes+'/'+ano;
+
+ // Dados do caixa do sistema
+ const diaDb=db[diaKey]||{r:[],c:[]};
+ const vendas=diaDb.r||[];
+ const custos=diaDb.c||[];
+
+ // Filtra por turno
+ const filtrarTurno=(lista)=>lista.filter(l=>{
+  if(!l._hora)return true;
+  const [h,m]=(l._hora||'00:00').split(':').map(Number);
+  const [hi,mi]=t.ini.split(':').map(Number);
+  const [hf,mf]=t.fim.split(':').map(Number);
+  const mins=h*60+m;
+  return mins>=hi*60+mi&&mins<=hf*60+mf;
+ });
+
+ const vendasTurno=filtrarTurno(vendas);
+ const cancelados=(db._cancelados||[]).filter(c=>{
+  if(c.dia!==diaKey)return false;
+  const [h,m]=(c._hora||'00:00').split(':').map(Number);
+  const [hi,mi]=t.ini.split(':').map(Number);
+  const [hf,mf]=t.fim.split(':').map(Number);
+  return h*60+m>=hi*60+mi&&h*60+m<=hf*60+mf;
+ });
+
+ // Totais por forma de pagamento
+ const porPgto={dinheiro:0,credito:0,debito:0,pix:0,voucher:0,fiado:0,outros:0};
+ vendasTurno.forEach(v=>{
+  const tipo=(v.seg||v._pgto||'outros').toLowerCase();
+  if(porPgto[tipo]!==undefined)porPgto[tipo]+=Number(v.v||0);
+  else porPgto.outros+=Number(v.v||0);
+ });
+ const totalVendas=Object.values(porPgto).reduce((a,b)=>a+b,0);
+ const saldoInicial=db._saldoInicial?.[diaKey+'-'+turno]||0;
+
+ // Taxas das maquininhas (aproximado)
+ const taxas={cielo:{credito:0.029,debito:0.015},c6:{credito:0.025,debito:0.012},stone:{credito:0.027,debito:0.014},getnet:{credito:0.028,debito:0.013}};
  const maquinas=db.maquinas||[];
- const turnos=[
-  {id:'almoco',nome:'🌞 Almoço',inicio:'10:00',fim:'15:00'},
-  {id:'janta',nome:'🌙 Janta',inicio:'18:00',fim:'23:00'}
- ];
+
+ // Ocorrências
+ const ocorrencias=[];
+ if(porPgto.fiado>0)ocorrencias.push({tipo:'warning',msg:`Fiado: ${brl(porPgto.fiado)} — verificar recebimento`});
+ if(cancelados.length>0)ocorrencias.push({tipo:'alert',msg:`${cancelados.length} item(ns) cancelado(s) no turno`});
+ if(saldoInicial===0)ocorrencias.push({tipo:'info',msg:'Saldo inicial não informado'});
 
  return`<div class="si">
-<p style="font-weight:800;font-size:15px;margin-bottom:4px;">🏦 Fechamento de Caixa</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Relatório por turno das maquininhas</p>
+<!-- HEADER -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+ <p style="font-weight:800;font-size:15px;">🏦 Fechamento de Caixa</p>
+ <button onclick="imprimirFechamento('${diaKey}','${turno}')" style="padding:6px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">🖨️ Imprimir</button>
+</div>
 
-<!-- Turno -->
-<div style="display:flex;gap:8px;margin-bottom:12px;">
- ${turnos.map(t=>`<button onclick="window._turnoSel='${t.id}';render()"
-  style="flex:1;padding:10px;border-radius:10px;border:2px solid ${(window._turnoSel||'almoco')===t.id?'var(--bl)':'var(--br)'};background:${(window._turnoSel||'almoco')===t.id?'rgba(68,136,255,0.15)':'var(--sf2)'};color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;">
-  ${t.nome}<br><span style="font-size:10px;color:var(--mu);">${t.inicio} — ${t.fim}</span>
+<!-- TURNO + DATA -->
+<div style="display:flex;gap:8px;margin-bottom:10px;">
+ ${Object.entries(turnos).map(([id,tv])=>`<button onclick="window._turnoSel='${id}';render()"
+  style="flex:1;padding:9px;border-radius:9px;border:2px solid ${turno===id?'var(--bl)':'var(--br)'};background:${turno===id?'rgba(68,136,255,0.15)':'var(--sf2)'};color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">
+  ${tv.nome}<br><span style="font-size:10px;color:var(--mu);">${tv.ini}—${tv.fim}</span>
  </button>`).join('')}
 </div>
-
-<!-- Data -->
-<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
- <input type="date" id="fc-data" value="${new Date().toISOString().slice(0,10)}"
-  style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:13px;"/>
- <button onclick="buscarRelatorioMaquinas()" style="padding:10px 16px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔍 Buscar</button>
+<div style="display:flex;gap:8px;margin-bottom:12px;">
+ <input type="date" value="${dataFc}" onchange="window._fcData=this.value;render()"
+  style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:12px;"/>
+ <button onclick="abrirSaldoInicial('${diaKey}','${turno}',${saldoInicial})"
+  style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.08);color:var(--ye);font-size:11px;cursor:pointer;">
+  💰 Saldo ini: ${brl(saldoInicial)}
+ </button>
 </div>
 
-${maquinas.length===0?`
-<div class="card" style="text-align:center;padding:20px;border-color:rgba(255,204,0,0.3);">
- <p style="font-size:24px;margin-bottom:8px;">⚙️</p>
- <p style="font-size:13px;font-weight:700;margin-bottom:4px;">Configure as maquininhas</p>
- <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Adicione os IDs das suas máquinas para puxar os relatórios automaticamente</p>
- <button onclick="abrirConfigMaquinas()" style="padding:10px 20px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Configurar máquinas</button>
-</div>`:`
-<div class="kg" style="margin-bottom:12px;" id="fc-totais">
- <div class="kpi"><p class="kl">Crédito</p><p class="kv" style="color:var(--bl);" id="fc-credito">—</p></div>
- <div class="kpi"><p class="kl">Débito</p><p class="kv" style="color:var(--gr);" id="fc-debito">—</p></div>
- <div class="kpi"><p class="kl">PIX</p><p class="kv" style="color:var(--ye);" id="fc-pix">—</p></div>
- <div class="kpi"><p class="kl">Total</p><p class="kv" style="color:var(--tx);" id="fc-total">—</p></div>
-</div>
+<!-- OCORRÊNCIAS -->
+${ocorrencias.length>0?`<div style="margin-bottom:10px;">
+ ${ocorrencias.map(o=>`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:${o.tipo==='alert'?'rgba(255,51,102,0.08)':o.tipo==='warning'?'rgba(255,204,0,0.08)':'rgba(68,136,255,0.08)'};border:1px solid ${o.tipo==='alert'?'rgba(255,51,102,0.3)':o.tipo==='warning'?'rgba(255,204,0,0.3)':'rgba(68,136,255,0.3)'};margin-bottom:5px;">
+  <span style="font-size:14px;">${o.tipo==='alert'?'🚨':o.tipo==='warning'?'⚠️':'ℹ️'}</span>
+  <span style="font-size:11px;color:var(--tx);">${o.msg}</span>
+ </div>`).join('')}
+</div>`:''}
 
-${maquinas.map(m=>`<div class="card" style="margin-bottom:8px;">
- <div style="display:flex;justify-content:space-between;align-items:center;">
-  <div style="display:flex;align-items:center;gap:8px;">
-   <span style="font-size:20px;">${m.operadora==='cielo'?'🔵':m.operadora==='c6'?'⚫':m.operadora==='stone'?'🟢':'🟣'}</span>
-   <div>
-    <p style="font-size:12px;font-weight:700;">${m.nome||m.operadora}</p>
-    <p style="font-size:10px;color:var(--mu);">ID: ${m.merchantId||'—'}</p>
-   </div>
-  </div>
-  <div id="fc-status-${m.id}" style="font-size:11px;color:var(--mu);">Aguardando...</div>
+<!-- TOTAIS DO CAIXA -->
+<div class="card" style="margin-bottom:10px;">
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">💰 Caixa do Sistema — ${t.nome}</p>
+ <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);">
+  <span style="font-size:11px;color:var(--mu);">Saldo inicial</span>
+  <span style="font-size:11px;font-weight:700;color:var(--ye);">${brl(saldoInicial)}</span>
  </div>
- <div id="fc-detalhes-${m.id}" style="margin-top:8px;display:none;"></div>
-</div>`).join('')}
+ ${Object.entries({
+  dinheiro:'💵 Dinheiro',credito:'💳 Crédito',debito:'💳 Débito',
+  pix:'📱 PIX',voucher:'🎫 Voucher',fiado:'📋 Fiado',outros:'🔹 Outros'
+ }).filter(([k])=>porPgto[k]>0).map(([k,lbl])=>`
+ <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);">
+  <span style="font-size:11px;">${lbl}</span>
+  <span style="font-size:12px;font-weight:700;color:var(--gr);">${brl(porPgto[k])}</span>
+ </div>`).join('')}
+ <div style="display:flex;justify-content:space-between;padding:8px 0 0;">
+  <span style="font-size:13px;font-weight:800;">TOTAL VENDAS</span>
+  <span style="font-size:14px;font-weight:900;color:var(--gr);">${brl(totalVendas)}</span>
+ </div>
+ <div style="display:flex;justify-content:space-between;padding:4px 0;">
+  <span style="font-size:12px;color:var(--mu);">Saldo final (+ dinheiro)</span>
+  <span style="font-size:13px;font-weight:800;color:var(--ye);">${brl(saldoInicial+porPgto.dinheiro)}</span>
+ </div>
+</div>
 
-<button onclick="abrirConfigMaquinas()" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:11px;cursor:pointer;">⚙️ Gerenciar máquinas</button>
-`}
+<!-- MAQUININHAS -->
+<div class="card" style="margin-bottom:10px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:12px;font-weight:700;">🏦 Conferência Maquininhas</p>
+  ${maquinas.length>0?`<button onclick="buscarRelatorioMaquinas()" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bl);color:#fff;font-size:10px;font-weight:700;cursor:pointer;">🔍 Buscar</button>`:''}
+ </div>
+ ${maquinas.length===0?`<p style="font-size:11px;color:var(--mu);">Nenhuma maquininha configurada. <button onclick="abrirConfigMaquinas()" style="background:none;border:none;color:var(--bl);font-size:11px;cursor:pointer;text-decoration:underline;">+ Configurar</button></p>`:
+ maquinas.map(m=>{
+  const taxa=taxas[m.operadora]||{credito:0.028,debito:0.015};
+  const vendMaq=(m._relatorio||{});
+  const taxaCredito=(vendMaq.credito||0)*taxa.credito;
+  const taxaDebito=(vendMaq.debito||0)*taxa.debito;
+  const totalTaxas=taxaCredito+taxaDebito;
+  const liquido=(vendMaq.total||0)-totalTaxas;
+  return`<div style="padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:6px;" id="maq-rel-${m.id}">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <span style="font-size:12px;font-weight:700;">${m.operadora==='cielo'?'🔵':m.operadora==='c6'?'⚫':m.operadora==='stone'?'🟢':'🟣'} ${m.nome}</span>
+    <span style="font-size:12px;font-weight:700;color:var(--gr);" id="fc-total-${m.id}">${vendMaq.total?brl(vendMaq.total):'—'}</span>
+   </div>
+   ${vendMaq.total?`
+   <div style="font-size:10px;color:var(--mu);display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+    <span>Crédito: ${brl(vendMaq.credito||0)}</span>
+    <span>Taxa cred: -${brl(taxaCredito)}</span>
+    <span>Débito: ${brl(vendMaq.debito||0)}</span>
+    <span>Taxa déb: -${brl(taxaDebito)}</span>
+    <span style="color:var(--re);font-weight:700;">Total taxas: -${brl(totalTaxas)}</span>
+    <span style="color:var(--gr);font-weight:700;">Líquido: ${brl(liquido)}</span>
+   </div>`:
+   `<p style="font-size:10px;color:var(--mu);" id="fc-status-${m.id}">Toque em 🔍 Buscar para carregar</p>`}
+  </div>`;}).join('')}
+</div>
+
+<!-- CANCELAMENTOS -->
+${cancelados.length>0?`<div class="card" style="margin-bottom:10px;border-color:rgba(255,51,102,0.3);">
+ <p style="font-size:12px;font-weight:700;color:var(--re);margin-bottom:8px;">🚨 Itens Cancelados (${cancelados.length})</p>
+ ${cancelados.map(c=>`<div style="padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;">
+  <div style="display:flex;justify-content:space-between;">
+   <span style="font-weight:600;">${c.nome}</span>
+   <span style="color:var(--re);">${brl(Number(c.val||0)*Number(c.qtd||1))}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;color:var(--mu);">
+   <span>Comanda ${c._comanda||'?'} · ${c._hora||'?'}</span>
+   <span>IP: ${c._ip||'interno'}</span>
+  </div>
+ </div>`).join('')}
+</div>`:''}
+
 </div>`;
 }
 
@@ -18271,6 +18374,39 @@ async function buscarRelatorioMaquinas(){
  up('fc-debito',totalDebito);
  up('fc-pix',totalPix);
  up('fc-total',totalCredito+totalDebito+totalPix);
+}
+
+function abrirSaldoInicial(diaKey,turno,atual){
+ const val=parseFloat(prompt('Saldo inicial do caixa — '+turno+'\n(dinheiro em caixa no início do turno):',atual.toFixed(2))||actual);
+ if(isNaN(val))return;
+ const db=ldb();
+ if(!db._saldoInicial)db._saldoInicial={};
+ db._saldoInicial[diaKey+'-'+turno]=val;
+ sdb(db);render();
+}
+
+function imprimirFechamento(diaKey,turno){
+ const db=ldb();
+ const [d,m,a]=diaKey.split('/');
+ const t=turno==='almoco'?'Almoço (10h-15h)':'Janta (18h-23h)';
+ const diaDb=db[diaKey]||{r:[],c:[]};
+ const vendas=(diaDb.r||[]);
+ const total=vendas.reduce((a,v)=>a+Number(v.v||0),0);
+
+ const win=window.open('','_blank','width=400,height=600');
+ win.document.write(`<html><head><title>Fechamento</title>
+  <style>body{font-family:monospace;font-size:13px;padding:20px;}
+  .linha{display:flex;justify-content:space-between;border-bottom:1px dotted #ccc;padding:3px 0;}
+  h2,h3{text-align:center;margin:5px 0;}</style></head><body>
+  <h2>DI CASA LARANJINHA</h2>
+  <h3>Fechamento — ${t}</h3>
+  <h3>${diaKey}</h3>
+  <hr/>
+  <div class="linha"><span>TOTAL VENDAS</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
+  <br/>
+  <button onclick="window.print()" style="width:100%;padding:10px;">🖨️ Imprimir</button>
+ </body></html>`);
+ win.document.close();
 }
 
 render();
