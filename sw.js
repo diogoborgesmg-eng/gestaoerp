@@ -1,72 +1,71 @@
-const CACHE = 'gestaoerp-v1';
+// GestaoERP Service Worker — sempre atualiza
+const CACHE_VERSION = 'gestaoerp-1780517909';
+const STATIC_CACHE = CACHE_VERSION;
 
-// Instala o service worker
+// Instala e ativa imediatamente
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(clients.claim());
+  // Remove caches antigos
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== STATIC_CACHE).map(k => caches.delete(k)))
+    ).then(() => clients.claim())
+  );
 });
 
-// Intercepta requisições
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Rota de compartilhamento — recebe arquivos do banco/apps
+  // index.html — SEMPRE busca do servidor (nunca cache)
+  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request, {cache: 'no-store'})
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // API e webhooks — sempre rede
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // Rota de compartilhamento de arquivos
   if (url.pathname === '/share' && e.request.method === 'POST') {
     e.respondWith((async () => {
       const data = await e.request.formData();
       const file = data.get('file');
-      const text = data.get('text') || '';
-      const title = data.get('title') || '';
-
-      // Abre o app e passa os dados via URL
-      const client = await self.clients.get(
-        (await self.clients.matchAll({ type: 'window' }))[0]?.id
-      );
-
-      if (client) {
-        // App já aberto — envia mensagem
-        client.postMessage({
-          type: 'SHARE_RECEIVED',
-          file: file ? { name: file.name, type: file.type, size: file.size } : null,
-          text,
-          title
-        });
-
-        // Se é arquivo de imagem, converte e envia
-        if (file && file.type.startsWith('image/')) {
-          const reader = new FileReaderSync();
-          const buffer = await file.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-          client.postMessage({
-            type: 'SHARE_FILE',
-            base64,
-            mimeType: file.type,
-            name: file.name
-          });
-        }
-
-        client.focus();
-      } else {
-        // App fechado — abre com parâmetro
-        await self.clients.openWindow('/?share=1');
+      const client = await clients.get(e.resultingClientId || e.clientId);
+      if (client && file) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => client.postMessage({type:'shared-file',data:reader.result,name:file.name});
       }
-
-      return Response.redirect('/?share=1', 303);
+      return Response.redirect('/?shared=1', 303);
     })());
     return;
   }
 
-  // Cache primeiro para assets estáticos
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Outros recursos — cache primeiro, rede como fallback
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(resp => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(STATIC_CACHE).then(c => c.put(e.request, clone));
+        }
+        return resp;
+      });
+    })
+  );
 });
 
-// Recebe arquivo grande via postMessage
-self.addEventListener('message', async e => {
-  if (e.data?.type === 'SHARE_FILE_LARGE') {
-    const clients = await self.clients.matchAll({ type: 'window' });
-    clients.forEach(c => c.postMessage(e.data));
-  }
+// Escuta mensagem para forçar atualização
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
