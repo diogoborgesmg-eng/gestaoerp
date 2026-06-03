@@ -18409,6 +18409,285 @@ function imprimirFechamento(diaKey,turno){
  win.document.close();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CADASTRO DE PRODUTO POR FOTO
+// ═══════════════════════════════════════════════════════════════
+function abrirCadastroPorFoto(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+
+ div.innerHTML=`<div style="text-align:center;max-width:400px;width:100%;">
+  <p style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px;">📦 Cadastrar Produto por Foto</p>
+  <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:20px;">Tire uma foto do produto — IA lê o código de barras e remove o fundo automaticamente</p>
+
+  <input type="file" id="foto-produto-input" accept="image/*" capture="environment" style="display:none"
+   onchange="processarFotoProduto(this)"/>
+  <input type="file" id="foto-produto-galeria" accept="image/*" style="display:none"
+   onchange="processarFotoProduto(this)"/>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+   <button onclick="document.getElementById('foto-produto-input').click()"
+    style="padding:16px;border-radius:12px;border:2px solid rgba(68,136,255,0.5);background:rgba(68,136,255,0.1);color:#4488ff;font-size:15px;font-weight:800;cursor:pointer;">
+    📷 Fotografar produto
+   </button>
+   <button onclick="document.getElementById('foto-produto-galeria').click()"
+    style="padding:16px;border-radius:12px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:15px;font-weight:800;cursor:pointer;">
+    🖼️ Escolher da galeria
+   </button>
+  </div>
+
+  <button onclick="this.closest('[style*=inset]').remove()"
+   style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">
+   Cancelar
+  </button>
+ </div>`;
+
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function processarFotoProduto(input){
+ const file=input.files[0];
+ if(!file)return;
+
+ // Fecha o seletor
+ input.closest('[style*=inset]')?.remove();
+
+ // Loading
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+ overlay.innerHTML=`<p style="font-size:32px;">🔍</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo produto...</p><p style="color:rgba(255,255,255,0.5);font-size:11px;">IA identificando código de barras e produto</p>`;
+ document.body.appendChild(overlay);
+
+ try{
+  // Converte para base64
+  const b64=await new Promise((res,rej)=>{
+   const r=new FileReader();
+   r.onload=()=>res(r.result.split(',')[1]);
+   r.onerror=rej;
+   r.readAsDataURL(file);
+  });
+
+  // Envia para Claude Sonnet
+  const apiKey=localStorage.getItem('erp_api_key')||gDadosFiscais()._cachedApiKey||'';
+  if(!apiKey){overlay.remove();alert('Configure a Chave API em Config');return;}
+
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+   body:JSON.stringify({
+    model:'claude-sonnet-4-20250514',
+    max_tokens:300,
+    messages:[{role:'user',content:[
+     {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+     {type:'text',text:`Analise esta foto de produto. Retorne APENAS JSON:
+{"nome":"nome comercial do produto","marca":"marca","volume":"ex: 310ml","codigoBarras":"número exato do código de barras se visível","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"}
+Se não conseguir ler algum campo, deixe em branco. Não invente.`}
+    ]}]
+   })
+  });
+
+  const data=await resp.json();
+  const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const prod=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+
+  overlay.remove();
+
+  if(!prod.nome&&!prod.codigoBarras){
+   alert('Não consegui identificar o produto. Tente com melhor iluminação ou use o cadastro manual.');
+   return;
+  }
+
+  // Abre form de cadastro pré-preenchido com a foto
+  abrirFormProdutoComFoto(prod,b64,file.type||'image/jpeg');
+
+ }catch(e){
+  overlay.remove();
+  alert('Erro: '+e.message);
+ }
+}
+
+function abrirFormProdutoComFoto(prod,imgB64,mimeType){
+ const imgSrc='data:'+mimeType+';base64,'+imgB64;
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-weight:800;font-size:14px;">📦 Novo Produto</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Preview da foto -->
+  <div style="text-align:center;margin-bottom:14px;">
+   <div style="position:relative;display:inline-block;">
+    <img src="${imgSrc}" style="width:140px;height:140px;object-fit:contain;border-radius:12px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);"/>
+    <div style="position:absolute;bottom:-4px;right:-4px;background:var(--gr);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;">✅</div>
+   </div>
+   <p style="font-size:10px;color:var(--mu);margin-top:6px;">Foto salva automaticamente</p>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div><label class="lbl">Nome do produto *</label>
+    <input id="fp-nome-foto" class="inpm" value="${prod.nome||''}" placeholder="Ex: Coca-Cola 310ml"/></div>
+   <div><label class="lbl">Código de barras</label>
+    <div style="display:flex;gap:6px;">
+     <input id="fp-ean-foto" class="inpm" value="${prod.codigoBarras||''}" placeholder="EAN-13" style="flex:1;font-family:'Space Mono',monospace;"/>
+     <button onclick="escanearCodigoBarraProd()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);font-size:16px;cursor:pointer;">📷</button>
+    </div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Preço de venda *</label>
+     <input id="fp-preco-foto" class="inpm" type="number" placeholder="R$ 0,00" step="0.01"/></div>
+    <div><label class="lbl">Categoria</label>
+     <select id="fp-cat-foto" class="inpm">
+      <option value="Bebidas" ${prod.categoria==='Bebidas'?'selected':''}>🥤 Bebidas</option>
+      <option value="Alimentos" ${prod.categoria==='Alimentos'?'selected':''}>🍽️ Alimentos</option>
+      <option value="🍽️ Prato Único">🍽️ Prato Único</option>
+      <option value="🏢 Prato Empresa">🏢 Prato Empresa</option>
+      <option value="🍕 Pizzas">🍕 Pizzas</option>
+      <option value="🍢 Espetos">🍢 Espetos</option>
+      <option value="outros">Outros</option>
+     </select></div>
+   </div>
+  </div>
+
+  <button onclick="salvarProdutoFoto('${imgSrc.substring(0,50)}','${mimeType}',\`${imgB64.substring(0,30)}\`)" 
+   style="width:100%;margin-top:14px;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;"
+   id="btn-salvar-prod-foto">
+   ✅ Salvar Produto
+  </button>
+ </div>`;
+
+ // Salva a imagem completa no window temporário
+ window._fotoProdTemp={b64:imgB64,mime:mimeType};
+
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarProdutoFoto(){
+ const nome=document.getElementById('fp-nome-foto')?.value?.trim();
+ const preco=parseFloat(document.getElementById('fp-preco-foto')?.value||0);
+ const cat=document.getElementById('fp-cat-foto')?.value||'Bebidas';
+ const ean=document.getElementById('fp-ean-foto')?.value?.trim();
+
+ if(!nome){alert('Informe o nome do produto');return;}
+ if(!preco){alert('Informe o preço de venda');return;}
+
+ const foto=window._fotoProdTemp?('data:'+window._fotoProdTemp.mime+';base64,'+window._fotoProdTemp.b64):'';
+
+ const db=ldb();
+ if(!db.cardapioPDV)db.cardapioPDV=[];
+
+ // Verifica se já existe pelo código de barras
+ if(ean){
+  const existente=db.cardapioPDV.find(p=>p.ean===ean);
+  if(existente){
+   if(!confirm(`Produto com este código já existe: "${existente.nome}"\n\nDeseja atualizar?`))return;
+   existente.nome=nome;existente.preco=preco;existente.cat=cat;existente.foto=foto;existente.ean=ean;
+   sdb(db);
+   document.querySelector('[style*="inset:0"]')?.remove();
+   window._fotoProdTemp=null;
+   render();
+   alert('✅ Produto atualizado!');return;
+  }
+ }
+
+ db.cardapioPDV.push({id:uid(),nome,preco,cat,foto,ean,dt:hj()});
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ window._fotoProdTemp=null;
+ render();
+ alert('✅ '+nome+' cadastrado!');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DE-PARA: NF → PDV (concilia uma vez, lembra para sempre)
+// ═══════════════════════════════════════════════════════════════
+function conciliarProdutoNF(nomeNF, callback){
+ const db=ldb();
+ const dePara=db._dePara||{};
+
+ // Já tem mapeamento?
+ const norm=nomeNF.trim().toLowerCase();
+ if(dePara[norm]){
+  callback(dePara[norm]);
+  return;
+ }
+
+ // Busca produto parecido automaticamente
+ const prods=gCardapioPDV();
+ const estoque=db.est||[];
+ const todos=[...prods.map(p=>({id:p.id,nome:p.nome,origem:'pdv'})),
+              ...estoque.map(e=>({id:e.id,nome:e.n,origem:'estoque'}))];
+
+ // Tenta match automático por similaridade
+ const similar=todos.find(p=>{
+  const pn=p.nome.toLowerCase();
+  const nn=norm.toLowerCase();
+  return pn.includes(nn.substring(0,6))||nn.includes(pn.substring(0,6));
+ });
+
+ // Abre modal de conciliação
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:14px 14px 32px;">
+  <p style="font-weight:800;font-size:14px;margin-bottom:4px;">🔗 Conciliar Produto</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Esta descrição da NF não foi reconhecida. Associe ao produto correto — o sistema vai lembrar sempre.</p>
+
+  <div style="background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:10px;color:var(--mu);">Descrição na NF:</p>
+   <p style="font-size:13px;font-weight:700;">${nomeNF}</p>
+  </div>
+
+  ${similar?`<div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:11px;color:var(--gr);font-weight:700;margin-bottom:6px;">✅ Sugestão automática:</p>
+   <div style="display:flex;justify-content:space-between;align-items:center;">
+    <p style="font-size:13px;font-weight:700;">${similar.nome}</p>
+    <button onclick="salvarDePara('${norm}',{id:'${similar.id}',nome:'${similar.nome.replace(/'/g,"\\'")}',origem:'${similar.origem}'});this.closest('[style*=inset]')?.remove();"
+     style="padding:7px 14px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">✅ Sim!</button>
+   </div>
+  </div>`:''}
+
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Ou selecione o produto correto:</p>
+  <input id="concilia-busca" class="inpm" placeholder="Buscar produto..." oninput="filtrarConciliacao(this.value)" style="margin-bottom:8px;"/>
+  <div id="concilia-lista" style="max-height:200px;overflow-y:auto;">
+   ${todos.map(p=>`<button onclick="salvarDePara('${norm}',{id:'${p.id}',nome:'${p.nome.replace(/'/g,"\\'")}',origem:'${p.origem}'});this.closest('[style*=inset]')?.remove();"
+    style="width:100%;text-align:left;padding:10px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;margin-bottom:4px;">
+    <span style="font-size:10px;color:var(--mu);">${p.origem==='pdv'?'🏷️ PDV':'📦 Estoque'}</span> ${p.nome}
+   </button>`).join('')}
+  </div>
+
+  <button onclick="this.closest('[style*=inset]').remove()"
+   style="width:100%;margin-top:10px;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">
+   Pular esta vez
+  </button>
+ </div>`;
+
+ window._conciliaCallback=callback;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarDePara(nomeNF, produto){
+ const db=ldb();
+ if(!db._dePara)db._dePara={};
+ db._dePara[nomeNF]=produto;
+ sdb(db);
+ if(window._conciliaCallback)window._conciliaCallback(produto);
+ window._conciliaCallback=null;
+}
+
+function filtrarConciliacao(busca){
+ const lista=document.getElementById('concilia-lista');
+ if(!lista)return;
+ const items=lista.querySelectorAll('button');
+ items.forEach(btn=>{
+  btn.style.display=btn.textContent.toLowerCase().includes(busca.toLowerCase())?'block':'none';
+ });
+}
+
 render();
 
 </script>
