@@ -109,7 +109,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." 
  oninput="buscaGlobal(this.value)" onfocus="this.placeholder=''"
  onblur="this.placeholder='🔍 Buscar...';setTimeout(()=>{const r=document.getElementById('busca-res');if(r)r.style.display='none';},200)"
- style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('pedido')">📋 Pedido Compra</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
+ style="background:var(--sf2);border:1px solid var(--br);border-radius:6px;padding:4px 8px;color:var(--tx);font-size:10px;width:100px;outline:none;"/><div id="busca-res" style="display:none;position:absolute;top:100%;right:0;background:var(--sf);border:1px solid var(--br);border-radius:8px;min-width:200px;max-height:200px;overflow-y:auto;z-index:200;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div></div><span class="db" id="data"></span><span id="hdr-alertas"></span><button onclick="toggleTema()" style="background:var(--sf2);border:1px solid var(--br);color:var(--mu);border-radius:6px;padding:4px 7px;font-size:12px;cursor:pointer;" id="btn-tema" title="Alternar tema">🌙</button><button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;" title="Configurações">⚙️ Config</button></div></div><div class="tnav"><button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button><button class="tb" onclick="ir('cad')">📝 Cadastros</button><button class="tb a" onclick="ir('dre')">📊 DRE</button><button class="tb" onclick="ir('est')">📦 Estoque</button><button class="tb" onclick="ir('voz')">🎙️ Voz</button><button class="tb" onclick="ir('vendas')">💰 Vendas</button><button class="tb" onclick="ir('forn')">🏭 Fornecedores</button><button class="tb" onclick="ir('fila')">📥 Fila NF</button><button class="tb" onclick="ir('compras')">🛒 Compras</button><button class="tb" onclick="ir('pedido')">📋 Pedido Compra</button><button class="tb" onclick="ir('fixos')">📌 Fixos</button><button class="tb" onclick="ir('ficha')">📋 Fichas</button><button class="tb" onclick="ir('fin')">💳 Financeiro</button><button class="tb" onclick="ir('plano')">📑 Plano Contas</button><button class="tb" onclick="ir('lancm')">📆 Lançamentos</button><button class="tb" onclick="ir('planfin')">🎯 Planejamento</button><button class="tb" onclick="ir('ia')">🤖 IA</button><button class="tb" onclick="ir('cfo')">🧠 Consultor</button><button class="tb" onclick="ir('bi')">📊 BI</button><button class="tb" onclick="ir('dashm')">📅 Análise Mensal</button><button class="tb" onclick="ir('dasha')">📈 Análise Anual</button><button class="tb" onclick="ir('dashc')">🗂️ Análise Contas</button><button class="tb" onclick="ir('dashcc')">🏷️ Centro Custo</button><button class="tb" onclick="ir('resultado')">📅 Resultado Dia</button><button class="tb" onclick="ir('fluxo')">💧 Fluxo Caixa</button><button class="tb" onclick="ir('cpagar')">💳 Contas a Pagar</button><button class="tb" onclick="ir('bancos')">🏦 Bancos</button><button class="tb" onclick="ir('openfinance')">🔗 Open Finance</button><button class="tb" onclick="ir('buffet')">🍽️ Custo Buffet</button><button class="tb" onclick="ir('extrav')">🔍 Extraviado</button><button class="tb" onclick="ir('caixa')">🏦 Fechamento</button><button class="tb" onclick="ir('mkt')">📣 Marketing</button><button class="tb" onclick="ir('rh')">👥 RH</button><button class="tb" onclick="ir('aval')">⭐ Avaliações</button><button class="tb" onclick="ir('comp')">✅ Compliance</button><button class="tb" onclick="ir('inst')">📖 Instruções</button><button class="tb" onclick="irConferencia()">🔍 Conferência</button></div>
 </div>
 <div class="main" id="main"></div>
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
@@ -8195,7 +8195,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,resultado:rResultadoDia};
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -17703,6 +17703,328 @@ function lerXMLNFe(file){
   }
  };
  reader.readAsText(file,'ISO-8859-1');
+}
+
+// ═══ CHECKOUT PDV ════════════════════════════════════════════
+function fecharContaPDV(comandaId){
+ const db=ldb();
+ if(!db.mesas)db.mesas=gMesas();
+ const m=db.mesas.find(x=>x.id===comandaId);
+ if(!m)return;
+ const itens=m.comanda||[];
+ const total=itens.reduce((a,i)=>a+Number(i.val||0)*Number(i.qtd||1),0);
+ if(!itens.length){alert('Comanda vazia!');return;}
+ abrirCheckoutPDV(comandaId,m,itens,total);
+}
+
+function abrirCheckoutPDV(comandaId,m,itens,total){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0d0d1a;z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="max-width:520px;margin:0 auto;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <div><p style="font-weight:900;font-size:16px;color:#fff;">🧾 Comanda ${comandaId}</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.4);">${itens.length} item(ns) · ${brl(total)}</p></div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">← Voltar</button>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;margin-bottom:12px;">
+   ${itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <span style="font-size:12px;color:#fff;">${i.qtd||1}x ${i.nome}</span>
+    <span style="font-size:12px;color:#fff;font-weight:700;">${brl(Number(i.val||0)*Number(i.qtd||1))}</span>
+   </div>`).join('')}
+   <div style="display:flex;justify-content:space-between;padding:10px 0 0;">
+    <span style="font-size:15px;font-weight:900;color:#fff;">TOTAL</span>
+    <span style="font-size:18px;font-weight:900;color:#00ff88;">${brl(total)}</span>
+   </div>
+  </div>
+  <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);margin-bottom:10px;">Forma de pagamento:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+   ${[['💳 Crédito','credito','#4488ff'],['💳 Débito','debito','#8844ff'],['📱 PIX','pix','#00ff88'],['💵 Dinheiro','dinheiro','#ffcc00'],['🎫 Voucher','voucher','#ff8844'],['📋 Fiado','fiado','#ff4466']].map(([lbl,id,cor])=>`
+   <button onclick="selecionarPagamento('${id}','${cor}',${total},${comandaId})"
+    style="padding:14px;border-radius:10px;border:2px solid ${cor}40;background:${cor}15;color:${cor};font-size:13px;font-weight:800;cursor:pointer;">${lbl}</button>`).join('')}
+  </div>
+  <button onclick="dividirConta(${comandaId},${total})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">👥 Dividir conta</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function selecionarPagamento(tipo,cor,total,comandaId){
+ if(tipo==='pix'){document.querySelector('[style*="z-index:700"]')?.remove();abrirPIXQRCode(comandaId,total);return;}
+ if(!confirm('Confirmar pagamento?\n'+tipo.toUpperCase()+'\nR$ '+total.toFixed(2).replace('.',',')))return;
+ confirmarPagamentoPDV(comandaId,tipo,total);
+ document.querySelector('[style*="z-index:700"]')?.remove();
+}
+
+function confirmarPagamentoPDV(comandaId,tipo,total,obs){
+ const db=ldb();
+ if(!db.mesas)db.mesas=gMesas();
+ const mIdx=db.mesas.findIndex(x=>x.id===comandaId);
+ if(mIdx<0)return;
+ const dia=hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ db[dia].r.push({id:uid(),d:'Comanda '+comandaId+(obs?' — '+obs:''),v:total,cat:'Vendas PDV',seg:tipo,_comanda:comandaId,_pgto:tipo,_hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+ const m=db.mesas[mIdx];
+ m.status='livre';m.comanda=[];m.abertura=null;m.mesa='';
+ sdb(db);
+ window._pdvModo=null;window._pdvComanda=null;
+ render();
+}
+
+function dividirConta(comandaId,total){
+ const n=parseInt(prompt('Dividir em quantas pessoas?','2')||'0');
+ if(!n||n<2)return;
+ alert(n+' pessoas\nR$ '+((total/n).toFixed(2).replace('.',','))+' por pessoa');
+}
+
+function liberarMesaPDV(comandaId){
+ if(!confirm('Liberar Comanda '+comandaId+'?\n⚠️ Itens serão APAGADOS sem cobrar.'))return;
+ const db=ldb();
+ if(!db.mesas)db.mesas=gMesas();
+ const m=db.mesas.find(x=>x.id===comandaId);
+ if(!m)return;
+ m.status='livre';m.comanda=[];m.abertura=null;m.mesa='';
+ sdb(db);window._pdvModo=null;window._pdvComanda=null;render();
+}
+
+// ═══ PIX QR CODE ═════════════════════════════════════════════
+function gerarPixEMV(chave,nome,cidade,valor,txid){
+ const pixKey=chave.replace(/[^0-9a-zA-Z@._\-]/g,'');
+ const merchantName=(nome||'Di Casa').substring(0,25).replace(/[^a-zA-Z0-9 ]/g,'');
+ const merchantCity=(cidade||'Patos de Minas').substring(0,15).replace(/[^a-zA-Z ]/g,'');
+ const amount=valor.toFixed(2);
+ const id=((txid||uid()).substring(0,25)).replace(/[^a-zA-Z0-9]/g,'');
+ const pad=(id,val)=>{const s=String(val);return id+String(s.length).padStart(2,'0')+s;};
+ const pixInfo=pad('00',pixKey)+pad('02',id.substring(0,25));
+ const mai=pad('00','BR.GOV.BCB.PIX')+pad('01',pixInfo);
+ const body=pad('00','01')+pad('26',mai)+pad('52','0000')+pad('53','986')+pad('54',amount)+pad('58','BR')+pad('59',merchantName)+pad('60',merchantCity)+pad('62',pad('05',id.substring(0,25)))+'6304';
+ let crc=0xFFFF;
+ for(let i=0;i<body.length;i++){crc^=body.charCodeAt(i)<<8;for(let j=0;j<8;j++)crc=crc&0x8000?(crc<<1)^0x1021:(crc<<1);crc&=0xFFFF;}
+ return body+crc.toString(16).toUpperCase().padStart(4,'0');
+}
+
+async function abrirPIXQRCode(comandaId,total){
+ const df=gDadosFiscais();
+ let chavePix=df.chavePix||df.cnpj?.replace(/\D/g,'')||'';
+ if(!chavePix){const c=prompt('Chave PIX do restaurante:');if(!c)return;const d=gDadosFiscais();d.chavePix=c;sDadosFiscais(d);chavePix=c;}
+ const txid='DCMDA'+String(comandaId)+Date.now().toString(36).toUpperCase();
+ const payload=gerarPixEMV(chavePix,'Di Casa Laranjinha','Patos de Minas',total,txid);
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0d0d1a;z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+ div.innerHTML=`<div style="text-align:center;max-width:340px;width:100%;">
+  <p style="font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">📱 PIX — Comanda ${comandaId}</p>
+  <p style="font-size:24px;font-weight:900;color:#00ff88;margin-bottom:16px;">${brl(total)}</p>
+  <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;display:inline-block;">
+   <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}" width="220" height="220" style="display:block;border-radius:8px;"/>
+  </div>
+  <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:12px;">Chave: ${chavePix}</p>
+  <button onclick="navigator.clipboard?.writeText('${payload}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar código PIX',2000)" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:#00ff88;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px;">📋 Copiar código PIX</button>
+  <button onclick="confirmarPagamentoPDV(${comandaId},'pix',${total},'PIX confirmado');this.closest('[style*=inset]').remove();" style="width:100%;padding:12px;border-radius:10px;border:none;background:#00ff88;color:#000;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px;">✅ Confirmar recebimento</button>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">← Voltar</button>
+ </div>`;
+ document.body.appendChild(div);
+}
+
+// ═══ FECHAMENTO DE CAIXA ═════════════════════════════════════
+function rFechamentoCaixa(){
+ const db=ldb();
+ const turno=window._turnoSel||'almoco';
+ const turnos={almoco:{nome:'🌞 Almoço',ini:'10:00',fim:'15:00'},janta:{nome:'🌙 Janta',ini:'18:00',fim:'23:00'}};
+ const t=turnos[turno];
+ const dataFc=window._fcData||new Date().toISOString().slice(0,10);
+ const [ano,mes,dia]=dataFc.split('-');
+ const diaKey=dia+'/'+mes+'/'+ano;
+ const diaDb=db[diaKey]||{r:[],c:[]};
+ const vendas=diaDb.r||[];
+ const porPgto={dinheiro:0,credito:0,debito:0,pix:0,voucher:0,fiado:0,outros:0};
+ vendas.forEach(v=>{const tipo=(v.seg||v._pgto||'outros').toLowerCase();if(porPgto[tipo]!==undefined)porPgto[tipo]+=Number(v.v||0);else porPgto.outros+=Number(v.v||0);});
+ const totalVendas=Object.values(porPgto).reduce((a,b)=>a+b,0);
+ const saldoInicial=db._saldoInicial?.[diaKey+'-'+turno]||0;
+ const cancelados=(db._cancelados||[]).filter(c=>c.dia===diaKey);
+ const ocorrencias=[];
+ if(porPgto.fiado>0)ocorrencias.push({tipo:'warning',msg:'Fiado: '+brl(porPgto.fiado)});
+ if(cancelados.length>0)ocorrencias.push({tipo:'alert',msg:cancelados.length+' item(ns) cancelado(s)'});
+
+ return`<div class="si">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+ <p style="font-weight:800;font-size:15px;">🏦 Fechamento de Caixa</p>
+ <button onclick="imprimirFechamento('${diaKey}','${turno}')" style="padding:6px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">🖨️ Imprimir</button>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px;">
+ ${Object.entries(turnos).map(([id,tv])=>`<button onclick="window._turnoSel='${id}';render()" style="flex:1;padding:9px;border-radius:9px;border:2px solid ${turno===id?'var(--bl)':'var(--br)'};background:${turno===id?'rgba(68,136,255,0.15)':'var(--sf2)'};color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">${tv.nome}<br><span style="font-size:10px;color:var(--mu);">${tv.ini}—${tv.fim}</span></button>`).join('')}
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px;">
+ <input type="date" value="${dataFc}" onchange="window._fcData=this.value;render()" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:12px;"/>
+ <button onclick="abrirSaldoInicial('${diaKey}','${turno}',${saldoInicial})" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.08);color:var(--ye);font-size:11px;cursor:pointer;">💰 ${brl(saldoInicial)}</button>
+</div>
+${ocorrencias.map(o=>`<div style="padding:8px;border-radius:8px;background:${o.tipo==='alert'?'rgba(255,51,102,0.08)':'rgba(255,204,0,0.08)'};border:1px solid ${o.tipo==='alert'?'rgba(255,51,102,0.3)':'rgba(255,204,0,0.3)'};margin-bottom:6px;font-size:11px;">${o.tipo==='alert'?'🚨':'⚠️'} ${o.msg}</div>`).join('')}
+<div class="card" style="margin-bottom:10px;">
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">💰 Vendas — ${t.nome}</p>
+ ${Object.entries({dinheiro:'💵 Dinheiro',credito:'💳 Crédito',debito:'💳 Débito',pix:'📱 PIX',voucher:'🎫 Voucher',fiado:'📋 Fiado',outros:'🔹 Outros'}).filter(([k])=>porPgto[k]>0).map(([k,lbl])=>`
+ <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);">
+  <span style="font-size:11px;">${lbl}</span><span style="font-size:12px;font-weight:700;color:var(--gr);">${brl(porPgto[k])}</span>
+ </div>`).join('')}
+ <div style="display:flex;justify-content:space-between;padding:8px 0 0;">
+  <span style="font-size:13px;font-weight:800;">TOTAL</span>
+  <span style="font-size:14px;font-weight:900;color:var(--gr);">${brl(totalVendas)}</span>
+ </div>
+ <div style="display:flex;justify-content:space-between;padding:4px 0;">
+  <span style="font-size:11px;color:var(--mu);">Saldo final (dinheiro)</span>
+  <span style="font-size:12px;font-weight:800;color:var(--ye);">${brl(saldoInicial+porPgto.dinheiro)}</span>
+ </div>
+</div>
+<div class="card" style="margin-bottom:10px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:12px;font-weight:700;">🏦 Maquininhas</p>
+  <button onclick="buscarRelatorioMaquinas()" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bl);color:#fff;font-size:10px;font-weight:700;cursor:pointer;">🔍 Buscar</button>
+ </div>
+ <div id="fc-totais-maq" style="font-size:11px;color:var(--mu);">Toque em 🔍 para carregar</div>
+</div>
+${cancelados.length>0?`<div class="card" style="border-color:rgba(255,51,102,0.3);">
+ <p style="font-size:12px;font-weight:700;color:var(--re);margin-bottom:8px;">🚨 Cancelados (${cancelados.length})</p>
+ ${cancelados.map(c=>`<div style="padding:5px 0;border-bottom:1px solid var(--br);font-size:11px;">
+  <div style="display:flex;justify-content:space-between;"><span>${c.nome}</span><span style="color:var(--re);">${brl(Number(c.val||0))}</span></div>
+  <span style="color:var(--mu);">Comanda ${c._comanda||'?'} · ${c._hora||'?'}</span>
+ </div>`).join('')}
+</div>`:''}
+</div>`;
+}
+
+function abrirSaldoInicial(diaKey,turno,atual){
+ const val=parseFloat(prompt('Saldo inicial — '+turno+'\n(dinheiro no caixa):',atual.toFixed(2))||atual);
+ if(isNaN(val))return;
+ const db=ldb();if(!db._saldoInicial)db._saldoInicial={};
+ db._saldoInicial[diaKey+'-'+turno]=val;sdb(db);render();
+}
+
+function imprimirFechamento(diaKey,turno){
+ const win=window.open('','_blank','width=400,height=600');
+ win.document.write('<html><head><title>Fechamento</title></head><body style="font-family:monospace;padding:20px;"><h2 style="text-align:center;">DI CASA LARANJINHA</h2><h3 style="text-align:center;">Fechamento — '+turno+'</h3><h3 style="text-align:center;">'+diaKey+'</h3><hr/><button onclick="window.print()" style="width:100%;padding:10px;">Imprimir</button></body></html>');
+ win.document.close();
+}
+
+async function buscarRelatorioMaquinas(){
+ const db=ldb();const maquinas=db.maquinas||[];
+ if(!maquinas.length){alert('Configure as maquininhas em ⚙️ Fechamento');return;}
+ const el=document.getElementById('fc-totais-maq');
+ if(el)el.textContent='⟳ Buscando...';
+ const df=gDadosFiscais();
+ const backendUrl=df.backendUrl||'https://gestaoerp.vercel.app';
+ const token=df.backendToken||'gestaoerp_diCasa_44686412';
+ const data=window._fcData||new Date().toISOString().slice(0,10);
+ let totalGeral=0;let html='';
+ for(const maq of maquinas){
+  try{
+   const resp=await fetch(backendUrl+'/api/maquina/relatorio',{method:'POST',headers:{'Content-Type':'application/json','x-api-token':token},body:JSON.stringify({operadora:maq.operadora,merchantId:maq.merchantId||maq.clientId,token:maq.token||maq.clientSecret||maq.merchantKey,data})});
+   const d=await resp.json();
+   totalGeral+=(d.total||0);
+   html+=`<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>${maq.nome}</span><span style="font-weight:700;color:var(--gr);">${brl(d.total||0)}</span></div>`;
+  }catch(e){html+=`<div style="color:var(--re);font-size:10px;">${maq.nome}: offline</div>`;}
+ }
+ html+=`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--br);margin-top:4px;"><span style="font-weight:800;">Total</span><span style="font-weight:900;color:var(--gr);">${brl(totalGeral)}</span></div>`;
+ if(el)el.innerHTML=html;
+}
+
+function abrirConfigMaquinas(){
+ const db=ldb();const maquinas=db.maquinas||[];
+ const ops=[{id:'cielo',nome:'Cielo',icon:'🔵',campos:[{id:'merchantId',label:'Merchant ID'},{id:'merchantKey',label:'Merchant Key',type:'password'}]},{id:'c6',nome:'C6 Bank',icon:'⚫',campos:[{id:'clientId',label:'Client ID'},{id:'clientSecret',label:'Client Secret',type:'password'}]},{id:'stone',nome:'Stone',icon:'🟢',campos:[{id:'merchantId',label:'Stone Code'},{id:'token',label:'Token',type:'password'}]},{id:'getnet',nome:'GetNet',icon:'🟣',campos:[{id:'clientId',label:'Client ID'},{id:'clientSecret',label:'Client Secret',type:'password'}]}];
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML='<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><p style="font-weight:800;font-size:14px;">⚙️ Maquininhas</p><button onclick="this.closest(\'[style*=inset]\').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button></div>'+
+  ops.map(op=>{const maq=maquinas.find(m=>m.operadora===op.id)||{};return`<div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:20px;">${op.icon}</span><p style="font-size:13px;font-weight:700;">${op.nome}</p></div>${op.campos.map(c=>`<div style="margin-bottom:6px;"><label class="lbl">${c.label}</label><input id="maq-${op.id}-${c.id}" class="inpm" type="${c.type||'text'}" value="${maq[c.id]||''}"/></div>`).join('')}<button onclick="salvarMaquina('${op.id}')" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button></div>`;}).join('')+
+ '</div>';
+ div.onclick=e=>{if(e.target===div)div.remove();};document.body.appendChild(div);
+}
+
+function salvarMaquina(op){
+ const db=ldb();if(!db.maquinas)db.maquinas=[];
+ const campos={cielo:['merchantId','merchantKey'],c6:['clientId','clientSecret'],stone:['merchantId','token'],getnet:['clientId','clientSecret']};
+ const dados={id:op,operadora:op,nome:op.toUpperCase()};
+ (campos[op]||[]).forEach(c=>{const v=document.getElementById('maq-'+op+'-'+c)?.value?.trim();if(v)dados[c]=v;});
+ const idx=db.maquinas.findIndex(m=>m.operadora===op);
+ if(idx>=0)db.maquinas[idx]=dados;else db.maquinas.push(dados);
+ sdb(db);alert('✅ '+op.toUpperCase()+' salvo!');
+ document.querySelector('[style*="inset:0"]')?.remove();render();
+}
+
+// ═══ CADASTRO POR FOTO ═══════════════════════════════════════
+function abrirCadastroPorFoto(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+ div.innerHTML=`<div style="text-align:center;max-width:400px;width:100%;">
+  <p style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px;">📦 Cadastrar por Foto</p>
+  <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:20px;">Tire foto do produto — IA lê código de barras e identifica</p>
+  <input type="file" id="foto-produto-input" accept="image/*" capture="environment" style="display:none" onchange="processarFotoProduto(this)"/>
+  <input type="file" id="foto-produto-galeria" accept="image/*" style="display:none" onchange="processarFotoProduto(this)"/>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+   <button onclick="document.getElementById('foto-produto-input').click()" style="padding:16px;border-radius:12px;border:2px solid rgba(68,136,255,0.5);background:rgba(68,136,255,0.1);color:#4488ff;font-size:15px;font-weight:800;cursor:pointer;">📷 Fotografar produto</button>
+   <button onclick="document.getElementById('foto-produto-galeria').click()" style="padding:16px;border-radius:12px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:15px;font-weight:800;cursor:pointer;">🖼️ Da galeria</button>
+  </div>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Cancelar</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};document.body.appendChild(div);
+}
+
+async function processarFotoProduto(input){
+ const file=input.files[0];if(!file)return;
+ input.closest('[style*=inset]')?.remove();
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+ overlay.innerHTML='<p style="font-size:32px;">🔍</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo produto...</p>';
+ document.body.appendChild(overlay);
+ try{
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+  const apiKey=localStorage.getItem('erp_api_key')||gDadosFiscais()._cachedApiKey||'';
+  if(!apiKey){overlay.remove();alert('Configure a Chave API em Config');return;}
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
+  const data=await resp.json();
+  const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const prod=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+  overlay.remove();
+  if(!prod.nome&&!prod.codigoBarras){alert('Não identificou o produto. Tente com melhor iluminação.');return;}
+  window._fotoProdTemp={b64,mime:file.type||'image/jpeg'};
+  const imgSrc='data:'+(file.type||'image/jpeg')+';base64,'+b64;
+  const div2=document.createElement('div');
+  div2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+  div2.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+   <p style="font-weight:800;font-size:14px;margin-bottom:14px;">📦 Novo Produto</p>
+   <div style="text-align:center;margin-bottom:14px;"><img src="${imgSrc}" style="width:140px;height:140px;object-fit:contain;border-radius:12px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);"/></div>
+   <div style="display:flex;flex-direction:column;gap:8px;">
+    <div><label class="lbl">Nome *</label><input id="fp-nome-foto" class="inpm" value="${prod.nome||''}" placeholder="Ex: Coca-Cola 310ml"/></div>
+    <div><label class="lbl">Código de barras</label><input id="fp-ean-foto" class="inpm" value="${prod.codigoBarras||''}" placeholder="EAN-13" style="font-family:'Space Mono',monospace;"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+     <div><label class="lbl">Preço de venda *</label><input id="fp-preco-foto" class="inpm" type="number" placeholder="0,00" step="0.01"/></div>
+     <div><label class="lbl">Categoria</label>
+      <select id="fp-cat-foto" class="inpm">
+       <option value="Bebidas" ${prod.categoria==='Bebidas'?'selected':''}>🥤 Bebidas</option>
+       <option value="Alimentos">🍽️ Alimentos</option>
+       <option value="🍽️ Prato Único">Prato Único</option>
+       <option value="🏢 Prato Empresa">Prato Empresa</option>
+       <option value="🍕 Pizzas">Pizzas</option>
+       <option value="🍢 Espetos">Espetos</option>
+       <option value="outros">Outros</option>
+      </select>
+     </div>
+    </div>
+   </div>
+   <button onclick="salvarProdutoFoto()" style="width:100%;margin-top:14px;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">✅ Salvar Produto</button>
+  </div>`;
+  div2.onclick=e=>{if(e.target===div2)div2.remove();};document.body.appendChild(div2);
+ }catch(e){overlay.remove();alert('Erro: '+e.message);}
+ input.value='';
+}
+
+function salvarProdutoFoto(){
+ const nome=document.getElementById('fp-nome-foto')?.value?.trim();
+ const preco=parseFloat(document.getElementById('fp-preco-foto')?.value||0);
+ const cat=document.getElementById('fp-cat-foto')?.value||'Bebidas';
+ const ean=document.getElementById('fp-ean-foto')?.value?.trim();
+ if(!nome){alert('Informe o nome');return;}
+ if(!preco){alert('Informe o preço');return;}
+ const foto=window._fotoProdTemp?('data:'+window._fotoProdTemp.mime+';base64,'+window._fotoProdTemp.b64):'';
+ const db=ldb();if(!db.cardapioPDV)db.cardapioPDV=[];
+ if(ean){const ex=db.cardapioPDV.find(p=>p.ean===ean);if(ex){if(!confirm('Produto já existe: "'+ex.nome+'"\nAtualizar?'))return;ex.nome=nome;ex.preco=preco;ex.cat=cat;ex.foto=foto;sdb(db);document.querySelector('[style*="inset:0"]')?.remove();window._fotoProdTemp=null;render();alert('✅ Atualizado!');return;}}
+ db.cardapioPDV.push({id:uid(),nome,preco,cat,foto,ean,dt:hj()});
+ sdb(db);document.querySelector('[style*="inset:0"]')?.remove();window._fotoProdTemp=null;render();alert('✅ '+nome+' cadastrado!');
 }
 
 render();
