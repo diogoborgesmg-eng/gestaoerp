@@ -7,6 +7,11 @@ const EVOLUTION_KEY = 'dicasalaranjinha2024';
 const INSTANCE = 'dicasalaranjinha';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
+// ✅ SÓ responde em grupos — número do grupo vai aqui após criar
+// Deixe vazio para responder em QUALQUER grupo, ou coloque o ID do grupo específico
+// Ex: '120363XXXXXXXXXX@g.us'
+const GRUPO_AUTORIZADO = process.env.GRUPO_ID || '';
+
 function httpsPost(url, data, headers) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
@@ -56,18 +61,30 @@ async function analisarImagem(base64, mime) {
   } catch(e) { console.error('Erro Claude:', e.message); return 'Erro ao analisar.'; }
 }
 
+async function responderTexto(numero, txt) {
+  const t = txt.toLowerCase().trim();
+  if (t.includes('oi') || t.includes('olá') || t.includes('ola') || t.includes('bom dia') || t.includes('boa tarde') || t.includes('boa noite')) {
+    await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de nota fiscal, recibo ou comprovante* que analiso na hora!\n\n💡 Comandos:\n• *nota* — lançar NF\n• *ajuda* — ver comandos');
+  } else if (t.includes('nota') || t.includes('nf') || t.includes('fiscal')) {
+    await enviarWpp(numero, '📄 Mande a foto da *Nota Fiscal* que extraio os dados automaticamente!');
+  } else if (t.includes('ajuda') || t.includes('help') || t.includes('comando')) {
+    await enviarWpp(numero, '🤖 *Comandos do Bot Di Casa Laranjinha*\n\n📸 *Foto de NF/Recibo* — análise automática\n📊 *nota* — lançar nota fiscal\n❓ *ajuda* — este menu\n\n_Powered by GestaoERP_ ✅');
+  } else {
+    await enviarWpp(numero, `✅ Recebi: "${txt}"\n\n📸 Para analisar documentos, mande uma foto de NF ou comprovante!`);
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Log TODA requisição que chegar
   console.log(`>>> ${req.method} ${req.url}`);
 
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Webhook WhatsApp ativo ✅', versao: '4.0' }));
+    res.end(JSON.stringify({ status: 'Webhook v5 ativo ✅', versao: '5.0' }));
     return;
   }
 
@@ -78,63 +95,66 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true }));
 
     try {
-      console.log('BODY recebido:', body.substring(0, 300));
       const data = JSON.parse(body);
       const evento = data.event || data.type || '';
-      console.log('=== EVENTO:', evento, '===');
 
       if (evento !== 'messages.upsert') {
         console.log('Ignorado:', evento);
         return;
       }
 
-      // Evolution API v2 — estrutura da mensagem
       let msgs = [];
-      if (Array.isArray(data.data)) {
-        msgs = data.data;
-      } else if (data.data?.messages) {
-        msgs = data.data.messages;
-      } else if (data.data) {
-        msgs = [data.data];
-      }
-
-      console.log('Total mensagens:', msgs.length);
+      if (Array.isArray(data.data)) msgs = data.data;
+      else if (data.data?.messages) msgs = data.data.messages;
+      else if (data.data) msgs = [data.data];
 
       for (const msg of msgs) {
-        const fromMe = msg.key?.fromMe;
-        if (fromMe) { console.log('Própria, skip'); continue; }
+        if (msg.key?.fromMe) continue;
 
         const numero = msg.key?.remoteJid;
-        const tipo = msg.messageType || '';
-        console.log('De:', numero, '| Tipo:', tipo);
-
         if (!numero) continue;
+
         const isGrupo = numero.endsWith('@g.us');
 
+        // ✅ SÓ processa mensagens de GRUPO
+        if (!isGrupo) {
+          console.log('Mensagem individual ignorada de:', numero);
+          continue;
+        }
+
+        // Se GRUPO_AUTORIZADO definido, só responde nesse grupo específico
+        if (GRUPO_AUTORIZADO && numero !== GRUPO_AUTORIZADO) {
+          console.log('Grupo não autorizado:', numero);
+          continue;
+        }
+
+        const tipo = msg.messageType || '';
+        console.log('Grupo:', numero, '| Tipo:', tipo);
+
         if (tipo === 'conversation' || tipo === 'extendedTextMessage') {
-          const txt = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').toLowerCase();
-          console.log('Texto recebido:', txt);
-          if (isGrupo && !txt.includes('ajuda') && !txt.includes('bot')) continue;
-          await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de recibo ou comprovante* que analiso na hora!');
+          const txt = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+          console.log('Texto no grupo:', txt);
+          // No grupo responde qualquer mensagem
+          await responderTexto(numero, txt);
         }
         else if (tipo === 'imageMessage') {
           await enviarWpp(numero, '🔍 Analisando documento...');
           const base64 = msg.message?.imageMessage?.base64 || msg.message?.base64;
           if (!base64) { await enviarWpp(numero, '❌ Imagem não acessível. Tente reenviar.'); continue; }
           const analise = await analisarImagem(base64, 'image/jpeg');
-          await enviarWpp(numero, `📋 *Análise*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
+          await enviarWpp(numero, `📋 *Análise do Documento*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
         } else {
           console.log('Tipo não tratado:', tipo);
         }
       }
     } catch(e) {
       console.error('Erro webhook:', e.message);
-      console.error('Body que causou erro:', body.substring(0, 500));
     }
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ Webhook v4 rodando na porta ${PORT}`);
+  console.log(`✅ Webhook v5 rodando na porta ${PORT}`);
   console.log(`🔑 API Key: ${ANTHROPIC_KEY ? '✅' : '❌ NÃO CONFIGURADA'}`);
+  console.log(`👥 Modo: ${GRUPO_AUTORIZADO ? 'Grupo específico: ' + GRUPO_AUTORIZADO : 'Qualquer grupo'}`);
 });
