@@ -14984,7 +14984,7 @@ function rCadastros(){
 </div>
 
 <!-- Botão voz + busca -->
-<div style="display:flex;gap:6px;margin-bottom:10px;">
+<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;">
  <input id="busca-cad" oninput="filtrarCadastros(this.value)" placeholder="🔍 Buscar..." 
   style="flex:1;background:var(--sf2);border:1px solid var(--br);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;"/>
  <button onclick="abrirCadastroPorVoz()" style="padding:8px 14px;border-radius:9px;border:2px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🎙️ Voz</button>
@@ -17993,7 +17993,7 @@ async function processarFotoProduto(input){
  document.body.appendChild(overlay);
  try{
   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-  const apiKey=localStorage.getItem('erp_api_key')||gDadosFiscais()._cachedApiKey||'';
+  const _df2=gDadosFiscais();const apiKey=_df2.apiKey||_df2._cachedApiKey||localStorage.getItem('erp_api_key')||'';
   if(!apiKey){overlay.remove();alert('Configure a Chave API em Config');return;}
   const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
   const data=await resp.json();
