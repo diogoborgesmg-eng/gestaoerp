@@ -17993,8 +17993,8 @@ async function processarFotoProduto(input){
  document.body.appendChild(overlay);
  try{
   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-  const _df2=gDadosFiscais();const apiKey=_df2.apiKey||_df2._cachedApiKey||localStorage.getItem('erp_api_key')||'';
-  if(!apiKey){overlay.remove();alert('Configure a Chave API em Config');return;}
+  const _df2=gDadosFiscais();const apiKey=_df2.apiKey||localStorage.getItem('erp_api_key')||'';
+  if(!apiKey){overlay.remove();alert('Chave API não encontrada.\nVá em ⚙️ Config → Chave API Anthropic e salve novamente.');return;}
   const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
   const data=await resp.json();
   const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
