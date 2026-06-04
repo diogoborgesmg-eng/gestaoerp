@@ -14971,7 +14971,7 @@ function rCadastros(){
  const materias=db.est?.filter(e=>e.cat==='Matéria-Prima')||[];
  const produtos=gCardapioPDV()||[];
 
- return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('cad')" style="padding:5px 12px;boradius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📝 Produtos</button><button onclick="ir('forn')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏭 Fornecedores</button><button onclick="ir('ficha')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📋 Fichas</button><button onclick="ir('est')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📦 Estoque</button><button onclick="ir('compras')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🛒 Compras</button><button onclick="ir('pedido')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📋 Pedidos</button></div><div class="si">
+ return`<div class="si">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><p style="font-weight:800;font-size:15px;">📝 Cadastros</p><button onclick="consultarScoreFornecedor()" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,204,0,0.4);background:rgba(255,204,0,0.1);color:var(--ye);font-size:11px;font-weight:700;cursor:pointer;">📊 Meu Score</button></div>
 
 <!-- Sub-abas -->
@@ -14989,6 +14989,7 @@ function rCadastros(){
   style="flex:1;background:var(--sf2);border:1px solid var(--br);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;"/>
  <button onclick="abrirCadastroPorVoz()" style="padding:8px 14px;border-radius:9px;border:2px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🎙️ Voz</button>
  <button onclick="novoCadastro('${sub}')" style="padding:8px 14px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">+ Novo</button>
+<button onclick="abrirCadastroPorFoto()" style="padding:7px 12px;border-radius:8px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;">📷 Foto</button>
 </div>
 
 <!-- Lista -->
