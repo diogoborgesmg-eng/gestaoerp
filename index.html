@@ -17886,9 +17886,14 @@ ${ocorrencias.map(o=>`<div style="padding:8px;border-radius:8px;background:${o.t
 <div class="card" style="margin-bottom:10px;">
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
   <p style="font-size:12px;font-weight:700;">🏦 Maquininhas</p>
-  <button onclick="buscarRelatorioMaquinas()" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bl);color:#fff;font-size:10px;font-weight:700;cursor:pointer;">🔍 Buscar</button>
+  <div style="display:flex;gap:6px;">
+   <button onclick="abrirConfigMaquinas()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;">⚙️ Config</button>
+   <button onclick="buscarRelatorioMaquinas()" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bl);color:#fff;font-size:10px;font-weight:700;cursor:pointer;">🔍 Buscar</button>
+  </div>
  </div>
- <div id="fc-totais-maq" style="font-size:11px;color:var(--mu);">Toque em 🔍 para carregar</div>
+ <div id="fc-totais-maq" style="font-size:11px;color:var(--mu);">
+  ${(ldb().maquinas||[]).length===0?'<button onclick="abrirConfigMaquinas()" style="width:100%;padding:10px;border-radius:8px;border:2px dashed rgba(255,255,255,0.2);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">+ Configurar Cielo / C6 / Stone / GetNet</button>':'Toque em 🔍 para carregar'}
+ </div>
 </div>
 ${cancelados.length>0?`<div class="card" style="border-color:rgba(255,51,102,0.3);">
  <p style="font-size:12px;font-weight:700;color:var(--re);margin-bottom:8px;">🚨 Cancelados (${cancelados.length})</p>
