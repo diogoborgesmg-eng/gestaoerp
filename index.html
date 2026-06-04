@@ -16852,7 +16852,7 @@ async function lerFotoRecibo(input){
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
    method: 'POST',
-   headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+   headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
    body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 400,
@@ -17995,7 +17995,7 @@ async function processarFotoProduto(input){
   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
   const apiKey=getApiKey()||'';
   if(!apiKey){overlay.remove();alert('Chave API não encontrada.\nVá em ⚙️ Config → Chave API Anthropic e salve novamente.');return;}
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
   const data=await resp.json();
   const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
   const prod=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
