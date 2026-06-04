@@ -11249,35 +11249,26 @@ function filtrarEst(tipo,valor){
  if(tipo==="busca")d._estBusca=valor;
  sdb(d);render();
 }
-async function comprimirImagem(file, maxW=1800, maxH=1800, qualidade=0.92){
- return new Promise((resolve)=>{
- const img=new Image();
- const url=URL.createObjectURL(file);
- img.onload=()=>{
- let {width:w,height:h}=img;
- // Se imagem está na horizontal (paisagem), rotaciona 90° para ficar vertical
- const girar = w > h * 1.2;
- let fw = girar ? h : w;
- let fh = girar ? w : h;
- if(fw>maxW){fh=Math.round(fh*maxW/fw);fw=maxW;}
- if(fh>maxH){fw=Math.round(fw*maxH/fh);fh=maxH;}
- const c=document.createElement("canvas");
- c.width=fw; c.height=fh;
- const ctx=c.getContext("2d");
- if(girar){
- ctx.translate(fw,0);
- ctx.rotate(Math.PI/2);
- ctx.filter='contrast(1.15) brightness(1.05) saturate(0.9)';
- ctx.drawImage(img,0,0,fh,fw);
- }else{
- ctx.filter='contrast(1.15) brightness(1.05) saturate(0.9)';
- ctx.drawImage(img,0,0,fw,fh);
- }
- URL.revokeObjectURL(url);
- resolve(c.toDataURL("image/jpeg",qualidade).split(",")[1]);
- };
- img.onerror=()=>{URL.revokeObjectURL(url);resolve(null);};
- img.src=url;
+async function comprimirImagem(b64, mime, maxW){
+ return new Promise((res,rej)=>{
+  try{
+   const img=new Image();
+   img.onerror=()=>res(b64); // se falhar, retorna original
+   img.onload=()=>{
+    try{
+     const canvas=document.createElement('canvas');
+     let w=img.width,h=img.height;
+     if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+     canvas.width=w||800;canvas.height=h||600;
+     const ctx=canvas.getContext('2d');
+     if(!ctx){res(b64);return;}
+     ctx.drawImage(img,0,0,w,h);
+     const data=canvas.toDataURL('image/jpeg',0.75);
+     res(data.split(',')[1]||b64);
+    }catch(e){res(b64);}
+   };
+   img.src='data:'+(mime||'image/jpeg')+';base64,'+b64;
+  }catch(e){res(b64);}
  });
 }
 const PROMPT_OCR_SYSTEM = `Você é especialista em leitura de DANFE (Nota Fiscal Eletrônica brasileira).
