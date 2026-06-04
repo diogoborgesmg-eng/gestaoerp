@@ -17993,7 +17993,7 @@ async function processarFotoProduto(input){
 
   // Usa a função claudeAPI do sistema (já tem todos os headers corretos)
   const result=await claudeAPI({
-   model:'claude-sonnet-4-20250514',
+   model:MODEL,
    max_tokens:300,
    messages:[{role:'user',content:[
     {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
