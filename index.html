@@ -17989,20 +17989,33 @@ async function processarFotoProduto(input){
  input.closest('[style*=inset]')?.remove();
  const overlay=document.createElement('div');
  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
- overlay.innerHTML='<p style="font-size:32px;">🔍</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo produto...</p>';
+ overlay.innerHTML='<p style="font-size:32px;">🔍</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo produto...</p><p style="color:rgba(255,255,255,0.5);font-size:11px;">IA identificando produto</p>';
  document.body.appendChild(overlay);
  try{
-  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-  const apiKey=getApiKey()||'';
-  if(!apiKey){overlay.remove();alert('Chave API não encontrada.\nVá em ⚙️ Config → Chave API Anthropic e salve novamente.');return;}
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON: {"nome":"nome comercial","marca":"marca","volume":"ex:310ml","codigoBarras":"numero exato se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx"} Se não conseguir ler um campo deixe em branco.'}]}]})});
-  const data=await resp.json();
-  const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  // Lê e comprime a imagem
+  const b64raw=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+  const b64=await comprimirImagem(b64raw,file.type||'image/jpeg',800);
+
+  // Usa a função claudeAPI do sistema (já tem todos os headers corretos)
+  const result=await claudeAPI({
+   model:'claude-sonnet-4-20250514',
+   max_tokens:300,
+   messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+    {type:'text',text:'Analise esta foto de produto. Retorne APENAS JSON sem explicação: {"nome":"nome comercial exato","marca":"","volume":"ex:310ml ou 1kg","codigoBarras":"numero EAN se visivel","categoria":"Bebidas|Alimentos|Outros","unidade":"un|kg|cx|L"} Se não conseguir ler um campo deixe vazio. Não invente dados.'}
+   ]}]
+  });
+
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
   const prod=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
   overlay.remove();
-  if(!prod.nome&&!prod.codigoBarras){alert('Não identificou o produto. Tente com melhor iluminação.');return;}
-  window._fotoProdTemp={b64,mime:file.type||'image/jpeg'};
-  const imgSrc='data:'+(file.type||'image/jpeg')+';base64,'+b64;
+
+  if(!prod.nome&&!prod.codigoBarras){
+   alert('Não identificou o produto.\nTente com melhor iluminação ou mais próximo.');return;
+  }
+
+  window._fotoProdTemp={b64,mime:'image/jpeg'};
+  const imgSrc='data:image/jpeg;base64,'+b64;
   const div2=document.createElement('div');
   div2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
   div2.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
@@ -18018,7 +18031,6 @@ async function processarFotoProduto(input){
        <option value="Bebidas" ${prod.categoria==='Bebidas'?'selected':''}>🥤 Bebidas</option>
        <option value="Alimentos">🍽️ Alimentos</option>
        <option value="🍽️ Prato Único">Prato Único</option>
-       <option value="🏢 Prato Empresa">Prato Empresa</option>
        <option value="🍕 Pizzas">Pizzas</option>
        <option value="🍢 Espetos">Espetos</option>
        <option value="outros">Outros</option>
@@ -18027,9 +18039,14 @@ async function processarFotoProduto(input){
     </div>
    </div>
    <button onclick="salvarProdutoFoto()" style="width:100%;margin-top:14px;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">✅ Salvar Produto</button>
+   <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
   </div>`;
-  div2.onclick=e=>{if(e.target===div2)div2.remove();};document.body.appendChild(div2);
- }catch(e){overlay.remove();alert('Erro: '+e.message);}
+  div2.onclick=e=>{if(e.target===div2)div2.remove();};
+  document.body.appendChild(div2);
+ }catch(e){
+  overlay.remove();
+  alert('Erro ao ler foto: '+e.message);
+ }
  input.value='';
 }
 
