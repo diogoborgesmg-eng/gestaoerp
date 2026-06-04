@@ -2993,7 +2993,7 @@ function rRH(){
  return mNum===mHoje&&Math.abs(dNum-dHoje)<=3;
  });
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('rh')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">👥 RH</button><button onclick="ir('comp')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">✅ Compliance</button><button onclick="ir('aval')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">⭐ Avaliações</button><button onclick="ir('mkt')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📣 Marketing</button></div><div class="si">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
 <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);display:flex;align-items:center;justify-content:center;font-size:22px;">👥</div>
 <div><p style="font-weight:800;font-size:15px;">Recursos Humanos</p>
@@ -7404,7 +7404,7 @@ function rDashMensal(){
  const mesAnt=calcDREMesAno(mmAnt,yyAnt);
  const varRec=mesAnt.totalR>0?((mes.totalR-mesAnt.totalR)/mesAnt.totalR*100):0;
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('dashm')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📅 Mensal</button><button onclick="ir('dasha')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📈 Anual</button><button onclick="ir('bi')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📊 BI</button><button onclick="ir('cfo')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🧠 CFO</button><button onclick="ir('plano')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📑 Plano</button><button onclick="ir('dashc')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🗂️ Contas</button><button onclick="ir('dashcc')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏷️ CC</button></div><div class="si">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
  <div>
   <p style="font-weight:800;font-size:15px;">📅 Análise Mensal</p>
@@ -17858,7 +17858,7 @@ function rFechamentoCaixa(){
  if(porPgto.fiado>0)ocorrencias.push({tipo:'warning',msg:'Fiado: '+brl(porPgto.fiado)});
  if(cancelados.length>0)ocorrencias.push({tipo:'alert',msg:cancelados.length+' item(ns) cancelado(s)'});
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('caixa')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏦 Fechamento</button><button onclick="ir('bot')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🤖 Bot</button><button onclick="ir('openfinance')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔗 Open Finance</button></div><div class="si">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
  <p style="font-weight:800;font-size:15px;">🏦 Fechamento de Caixa</p>
  <button onclick="imprimirFechamento('${diaKey}','${turno}')" style="padding:6px 10px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">🖨️ Imprimir</button>
