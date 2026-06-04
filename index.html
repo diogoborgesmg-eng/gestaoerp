@@ -18009,8 +18009,10 @@ async function processarFotoProduto(input){
    alert('Não identificou o produto.\nTente com melhor iluminação ou mais próximo.');return;
   }
 
-  window._fotoProdTemp={b64,mime:'image/jpeg'};
-  const imgSrc='data:image/jpeg;base64,'+b64;
+  // Remove fundo da foto
+  const fotoProcessada=await removerFundoProduto(b64,'image/jpeg');
+  window._fotoProdTemp={b64:fotoProcessada.b64,mime:fotoProcessada.mime};
+  const imgSrc='data:'+(fotoProcessada.mime||'image/jpeg')+';base64,'+fotoProcessada.b64;
   const div2=document.createElement('div');
   div2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
   div2.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
@@ -18018,7 +18020,11 @@ async function processarFotoProduto(input){
    <div style="text-align:center;margin-bottom:14px;"><img src="${imgSrc}" style="width:140px;height:140px;object-fit:contain;border-radius:12px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);"/></div>
    <div style="display:flex;flex-direction:column;gap:8px;">
     <div><label class="lbl">Nome *</label><input id="fp-nome-foto" class="inpm" value="${prod.nome||''}" placeholder="Ex: Coca-Cola 310ml"/></div>
-    <div><label class="lbl">Código de barras</label><input id="fp-ean-foto" class="inpm" value="${prod.codigoBarras||''}" placeholder="EAN-13" style="font-family:'Space Mono',monospace;"/></div>
+    <div><label class="lbl">Código de barras</label>
+    <div style="display:flex;gap:6px;">
+     <input id="fp-ean-foto" class="inpm" value="${prod.codigoBarras||''}" placeholder="EAN-13" style="flex:1;font-family:'Space Mono',monospace;"/>
+     <button type="button" onclick="escanearCodigoBarraFoto()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--br);background:var(--sf2);font-size:16px;cursor:pointer;" title="Escanear código de barras">📷</button>
+    </div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
      <div><label class="lbl">Preço de venda *</label><input id="fp-preco-foto" class="inpm" type="number" placeholder="0,00" step="0.01"/></div>
      <div><label class="lbl">Categoria</label>
@@ -18057,6 +18063,105 @@ function salvarProdutoFoto(){
  if(ean){const ex=db.cardapioPDV.find(p=>p.ean===ean);if(ex){if(!confirm('Produto já existe: "'+ex.nome+'"\nAtualizar?'))return;ex.nome=nome;ex.preco=preco;ex.cat=cat;ex.foto=foto;sdb(db);document.querySelector('[style*="inset:0"]')?.remove();window._fotoProdTemp=null;render();alert('✅ Atualizado!');return;}}
  db.cardapioPDV.push({id:uid(),nome,preco,cat,foto,ean,dt:hj()});
  sdb(db);document.querySelector('[style*="inset:0"]')?.remove();window._fotoProdTemp=null;render();alert('✅ '+nome+' cadastrado!');
+}
+
+// ═══ SCANNER DE CÓDIGO DE BARRAS ═══════════════════════════
+async function escanearCodigoBarraFoto(){
+ // Tenta BarcodeDetector nativo (Android Chrome)
+ if('BarcodeDetector' in window){
+  try{
+   const detector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','qr_code','upc_a','upc_e']});
+   
+   // Cria preview de câmera
+   const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+   
+   const div=document.createElement('div');
+   div.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+   div.innerHTML=`<p style="color:#fff;font-size:13px;font-weight:700;margin-bottom:10px;z-index:2;">Aponte para o código de barras</p>
+    <div style="position:relative;width:100%;max-width:400px;">
+     <video id="barcode-video" autoplay playsinline style="width:100%;border-radius:12px;"></video>
+     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:2px;background:rgba(255,51,102,0.8);box-shadow:0 0 10px rgba(255,51,102,0.8);"></div>
+    </div>
+    <button onclick="this.closest('[style*=inset]').remove();window._scanStream&&window._scanStream.getTracks().forEach(t=>t.stop());" 
+     style="margin-top:16px;padding:10px 24px;border-radius:10px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:13px;cursor:pointer;">✕ Cancelar</button>`;
+   document.body.appendChild(div);
+   
+   const video=document.getElementById('barcode-video');
+   video.srcObject=stream;
+   window._scanStream=stream;
+   
+   // Escaneia continuamente
+   let scanning=true;
+   const scan=async()=>{
+    if(!scanning||!document.body.contains(div))return;
+    try{
+     const barcodes=await detector.detect(video);
+     if(barcodes.length>0){
+      const code=barcodes[0].rawValue;
+      scanning=false;
+      stream.getTracks().forEach(t=>t.stop());
+      div.remove();
+      // Preenche o campo
+      const el=document.getElementById('fp-ean-foto');
+      if(el){el.value=code;el.style.borderColor='var(--gr)';}
+      return;
+     }
+    }catch(e){}
+    if(scanning)requestAnimationFrame(scan);
+   };
+   video.onloadedmetadata=()=>scan();
+   return;
+  }catch(e){
+   console.log('BarcodeDetector erro:',e);
+  }
+ }
+ 
+ // Fallback: input manual
+ const codigo=prompt('Digite o código de barras:');
+ if(codigo){
+  const el=document.getElementById('fp-ean-foto');
+  if(el)el.value=codigo.trim();
+ }
+}
+
+// ═══ REMOÇÃO DE FUNDO ═══════════════════════════════════════
+async function removerFundoProduto(b64, mime){
+ // Usa a API gratuita do PhotoRoom ou remove.bg
+ // Alternativa gratuita: Clipdrop API (100 free/month)
+ // Melhor abordagem: usar CSS mix-blend-mode para simular
+ // OU usar canvas para remover fundo branco/claro
+
+ return new Promise((res)=>{
+  const img=new Image();
+  img.onload=()=>{
+   const canvas=document.createElement('canvas');
+   canvas.width=img.width;canvas.height=img.height;
+   const ctx=canvas.getContext('2d');
+   ctx.drawImage(img,0,0);
+   
+   // Remove pixels brancos/claros do fundo (técnica simples)
+   const data=ctx.getImageData(0,0,canvas.width,canvas.height);
+   const pixels=data.data;
+   
+   // Analisa cor do canto para determinar cor do fundo
+   const bgR=pixels[0],bgG=pixels[1],bgB=pixels[2];
+   const threshold=40;
+   
+   for(let i=0;i<pixels.length;i+=4){
+    const r=pixels[i],g=pixels[i+1],b=pixels[i+2];
+    // Se pixel for próximo da cor de fundo, torna transparente
+    if(Math.abs(r-bgR)<threshold&&Math.abs(g-bgG)<threshold&&Math.abs(b-bgB)<threshold){
+     pixels[i+3]=0; // transparente
+    }
+   }
+   
+   ctx.putImageData(data,0,0);
+   const result=canvas.toDataURL('image/png').split(',')[1];
+   res({b64:result,mime:'image/png'});
+  };
+  img.onerror=()=>res({b64,mime}); // retorna original se falhar
+  img.src='data:'+mime+';base64,'+b64;
+ });
 }
 
 render();
