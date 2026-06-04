@@ -1,7 +1,7 @@
 const http = require('http');
 const https = require('https');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 const EVOLUTION_URL = 'https://evolution-api-latest-lrlv.onrender.com';
 const EVOLUTION_KEY = 'dicasalaranjinha2024';
 const INSTANCE = 'dicasalaranjinha';
@@ -35,7 +35,7 @@ async function enviarWpp(numero, texto) {
       { number: numero, text: texto },
       { apikey: EVOLUTION_KEY }
     );
-    console.log('Resposta:', JSON.stringify(r).substring(0, 100));
+    console.log('Resposta envio:', JSON.stringify(r).substring(0, 100));
   } catch(e) { console.error('Erro enviar:', e.message); }
 }
 
@@ -61,32 +61,34 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Log TODA requisição que chegar
+  console.log(`>>> ${req.method} ${req.url}`);
+
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Webhook WhatsApp ativo ✅', versao: '3.0' }));
+    res.end(JSON.stringify({ status: 'Webhook WhatsApp ativo ✅', versao: '4.0' }));
     return;
   }
 
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
-    // Responde imediatamente
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
 
     try {
+      console.log('BODY recebido:', body.substring(0, 300));
       const data = JSON.parse(body);
-      const evento = data.event || '';
+      const evento = data.event || data.type || '';
       console.log('=== EVENTO:', evento, '===');
 
-      // Só processa mensagens
       if (evento !== 'messages.upsert') {
         console.log('Ignorado:', evento);
         return;
       }
 
-      // A Evolution API v2 manda as mensagens em data.data ou data.data.messages
+      // Evolution API v2 — estrutura da mensagem
       let msgs = [];
       if (Array.isArray(data.data)) {
         msgs = data.data;
@@ -107,17 +109,14 @@ const server = http.createServer(async (req, res) => {
         console.log('De:', numero, '| Tipo:', tipo);
 
         if (!numero) continue;
-
         const isGrupo = numero.endsWith('@g.us');
 
-        // Texto
         if (tipo === 'conversation' || tipo === 'extendedTextMessage') {
           const txt = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').toLowerCase();
-          console.log('Texto:', txt);
+          console.log('Texto recebido:', txt);
           if (isGrupo && !txt.includes('ajuda') && !txt.includes('bot')) continue;
           await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de recibo ou comprovante* que analiso na hora!');
         }
-        // Imagem
         else if (tipo === 'imageMessage') {
           await enviarWpp(numero, '🔍 Analisando documento...');
           const base64 = msg.message?.imageMessage?.base64 || msg.message?.base64;
@@ -129,12 +128,13 @@ const server = http.createServer(async (req, res) => {
         }
       }
     } catch(e) {
-      console.error('Erro:', e.message);
+      console.error('Erro webhook:', e.message);
+      console.error('Body que causou erro:', body.substring(0, 500));
     }
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ Webhook v3 rodando na porta ${PORT}`);
+  console.log(`✅ Webhook v4 rodando na porta ${PORT}`);
   console.log(`🔑 API Key: ${ANTHROPIC_KEY ? '✅' : '❌ NÃO CONFIGURADA'}`);
 });
