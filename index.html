@@ -8490,6 +8490,13 @@ function rCfg(){
  const destinatarios=JSON.parse(localStorage.getItem("erp_destinatarios")||"[]");
 
  return`<div class="si">
+<div style="display:flex;gap:6px;margin-bottom:12px;">
+ <button onclick="exportarBackup()" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:var(--gr);font-size:12px;font-weight:700;cursor:pointer;">💾 Exportar Backup</button>
+ <label style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.08);color:var(--ye);font-size:12px;font-weight:700;cursor:pointer;text-align:center;">
+  📂 Restaurar
+  <input type="file" accept=".json" style="display:none" onchange="importarBackup(this)"/>
+ </label>
+</div>
 <p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;font-weight:700;">⚙️ Configurações</p>
 
 <!-- ATALHOS RÁPIDOS -->
@@ -17942,11 +17949,11 @@ async function buscarRelatorioMaquinas(){
 
 function abrirConfigMaquinas(){
  const db=ldb();const maquinas=db.maquinas||[];
- const ops=[{id:'cielo',nome:'Cielo',icon:'🔵',campos:[{id:'merchantId',label:'Merchant ID'},{id:'merchantKey',label:'Merchant Key',type:'password'}]},{id:'c6',nome:'C6 Bank',icon:'⚫',campos:[{id:'clientId',label:'Client ID'},{id:'clientSecret',label:'Client Secret',type:'password'}]},{id:'stone',nome:'Stone',icon:'🟢',campos:[{id:'merchantId',label:'Stone Code'},{id:'token',label:'Token',type:'password'}]},{id:'getnet',nome:'GetNet',icon:'🟣',campos:[{id:'clientId',label:'Client ID'},{id:'clientSecret',label:'Client Secret',type:'password'}]}];
+ const ops=[{id:'cielo',nome:'Cielo',icon:'🔵',campos:[{id:'merchantId',label:'Merchant ID',hint:'Maquininha → Menu → Configurações → Dados do Lojista'},{id:'merchantKey',label:'Merchant Key',hint:'portal.cielo.com.br → Minha Conta',type:'password'}]},{id:'c6',nome:'C6 Bank',icon:'⚫',campos:[{id:'clientId',label:'Client ID',hint:'App C6 Empresas → Configurações → Maquininha → Sobre'},{id:'clientSecret',label:'Client Secret',hint:'App C6 Empresas → Integrações',type:'password'}]},{id:'stone',nome:'Stone',icon:'🟢',campos:[{id:'merchantId',label:'Stone Code',hint:'Maquininha → Menu → Configurações → Sobre o terminal'},{id:'token',label:'Token',hint:'conta.stone.com.br → Integrações',type:'password'}]},{id:'getnet',nome:'GetNet',icon:'🟣',campos:[{id:'clientId',label:'Client ID',hint:'Maquininha → Menu → Sobre'},{id:'clientSecret',label:'Client Secret',hint:'portal.getnet.com.br → Credenciais',type:'password'}]}];
  const div=document.createElement('div');
  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
  div.innerHTML='<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><p style="font-weight:800;font-size:14px;">⚙️ Maquininhas</p><button onclick="this.closest(\'[style*=inset]\').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button></div>'+
-  ops.map(op=>{const maq=maquinas.find(m=>m.operadora===op.id)||{};return`<div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:20px;">${op.icon}</span><p style="font-size:13px;font-weight:700;">${op.nome}</p></div>${op.campos.map(c=>`<div style="margin-bottom:6px;"><label class="lbl">${c.label}</label><input id="maq-${op.id}-${c.id}" class="inpm" type="${c.type||'text'}" value="${maq[c.id]||''}"/></div>`).join('')}<button onclick="salvarMaquina('${op.id}')" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button></div>`;}).join('')+
+  ops.map(op=>{const maq=maquinas.find(m=>m.operadora===op.id)||{};return`<div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:20px;">${op.icon}</span><p style="font-size:13px;font-weight:700;">${op.nome}</p></div>${op.campos.map(c=>`<div style="margin-bottom:6px;"><label class="lbl">${c.label}</label><input id="maq-${op.id}-${c.id}" class="inpm" type="${c.type||'text'}" value="${maq[c.id]||''}" placeholder="${c.hint||''}"/>${c.hint?`<p style="font-size:9px;color:var(--mu);margin-top:2px;">📍 ${c.hint}</p>`:''}</div>`).join('')}<button onclick="salvarMaquina('${op.id}')" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button></div>`;}).join('')+
  '</div>';
  div.onclick=e=>{if(e.target===div)div.remove();};document.body.appendChild(div);
 }
@@ -18167,6 +18174,64 @@ async function removerFundoProduto(b64, mime){
   img.onerror=()=>res({b64,mime}); // retorna original se falhar
   img.src='data:'+mime+';base64,'+b64;
  });
+}
+
+// ═══ BACKUP / RESTORE ════════════════════════════════════════
+function exportarBackup(){
+ const keys=['erp_dados_fiscais','erp_api_key','erp_apikey','erp_empresa','erp_importado_v4'];
+ const db=ldb();
+ const backup={
+  versao:1,
+  data:new Date().toISOString(),
+  localStorage:{},
+  db:db
+ };
+ // Copia localStorage
+ keys.forEach(k=>{
+  const v=localStorage.getItem(k);
+  if(v)backup.localStorage[k]=v;
+ });
+ // Adiciona TUDO do localStorage que começa com erp_
+ for(let i=0;i<localStorage.length;i++){
+  const k=localStorage.key(i);
+  if(k&&(k.startsWith('erp_')||k==='gestaoerp_db')){
+   backup.localStorage[k]=localStorage.getItem(k);
+  }
+ }
+ const json=JSON.stringify(backup,null,2);
+ const blob=new Blob([json],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');
+ a.href=url;
+ a.download='gestaoerp-backup-'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.json';
+ a.click();
+ URL.revokeObjectURL(url);
+ alert('✅ Backup exportado!\n\nGuarde o arquivo em local seguro.\nPode restaurar a qualquer momento.');
+}
+
+function importarBackup(input){
+ const file=input.files[0];
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=e=>{
+  try{
+   const backup=JSON.parse(e.target.result);
+   if(!backup.versao||!backup.db){alert('Arquivo inválido');return;}
+   if(!confirm('Restaurar backup de '+new Date(backup.data).toLocaleString('pt-BR')+'?\n\nIsso vai sobrescrever os dados atuais.'))return;
+   
+   // Restaura localStorage
+   Object.entries(backup.localStorage||{}).forEach(([k,v])=>localStorage.setItem(k,v));
+   // Restaura db
+   sdb(backup.db);
+   
+   alert('✅ Backup restaurado!\nRecarregando...');
+   setTimeout(()=>window.location.reload(),1000);
+  }catch(err){
+   alert('Erro ao restaurar: '+err.message);
+  }
+ };
+ reader.readAsText(file);
+ input.value='';
 }
 
 render();
