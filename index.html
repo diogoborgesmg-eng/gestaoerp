@@ -16775,31 +16775,10 @@ function lancarReciboBot(dados){
 }
 
 // Verifica webhook periodicamente (polling simples)
-async function verificarBotWhatsapp(){
- try{
-  const df=gDadosFiscais();
-  const backendUrl=df.backendUrl||'https://gestaoerp.vercel.app';
-  const token=df.backendToken||'gestaoerp_diCasa_44686412';
-  const db=ldb();
-  const ultimaVerif=db._botUltVerif||'';
-  const agora=new Date().toISOString();
-
-  const r=await fetch(backendUrl+'/api/bot/pendentes?desde='+encodeURIComponent(ultimaVerif),{
-   headers:{'x-api-token':token}
-  });
-  if(!r.ok)return;
-  const data=await r.json();
-
-  if(data.lancamentos?.length>0){
-   data.lancamentos.forEach(l=>lancarReciboBot(l));
-   db._botUltVerif=agora;
-   sdb(db);
-  }
- }catch(e){}
-}
+async 
 
 // Roda a verificação a cada 30 segundos quando o sistema está aberto
-setInterval(verificarBotWhatsapp, 30000);
+setInterval(()=>{},99999999;// 30000);
 
 function rBotWhatsapp(){
  const df=gDadosFiscais();
