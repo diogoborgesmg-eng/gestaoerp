@@ -117,6 +117,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div></div></div>
 <div class="tnav">
 <button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
+<button class="tb" onclick="ir('cozinha')">🧑‍🍳 Cozinha</button>
 <button class="tb" onclick="ir('cad')">📦 Cadastros</button>
 <button class="tb a" onclick="ir('dre')">📊 DRE</button>
 <button class="tb" onclick="ir('fin')">💰 Financeiro</button>
@@ -8209,7 +8210,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
+ const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -18232,6 +18233,482 @@ function importarBackup(input){
  };
  reader.readAsText(file);
  input.value='';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO COZINHA PROFISSIONAL — Suflex style
+// Recebimento · Validades · Etiquetas · Produção · Contagem
+// ═══════════════════════════════════════════════════════════════
+
+function rCozinha(){
+ const db=ldb();
+ const sub=window._cozinhaSub||'validades';
+ const subs=[
+  ['validades','⏰ Validades'],
+  ['recebimento','📥 Recebimento'],
+  ['producao','🍳 Produção'],
+  ['etiquetas','🏷️ Etiquetas'],
+  ['contagem','📊 Contagem'],
+ ];
+
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const itens=db.cozinhaItens||[];
+ const vencendoHoje=itens.filter(i=>{const d=new Date(i.validade);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();});
+ const vencidos=itens.filter(i=>new Date(i.validade)<hoje);
+ const vencendo3=itens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>0&&diff<=3;});
+
+ return `<div class="si">
+<div style="display:flex;gap:5px;overflow-x:auto;padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:0;">
+ ${subs.map(([k,l])=>'<button onclick="window._cozinhaSub=\''+k+'\';render()" style="padding:5px 12px;border-radius:15px;border:none;background:'+(sub===k?'var(--bl)':'rgba(255,255,255,0.06)')+';color:'+(sub===k?'#fff':'var(--mu)')+';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+l+'</button>').join('')}
+</div>
+
+${vencidos.length>0||vencendoHoje.length>0?`
+<div style="padding:8px 12px;background:rgba(255,51,102,0.1);border-bottom:1px solid rgba(255,51,102,0.3);">
+ ${vencidos.length>0?`<p style="font-size:12px;color:var(--re);font-weight:700;">🚨 ${vencidos.length} item(ns) VENCIDO(S) — descarte imediato!</p>`:''}
+ ${vencendoHoje.length>0?`<p style="font-size:12px;color:var(--ye);font-weight:700;">⚠️ ${vencendoHoje.length} item(ns) vence(m) HOJE</p>`:''}
+ ${vencendo3.length>0?`<p style="font-size:11px;color:rgba(255,204,0,0.8);">📅 ${vencendo3.length} item(ns) vence(m) em até 3 dias</p>`:''}
+</div>`:''}
+
+${sub==='validades'?_rValidades(itens,hoje):
+  sub==='recebimento'?_rRecebimento():
+  sub==='producao'?_rProducao():
+  sub==='etiquetas'?_rEtiquetas():
+  _rContagem()}
+</div>`;
+}
+
+function _rValidades(itens,hoje){
+ const grupos=[
+  {label:'🚨 Vencidos',cor:'var(--re)',bg:'rgba(255,51,102,0.08)',filtro:i=>new Date(i.validade)<hoje},
+  {label:'⚠️ Vence Hoje',cor:'var(--ye)',bg:'rgba(255,204,0,0.08)',filtro:i=>{const d=new Date(i.validade);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();}},
+  {label:'📅 Próximos 3 dias',cor:'#ff8844',bg:'rgba(255,136,68,0.08)',filtro:i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>0&&diff<=3;}},
+  {label:'✅ OK',cor:'var(--gr)',bg:'rgba(0,255,136,0.05)',filtro:i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>3;}},
+ ];
+ if(!itens.length) return `<div style="padding:20px;text-align:center;color:var(--mu);">
+  <p style="font-size:24px;margin-bottom:8px;">⏰</p>
+  <p style="font-size:13px;font-weight:700;">Nenhum item cadastrado</p>
+  <p style="font-size:11px;margin-top:4px;">Use 📥 Recebimento para registrar produtos</p>
+ </div>`;
+
+ return grupos.map(g=>{
+  const lista=itens.filter(g.filtro);
+  if(!lista.length)return'';
+  return`<div style="padding:10px 12px;">
+   <p style="font-size:12px;font-weight:700;color:${g.cor};margin-bottom:6px;">${g.label} (${lista.length})</p>
+   ${lista.map(i=>`<div style="background:${g.bg};border:1px solid ${g.cor}40;border-radius:10px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+    <div>
+     <p style="font-size:12px;font-weight:700;">${i.nome}</p>
+     <p style="font-size:10px;color:var(--mu);">${i.qtd} ${i.un||'un'} · Lote: ${i.lote||'—'} · ${i.local||'Câmara'}</p>
+     <p style="font-size:10px;color:var(--mu);">Resp: ${i.responsavel||'—'} · Rec: ${i.dtRecebimento||'—'}</p>
+    </div>
+    <div style="text-align:right;">
+     <p style="font-size:11px;font-weight:700;color:${g.cor};">${new Date(i.validade).toLocaleDateString('pt-BR')}</p>
+     <div style="display:flex;gap:4px;margin-top:4px;">
+      <button onclick="imprimirEtiquetaItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:9px;cursor:pointer;">🏷️</button>
+      <button onclick="descarteItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(255,51,102,0.15);color:var(--re);font-size:9px;cursor:pointer;">🗑️</button>
+     </div>
+    </div>
+   </div>`).join('')}
+  </div>`;
+ }).join('');
+}
+
+function _rRecebimento(){
+ return`<div style="padding:12px;">
+  <p style="font-weight:700;font-size:13px;margin-bottom:10px;">📥 Registrar Recebimento</p>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Produto *</label><input id="rec-nome" class="inpm" placeholder="Ex: Filé Mignon"/></div>
+    <div><label class="lbl">Fornecedor</label><input id="rec-forn" class="inpm" placeholder="Nome do fornecedor"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    <div><label class="lbl">Qtd *</label><input id="rec-qtd" class="inpm" type="number" placeholder="0"/></div>
+    <div><label class="lbl">Unid</label>
+     <select id="rec-un" class="inpm">
+      <option>kg</option><option>g</option><option>L</option><option>ml</option><option>un</option><option>cx</option><option>pct</option>
+     </select>
+    </div>
+    <div><label class="lbl">Temperatura</label><input id="rec-temp" class="inpm" type="number" placeholder="°C"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Validade original *</label><input id="rec-validade" class="inpm" type="date"/></div>
+    <div><label class="lbl">Lote/NF</label><input id="rec-lote" class="inpm" placeholder="Nº do lote ou NF"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Local de armazenamento</label>
+     <select id="rec-local" class="inpm">
+      <option>Câmara Fria</option><option>Freezer</option><option>Estoque Seco</option><option>Geladeira</option><option>Bancada</option>
+     </select>
+    </div>
+    <div><label class="lbl">Responsável</label><input id="rec-resp" class="inpm" placeholder="Nome"/></div>
+   </div>
+   <div>
+    <label class="lbl">Observação</label>
+    <input id="rec-obs" class="inpm" placeholder="Condição de chegada, temperatura, etc."/>
+   </div>
+
+   <!-- Verificação de temperatura -->
+   <div id="rec-temp-alerta" style="display:none;padding:8px;border-radius:8px;background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);">
+    <p style="font-size:11px;color:var(--re);font-weight:700;">⚠️ Temperatura fora do padrão! Recusar ou registrar não conformidade.</p>
+   </div>
+
+   <button onclick="salvarRecebimento()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:800;cursor:pointer;">
+    ✅ Registrar + Gerar Etiqueta
+   </button>
+  </div>
+
+  <!-- Histórico recente -->
+  <p style="font-weight:700;font-size:12px;margin:14px 0 8px;">📋 Recebimentos recentes</p>
+  ${(ldb().cozinhaItens||[]).slice(-5).reverse().map(i=>`<div style="display:flex;justify-content:space-between;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+   <div>
+    <p style="font-size:12px;font-weight:700;">${i.nome}</p>
+    <p style="font-size:10px;color:var(--mu);">${i.qtd} ${i.un} · ${i.fornecedor||'—'} · ${i.dtRecebimento}</p>
+   </div>
+   <p style="font-size:11px;color:var(--mu);">${new Date(i.validade).toLocaleDateString('pt-BR')}</p>
+  </div>`).join('')}
+ </div>`;
+}
+
+function _rProducao(){
+ const db=ldb();
+ const prods=db.cozinhaProducao||[];
+ return`<div style="padding:12px;">
+  <p style="font-weight:700;font-size:13px;margin-bottom:10px;">🍳 Registrar Produção</p>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Preparação *</label><input id="prod-nome" class="inpm" placeholder="Ex: Frango Grelhado"/></div>
+    <div><label class="lbl">Qtd produzida</label><input id="prod-qtd" class="inpm" type="number" placeholder="0"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Validade após preparo *</label><input id="prod-validade" class="inpm" type="date"/></div>
+    <div><label class="lbl">Temperatura de preparo</label><input id="prod-temp" class="inpm" type="number" placeholder="°C"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Método conservação</label>
+     <select id="prod-metodo" class="inpm">
+      <option>Refrigerado 0-5°C</option><option>Congelado -18°C</option><option>Temperatura ambiente</option><option>Banho-maria</option>
+     </select>
+    </div>
+    <div><label class="lbl">Responsável *</label><input id="prod-resp" class="inpm" placeholder="Nome do cozinheiro"/></div>
+   </div>
+   <button onclick="salvarProducao()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bl);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">
+    🍳 Registrar + Gerar Etiqueta
+   </button>
+  </div>
+
+  <p style="font-weight:700;font-size:12px;margin:14px 0 8px;">📋 Produção recente</p>
+  ${prods.slice(-5).reverse().map(p=>`<div style="display:flex;justify-content:space-between;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+   <div>
+    <p style="font-size:12px;font-weight:700;">${p.nome}</p>
+    <p style="font-size:10px;color:var(--mu);">${p.responsavel} · ${p.metodo||''}</p>
+   </div>
+   <div style="text-align:right;">
+    <p style="font-size:11px;color:var(--mu);">Vence: ${new Date(p.validade).toLocaleDateString('pt-BR')}</p>
+    <button onclick="imprimirEtiquetaProducao('${p.id}')" style="padding:3px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:9px;cursor:pointer;">🏷️ Etiqueta</button>
+   </div>
+  </div>`).join('')}
+ </div>`;
+}
+
+function _rEtiquetas(){
+ return`<div style="padding:12px;">
+  <p style="font-weight:700;font-size:13px;margin-bottom:4px;">🏷️ Imprimir Etiquetas</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Selecione os itens para imprimir</p>
+  
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+   <button onclick="imprimirEtiquetasLote('recebimento')" style="padding:10px;border-radius:9px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:var(--gr);font-size:12px;font-weight:700;cursor:pointer;">📦 Recebimentos<br><span style="font-size:10px;font-weight:400;">de hoje</span></button>
+   <button onclick="imprimirEtiquetasLote('producao')" style="padding:10px;border-radius:9px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:12px;font-weight:700;cursor:pointer;">🍳 Produções<br><span style="font-size:10px;font-weight:400;">de hoje</span></button>
+   <button onclick="imprimirEtiquetasLote('vencendo')" style="padding:10px;border-radius:9px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.08);color:var(--ye);font-size:12px;font-weight:700;cursor:pointer;">⚠️ Vencendo<br><span style="font-size:10px;font-weight:400;">próximos 3 dias</span></button>
+   <button onclick="previewEtiqueta()" style="padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:var(--mu);font-size:12px;font-weight:700;cursor:pointer;">👁️ Preview<br><span style="font-size:10px;font-weight:400;">visualizar modelo</span></button>
+  </div>
+
+  <div class="card" style="margin-bottom:10px;">
+   <p style="font-size:11px;font-weight:700;margin-bottom:6px;">⚙️ Configurar impressora</p>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <div><label class="lbl">Largura (mm)</label><input id="etq-larg" class="inpm" type="number" value="${(ldb().etqConfig||{}).larg||50}" placeholder="50"/></div>
+    <div><label class="lbl">Altura (mm)</label><input id="etq-alt" class="inpm" type="number" value="${(ldb().etqConfig||{}).alt||30}" placeholder="30"/></div>
+   </div>
+   <button onclick="salvarConfigEtiqueta()" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:none;background:var(--sf2);color:var(--mu);font-size:11px;cursor:pointer;">💾 Salvar configuração</button>
+  </div>
+
+  <div class="card" style="border-color:rgba(255,204,0,0.3);">
+   <p style="font-size:11px;color:var(--ye);">💡 Compatível com qualquer impressora térmica: Zebra, Elgin, Argox, Bematech. Conecte via USB ou rede e imprima direto do browser.</p>
+  </div>
+ </div>`;
+}
+
+function _rContagem(){
+ const db=ldb();
+ const contagem=db.cozinhaContagem||{data:'',itens:[]};
+ return`<div style="padding:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+   <p style="font-weight:700;font-size:13px;">📊 Contagem de Estoque</p>
+   <button onclick="iniciarContagem()" style="padding:7px 12px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">+ Nova Contagem</button>
+  </div>
+
+  <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:11px;color:var(--bl);font-weight:700;">📷 Contagem por QR Code</p>
+   <p style="font-size:10px;color:var(--mu);margin-top:2px;">Escaneie a etiqueta do produto para lançar na contagem automaticamente</p>
+   <button onclick="escanearQRContagem()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📷 Escanear QR Code</button>
+  </div>
+
+  ${contagem.itens.length>0?`
+  <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Última contagem: ${contagem.data}</p>
+  ${contagem.itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+   <p style="font-size:12px;font-weight:700;">${i.nome}</p>
+   <p style="font-size:12px;font-weight:700;color:var(--gr);">${i.qtd} ${i.un||'un'}</p>
+  </div>`).join('')}
+  <button onclick="exportarContagem()" style="width:100%;margin-top:8px;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">📥 Exportar contagem</button>
+  `:`<p style="text-align:center;color:var(--mu);font-size:12px;padding:20px;">Nenhuma contagem realizada. Toque em "+ Nova Contagem".</p>`}
+ </div>`;
+}
+
+// ═══ FUNÇÕES DE AÇÃO ═════════════════════════════════════════
+function salvarRecebimento(){
+ const f=id=>document.getElementById(id)?.value?.trim()||'';
+ const nome=f('rec-nome');if(!nome){alert('Informe o produto');return;}
+ const validade=f('rec-validade');if(!validade){alert('Informe a validade');return;}
+ const qtd=parseFloat(f('rec-qtd'))||0;
+
+ const item={
+  id:uid(),tipo:'recebimento',
+  nome,fornecedor:f('rec-forn'),
+  qtd,un:f('rec-un')||'kg',
+  temperatura:parseFloat(f('rec-temp'))||null,
+  validade,lote:f('rec-lote'),
+  local:f('rec-local')||'Câmara Fria',
+  responsavel:f('rec-resp'),
+  obs:f('rec-obs'),
+  dtRecebimento:hj(),
+  criadoEm:new Date().toISOString()
+ };
+
+ // Alerta de temperatura
+ const temp=item.temperatura;
+ if(temp!==null){
+  if(['Câmara Fria','Geladeira'].includes(item.local)&&(temp<0||temp>8)){
+   if(!confirm(`⚠️ Temperatura ${temp}°C fora do padrão para ${item.local} (0-8°C)\n\nRegistrar mesmo assim?`))return;
+  }
+  if(item.local==='Freezer'&&temp>-10){
+   if(!confirm(`⚠️ Temperatura ${temp}°C fora do padrão para Freezer (< -10°C)\n\nRegistrar mesmo assim?`))return;
+  }
+ }
+
+ const db=ldb();
+ if(!db.cozinhaItens)db.cozinhaItens=[];
+ db.cozinhaItens.push(item);
+ sdb(db);
+
+ // Imprime etiqueta automaticamente
+ imprimirEtiquetaItem(item.id);
+ 
+ window._cozinhaSub='validades';
+ render();
+}
+
+function salvarProducao(){
+ const f=id=>document.getElementById(id)?.value?.trim()||'';
+ const nome=f('prod-nome');if(!nome){alert('Informe a preparação');return;}
+ const validade=f('prod-validade');if(!validade){alert('Informe a validade');return;}
+
+ const prod={
+  id:uid(),
+  nome,qtd:parseFloat(f('prod-qtd'))||1,
+  validade,temperatura:parseFloat(f('prod-temp'))||null,
+  metodo:f('prod-metodo')||'Refrigerado 0-5°C',
+  responsavel:f('prod-resp'),
+  dtProducao:hj(),criadoEm:new Date().toISOString()
+ };
+
+ const db=ldb();
+ if(!db.cozinhaProducao)db.cozinhaProducao=[];
+ db.cozinhaProducao.push(prod);
+ sdb(db);
+ imprimirEtiquetaProducao(prod.id);
+ render();
+}
+
+function descarteItem(id){
+ if(!confirm('Confirmar descarte?'))return;
+ const db=ldb();
+ db.cozinhaItens=(db.cozinhaItens||[]).filter(i=>i.id!==id);
+ if(!db.cozinhaDescartes)db.cozinhaDescartes=[];
+ const item=(ldb().cozinhaItens||[]).find(i=>i.id===id);
+ if(item)db.cozinhaDescartes.push({...item,dtDescarte:hj()});
+ sdb(db);render();
+}
+
+function salvarConfigEtiqueta(){
+ const db=ldb();
+ db.etqConfig={
+  larg:parseInt(document.getElementById('etq-larg')?.value||'50'),
+  alt:parseInt(document.getElementById('etq-alt')?.value||'30')
+ };
+ sdb(db);alert('✅ Configuração salva!');
+}
+
+function gerarQRCodeData(id){
+ return 'GESTAOERP:'+id;
+}
+
+function imprimirEtiquetaItem(id){
+ const db=ldb();
+ const item=(db.cozinhaItens||[]).find(i=>i.id===id);
+ if(!item){alert('Item não encontrado');return;}
+ const cfg=db.etqConfig||{larg:50,alt:30};
+ _abrirJanelaEtiqueta([item],cfg,'recebimento');
+}
+
+function imprimirEtiquetaProducao(id){
+ const db=ldb();
+ const prod=(db.cozinhaProducao||[]).find(p=>p.id===id);
+ if(!prod){alert('Produção não encontrada');return;}
+ const cfg=db.etqConfig||{larg:50,alt:30};
+ _abrirJanelaEtiqueta([prod],cfg,'producao');
+}
+
+function imprimirEtiquetasLote(tipo){
+ const db=ldb();
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ let itens=[];
+ if(tipo==='recebimento') itens=(db.cozinhaItens||[]).filter(i=>i.dtRecebimento===hj());
+ else if(tipo==='producao') itens=(db.cozinhaProducao||[]).filter(p=>p.dtProducao===hj());
+ else if(tipo==='vencendo') itens=(db.cozinhaItens||[]).filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>=0&&diff<=3;});
+ if(!itens.length){alert('Nenhum item para imprimir.');return;}
+ _abrirJanelaEtiqueta(itens,db.etqConfig||{larg:50,alt:30},tipo);
+}
+
+function previewEtiqueta(){
+ const item={id:'PREVIEW',nome:'FILÉ MIGNON',fornecedor:'Frigorífico XYZ',qtd:5,un:'kg',lote:'L2024-001',validade:new Date(Date.now()+5*86400000).toISOString().slice(0,10),local:'Câmara Fria',responsavel:'João',dtRecebimento:hj(),temperatura:4};
+ _abrirJanelaEtiqueta([item],{larg:50,alt:30},'recebimento');
+}
+
+function _abrirJanelaEtiqueta(itens,cfg,tipo){
+ const w=cfg.larg||50;const h=cfg.alt||30;
+ const df=gDadosFiscais();
+ const empresa=df.razao||'Di Casa Laranjinha';
+ const cnpj=df.cnpj||'44.686.412/0001-00';
+
+ const etiquetasHTML=itens.map(item=>{
+  const qrData=gerarQRCodeData(item.id);
+  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(qrData);
+  const valStr=item.validade?new Date(item.validade+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  const isProducao=tipo==='producao'||!!item.metodo;
+
+  return`<div style="width:${w}mm;height:${h}mm;border:1px solid #000;padding:1.5mm;display:flex;flex-direction:column;justify-content:space-between;font-family:Arial,sans-serif;page-break-after:always;box-sizing:border-box;overflow:hidden;">
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2mm;">
+    <div style="flex:1;min-width:0;">
+     <p style="font-size:7pt;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nome}</p>
+     <p style="font-size:5pt;margin:0;color:#333;">${item.fornecedor||item.responsavel||''}</p>
+     ${isProducao?`<p style="font-size:5pt;margin:0;color:#333;">${item.metodo||''}</p>`:`<p style="font-size:5pt;margin:0;color:#333;">${item.local||''} ${item.temperatura?'· '+item.temperatura+'°C':''}</p>`}
+    </div>
+    <img src="${qrUrl}" style="width:12mm;height:12mm;flex-shrink:0;" />
+   </div>
+   <div>
+    <div style="display:flex;justify-content:space-between;font-size:5pt;border-top:0.3mm solid #ccc;padding-top:0.5mm;margin-top:0.5mm;">
+     <span>${isProducao?'Preparo':'Receb.'}: ${item.dtRecebimento||item.dtProducao||hj()}</span>
+     <span style="font-weight:700;">Validade: ${valStr}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:4pt;color:#555;">
+     <span>${isProducao?'Resp: '+item.responsavel:'Lote: '+(item.lote||'—')}</span>
+     <span>${empresa.substring(0,20)}</span>
+    </div>
+   </div>
+  </div>`;
+ }).join('');
+
+ const win=window.open('','_blank');
+ win.document.write(`<!DOCTYPE html><html><head><title>Etiquetas</title>
+  <style>@media print{@page{margin:0;size:${w}mm ${h}mm;}body{margin:0;}}</style>
+ </head><body style="margin:0;padding:0;">
+  <div style="display:flex;flex-wrap:wrap;gap:1mm;padding:2mm;">
+   ${etiquetasHTML}
+  </div>
+  <div style="padding:10px;text-align:center;border-top:1px solid #eee;">
+   <button onclick="window.print()" style="padding:10px 30px;font-size:14px;background:#000;color:#fff;border:none;border-radius:8px;cursor:pointer;">🖨️ Imprimir ${itens.length} etiqueta(s)</button>
+  </div>
+ </body></html>`);
+ win.document.close();
+}
+
+function iniciarContagem(){
+ const db=ldb();
+ if(!db.cozinhaContagem)db.cozinhaContagem={data:'',itens:[]};
+ db.cozinhaContagem={data:hj(),itens:[]};
+ sdb(db);
+ render();
+ alert('✅ Nova contagem iniciada!\nEscaneie os QR Codes das etiquetas ou adicione manualmente.');
+}
+
+async function escanearQRContagem(){
+ if('BarcodeDetector' in window){
+  try{
+   const detector=new BarcodeDetector({formats:['qr_code']});
+   const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+   const div=document.createElement('div');
+   div.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+   div.innerHTML=`<p style="color:#fff;font-size:13px;margin-bottom:10px;">Aponte para o QR Code da etiqueta</p>
+    <video id="qr-video" autoplay playsinline style="width:90%;max-width:400px;border-radius:12px;"></video>
+    <button onclick="this.closest('[style*=inset]').remove();window._qrStream&&window._qrStream.getTracks().forEach(t=>t.stop())" style="margin-top:16px;padding:10px 24px;border-radius:10px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:13px;cursor:pointer;">✕ Cancelar</button>`;
+   document.body.appendChild(div);
+   const video=document.getElementById('qr-video');
+   video.srcObject=stream;window._qrStream=stream;
+   let scanning=true;
+   const scan=async()=>{
+    if(!scanning||!document.body.contains(div))return;
+    try{
+     const codes=await detector.detect(video);
+     if(codes.length>0){
+      const data=codes[0].rawValue;
+      scanning=false;stream.getTracks().forEach(t=>t.stop());div.remove();
+      if(data.startsWith('GESTAOERP:')){
+       const id=data.replace('GESTAOERP:','');
+       adicionarContagemItem(id);
+      }else{
+       alert('QR Code não reconhecido: '+data);
+      }
+     }
+    }catch(e){}
+    if(scanning)requestAnimationFrame(scan);
+   };
+   video.onloadedmetadata=()=>scan();
+  }catch(e){adicionarContagemManual();}
+ }else{adicionarContagemManual();}
+}
+
+function adicionarContagemItem(id){
+ const db=ldb();
+ const item=(db.cozinhaItens||[]).find(i=>i.id===id)||(db.cozinhaProducao||[]).find(p=>p.id===id);
+ if(!item){alert('Item não encontrado no sistema.');return;}
+ const qtd=parseFloat(prompt('Quantidade de '+item.nome+' ('+item.un+'):','0')||'0');
+ if(!isNaN(qtd)&&qtd>=0){
+  if(!db.cozinhaContagem)db.cozinhaContagem={data:hj(),itens:[]};
+  const ex=db.cozinhaContagem.itens.find(i=>i.id===id);
+  if(ex)ex.qtd=qtd;else db.cozinhaContagem.itens.push({id,nome:item.nome,qtd,un:item.un||'un'});
+  sdb(db);render();
+ }
+}
+
+function adicionarContagemManual(){
+ const nome=prompt('Nome do item:');if(!nome)return;
+ const qtd=parseFloat(prompt('Quantidade:','0')||'0');
+ const un=prompt('Unidade (kg, un, L):','kg');
+ const db=ldb();
+ if(!db.cozinhaContagem)db.cozinhaContagem={data:hj(),itens:[]};
+ db.cozinhaContagem.itens.push({id:uid(),nome,qtd,un});
+ sdb(db);render();
+}
+
+function exportarContagem(){
+ const db=ldb();
+ const c=db.cozinhaContagem||{data:hj(),itens:[]};
+ let csv='Produto,Quantidade,Unidade\n';
+ c.itens.forEach(i=>{csv+=`"${i.nome}",${i.qtd},"${i.un||'un'}"\n`;});
+ const blob=new Blob([csv],{type:'text/csv'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='contagem-'+c.data.replace(/\//g,'-')+'.csv';
+ a.click();
 }
 
 render();
