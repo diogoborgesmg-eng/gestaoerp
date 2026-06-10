@@ -69,31 +69,73 @@ async function buscarMidia(msg) {
   }
 }
 
-async function analisarImagem(base64, mime) {
+async function analisarImagem(base64Data, mime) {
   try {
-    console.log('Chamando Claude com base64 tamanho:', base64.length);
-    const result = await httpsRequest('POST',
-      'https://api.anthropic.com/v1/messages',
-      {
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mime || 'image/jpeg', data: base64 } },
-            { type: 'text', text: 'Analise este documento financeiro do Di Casa Laranjinha (Patos de Minas MG). Extraia: Tipo, Fornecedor/Estabelecimento, Data, Valor total, Forma de pagamento, Itens. Responda em português de forma organizada.' }
-          ]
-        }]
-      },
-      { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' }
-    );
+    console.log('Chamando Claude com base64 tamanho:', base64Data.length);
+    
+    const payload = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mime || 'image/jpeg', data: base64Data } },
+          { type: 'text', text: 'Analise este comprovante/recibo financeiro. Extraia APENAS o que está escrito: valor, destinatário/estabelecimento, data, tipo (pix/boleto/cartão/dinheiro), observação. Responda em português de forma concisa.' }
+        ]
+      }]
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01'
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            console.log('Status HTTP:', res.statusCode);
+            console.log('Resposta Claude raw:', JSON.stringify(parsed).substring(0, 400));
+            resolve(parsed);
+          } catch(e) {
+            console.error('Erro parse Claude:', e.message, data.substring(0,200));
+            reject(e);
+          }
+        });
+      });
+
+      req.on('error', (e) => {
+        console.error('Erro HTTP Claude:', e.message);
+        reject(e);
+      });
+
+      // Escreve o payload em chunks para evitar problemas com payloads grandes
+      req.write(payload);
+      req.end();
+    });
+
+    if (result.error) {
+      console.error('Erro API Claude:', JSON.stringify(result.error));
+      return 'Erro na análise: ' + (result.error.message || 'desconhecido');
+    }
+
     const texto = result.content?.[0]?.text;
-    console.log('Resposta Claude raw:', JSON.stringify(result).substring(0, 300));
-    console.log('Resposta Claude texto:', texto?.substring(0, 200));
-    return texto || 'Não consegui extrair os dados.';
+    console.log('✅ Claude respondeu:', texto?.substring(0, 150));
+    return texto || 'Não consegui extrair os dados do comprovante.';
+
   } catch(e) {
-    console.error('Erro Claude:', e.message, JSON.stringify(e));
-    return `Erro Claude: ${e.message}`;
+    console.error('Erro analisarImagem:', e.message);
+    return 'Erro ao processar imagem: ' + e.message;
   }
 }
 
