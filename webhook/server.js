@@ -35,26 +35,34 @@ function httpsRequest(method, url, data, headers) {
 
 async function enviarWpp(numero, texto) {
   try {
-    const r = await httpsRequest('POST',
+    await httpsRequest('POST',
       `${EVOLUTION_URL}/message/sendText/${INSTANCE}`,
       { number: numero, text: texto },
       { apikey: EVOLUTION_KEY }
     );
-    console.log('Enviado para:', numero, '|', JSON.stringify(r).substring(0, 80));
   } catch(e) { console.error('Erro enviar:', e.message); }
 }
 
-// Busca o base64 da mídia diretamente na Evolution API
-async function buscarMidiaBase64(messageId, remoteJid) {
+async function buscarMidia(msg) {
   try {
-    console.log('Buscando mídia para messageId:', messageId);
-    const r = await httpsRequest('POST',
-      `${EVOLUTION_URL}/chat/getBase64FromMediaMessage/${INSTANCE}`,
-      { message: { key: { id: messageId, remoteJid } } },
-      { apikey: EVOLUTION_KEY }
-    );
-    console.log('Resposta mídia:', JSON.stringify(r).substring(0, 100));
-    return r.base64 || r.data?.base64 || null;
+    // Tenta os 3 endpoints da Evolution API v2
+    const endpoints = [
+      `/chat/getBase64FromMediaMessage/${INSTANCE}`,
+      `/message/getMedia/${INSTANCE}`,
+    ];
+    
+    for (const ep of endpoints) {
+      console.log('Tentando endpoint:', ep);
+      const r = await httpsRequest('POST',
+        `${EVOLUTION_URL}${ep}`,
+        { message: { key: msg.key, messageType: msg.messageType, message: msg.message } },
+        { apikey: EVOLUTION_KEY }
+      );
+      console.log('Resposta:', JSON.stringify(r).substring(0, 200));
+      const b64 = r.base64 || r.data?.base64 || r.mediaData?.base64;
+      if (b64) { console.log('✅ Base64 encontrado!'); return b64; }
+    }
+    return null;
   } catch(e) {
     console.error('Erro buscar mídia:', e.message);
     return null;
@@ -63,6 +71,7 @@ async function buscarMidiaBase64(messageId, remoteJid) {
 
 async function analisarImagem(base64, mime) {
   try {
+    console.log('Chamando Claude com base64 tamanho:', base64.length);
     const result = await httpsRequest('POST',
       'https://api.anthropic.com/v1/messages',
       {
@@ -72,16 +81,18 @@ async function analisarImagem(base64, mime) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mime || 'image/jpeg', data: base64 } },
-            { type: 'text', text: 'Você é o assistente financeiro do Di Casa Laranjinha em Patos de Minas MG. Analise este documento e extraia: Tipo (NF/Recibo/Comprovante), Fornecedor/Estabelecimento, Data, Valor total, Forma de pagamento, lista de Itens com valores. Responda de forma organizada em português.' }
+            { type: 'text', text: 'Analise este documento financeiro do Di Casa Laranjinha (Patos de Minas MG). Extraia: Tipo, Fornecedor/Estabelecimento, Data, Valor total, Forma de pagamento, Itens. Responda em português de forma organizada.' }
           ]
         }]
       },
       { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' }
     );
-    return result.content?.[0]?.text || 'Não consegui analisar.';
+    const texto = result.content?.[0]?.text;
+    console.log('Resposta Claude:', texto?.substring(0, 100));
+    return texto || 'Não consegui extrair os dados.';
   } catch(e) {
-    console.error('Erro Claude:', e.message);
-    return `Erro ao analisar: ${e.message}`;
+    console.error('Erro Claude:', e.message, JSON.stringify(e));
+    return `Erro Claude: ${e.message}`;
   }
 }
 
@@ -93,7 +104,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Webhook v6 ativo ✅', versao: '6.0' }));
+    res.end(JSON.stringify({ status: 'Webhook v7 ativo ✅' }));
     return;
   }
 
@@ -105,7 +116,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const data = JSON.parse(body);
-      const evento = data.event || data.type || '';
+      const evento = data.event || '';
       if (evento !== 'messages.upsert') { console.log('Ignorado:', evento); return; }
 
       let msgs = [];
@@ -116,67 +127,44 @@ const server = http.createServer(async (req, res) => {
       for (const msg of msgs) {
         if (msg.key?.fromMe) continue;
         const numero = msg.key?.remoteJid;
-        if (!numero) continue;
-
-        const isGrupo = numero.endsWith('@g.us');
-        if (!isGrupo) { console.log('Individual ignorado:', numero); continue; }
-        if (GRUPO_AUTORIZADO && numero !== GRUPO_AUTORIZADO) { console.log('Grupo não autorizado:', numero); continue; }
+        if (!numero || !numero.endsWith('@g.us')) { console.log('Ignorado (não grupo):', numero); continue; }
+        if (GRUPO_AUTORIZADO && numero !== GRUPO_AUTORIZADO) continue;
 
         const tipo = msg.messageType || '';
-        const messageId = msg.key?.id;
-        console.log('Grupo:', numero, '| Tipo:', tipo, '| ID:', messageId);
+        console.log('--- MSG ---');
+        console.log('Grupo:', numero);
+        console.log('Tipo:', tipo);
+        console.log('Key:', JSON.stringify(msg.key));
+        // Log completo da mensagem para debug
+        console.log('MSG completa:', JSON.stringify(msg).substring(0, 500));
 
         if (tipo === 'conversation' || tipo === 'extendedTextMessage') {
           const txt = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-          console.log('Texto:', txt);
-          const t = txt.toLowerCase().trim();
-          if (t.includes('oi') || t.includes('olá') || t.includes('ola') || t.includes('bom dia') || t.includes('boa')) {
-            await enviarWpp(numero, '👋 Olá! Sou o assistente do *Di Casa Laranjinha* 🍕🍖\n\n📸 Mande uma *foto de NF, recibo ou comprovante* que analiso na hora!');
-          } else if (t.includes('ajuda') || t.includes('help')) {
-            await enviarWpp(numero, '🤖 *Comandos disponíveis:*\n\n📸 *Foto de NF/Recibo* → análise automática\n❓ *ajuda* → este menu\n\n_GestaoERP Di Casa Laranjinha_ ✅');
-          } else {
-            await enviarWpp(numero, `✅ Recebi sua mensagem!\n\n📸 Para analisar documentos, mande uma *foto de NF ou comprovante*.`);
-          }
+          await enviarWpp(numero, `✅ Recebi: "${txt}"\n\n📸 Mande uma foto de NF ou comprovante para analisar!`);
         }
-        else if (tipo === 'imageMessage') {
-          await enviarWpp(numero, '🔍 Recebi a imagem! Analisando...');
+        else if (tipo === 'imageMessage' || tipo === 'documentMessage' || tipo === 'documentWithCaptionMessage') {
+          await enviarWpp(numero, '🔍 Recebi! Buscando imagem...');
           
-          // Tenta base64 direto na mensagem primeiro
-          let base64 = msg.message?.imageMessage?.base64 || msg.message?.base64;
-          
-          // Se não veio, busca na Evolution API
-          if (!base64 && messageId) {
-            base64 = await buscarMidiaBase64(messageId, numero);
-          }
+          const base64 = await buscarMidia(msg);
           
           if (!base64) {
-            await enviarWpp(numero, '❌ Não consegui acessar a imagem. Tente reenviar a foto diretamente.');
+            console.log('❌ Base64 não encontrado em nenhum endpoint');
+            await enviarWpp(numero, '❌ Não consegui acessar a imagem.\n\nTente:\n1. Enviar a foto diretamente (não encaminhada)\n2. Tirar foto da câmera');
             continue;
           }
           
+          await enviarWpp(numero, '✅ Imagem obtida! Analisando com IA...');
           const analise = await analisarImagem(base64, 'image/jpeg');
-          await enviarWpp(numero, `📋 *Análise do Documento*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
-        }
-        else if (tipo === 'documentMessage' || tipo === 'documentWithCaptionMessage') {
-          await enviarWpp(numero, '📄 Recebi o documento! Analisando...');
-          let base64 = null;
-          if (messageId) base64 = await buscarMidiaBase64(messageId, numero);
-          if (!base64) { await enviarWpp(numero, '❌ Não consegui acessar o documento. Tente enviar como imagem.'); continue; }
-          const analise = await analisarImagem(base64, 'image/jpeg');
-          await enviarWpp(numero, `📋 *Análise do Documento*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
-        }
-        else {
-          console.log('Tipo não tratado:', tipo);
+          await enviarWpp(numero, `📋 *Análise*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
         }
       }
     } catch(e) {
-      console.error('Erro webhook:', e.message);
+      console.error('Erro geral:', e.message);
     }
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ Webhook v6 rodando na porta ${PORT}`);
-  console.log(`🔑 API Key: ${ANTHROPIC_KEY ? '✅' : '❌ NÃO CONFIGURADA'}`);
-  console.log(`👥 Modo: ${GRUPO_AUTORIZADO ? 'Grupo: ' + GRUPO_AUTORIZADO : 'Qualquer grupo'}`);
+  console.log(`✅ Webhook v7 rodando na porta ${PORT}`);
+  console.log(`🔑 API Key: ${ANTHROPIC_KEY ? '✅' : '❌'}`);
 });
