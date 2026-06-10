@@ -75,7 +75,7 @@ async function analisarImagem(base64, mime) {
     const result = await httpsRequest('POST',
       'https://api.anthropic.com/v1/messages',
       {
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
         messages: [{
           role: 'user',
@@ -88,7 +88,8 @@ async function analisarImagem(base64, mime) {
       { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' }
     );
     const texto = result.content?.[0]?.text;
-    console.log('Resposta Claude:', texto?.substring(0, 100));
+    console.log('Resposta Claude raw:', JSON.stringify(result).substring(0, 300));
+    console.log('Resposta Claude texto:', texto?.substring(0, 200));
     return texto || 'Não consegui extrair os dados.';
   } catch(e) {
     console.error('Erro Claude:', e.message, JSON.stringify(e));
