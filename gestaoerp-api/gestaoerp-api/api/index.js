@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// GestaoERP API — Backend Serverless v3.0
+// GestaoERP API v1781122062 — Backend Serverless v3.0
 // Di Casa Laranjinha — CNPJ: 44.686.412/0001-00
 // ═══════════════════════════════════════════════════════════
 
