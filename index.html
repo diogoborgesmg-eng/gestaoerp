@@ -18305,6 +18305,7 @@ function _rValidades(itens,hoje){
      <p style="font-size:11px;font-weight:700;color:${g.cor};">${new Date(i.validade).toLocaleDateString('pt-BR')}</p>
      <div style="display:flex;gap:4px;margin-top:4px;">
       <button onclick="imprimirEtiquetaItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:9px;cursor:pointer;">🏷️</button>
+      <button onclick="abrirRetiradaParcial('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:9px;cursor:pointer;">✂️</button>
       <button onclick="descarteItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(255,51,102,0.15);color:var(--re);font-size:9px;cursor:pointer;">🗑️</button>
      </div>
     </div>
@@ -18872,6 +18873,114 @@ function salvarInventarioFoto(itens){
  window._cozinhaSub='contagem';
  render();
  alert(`✅ Estoque atualizado!\n${itens.length} itens registrados na contagem de ${hj()}`);
+}
+
+// ═══ RETIRADA PARCIAL — atualiza etiqueta automaticamente ════
+function abrirRetiradaParcial(id){
+ const db=ldb();
+ const item=(db.cozinhaItens||[]).find(i=>i.id===id);
+ if(!item){alert('Item não encontrado');return;}
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:16px 14px 32px;">
+  <p style="font-weight:800;font-size:14px;margin-bottom:4px;">✂️ Retirada Parcial</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Registra saída e gera nova etiqueta com saldo</p>
+
+  <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:13px;font-weight:800;">${item.nome}</p>
+   <p style="font-size:12px;color:var(--gr);">Estoque atual: <b>${item.qtd} ${item.un}</b></p>
+   <p style="font-size:10px;color:var(--mu);">Validade: ${new Date(item.validade+'T12:00:00').toLocaleDateString('pt-BR')} · ${item.local||'—'}</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+   <div>
+    <label class="lbl">Quantidade retirada *</label>
+    <input id="ret-qtd" class="inpm" type="number" placeholder="0" step="0.1" min="0" max="${item.qtd}"
+     oninput="atualizarSaldoRetirada(${item.qtd},'${item.un}')"/>
+   </div>
+   <div>
+    <label class="lbl">Destino</label>
+    <select id="ret-destino" class="inpm">
+     <option>Pré-preparo</option>
+     <option>Produção</option>
+     <option>Descarte</option>
+     <option>Outro setor</option>
+    </select>
+   </div>
+  </div>
+
+  <div id="ret-saldo-preview" style="display:none;background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:11px;color:var(--bl);font-weight:700;">Nova etiqueta será gerada:</p>
+   <p id="ret-saldo-txt" style="font-size:16px;font-weight:900;color:#fff;margin-top:4px;"></p>
+  </div>
+
+  <div style="display:flex;gap:8px;">
+   <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>
+   <button onclick="confirmarRetirada('${id}')" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Retirar + Nova Etiqueta</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function atualizarSaldoRetirada(qtdTotal, un){
+ const retirada=parseFloat(document.getElementById('ret-qtd')?.value||0);
+ const saldo=qtdTotal-retirada;
+ const preview=document.getElementById('ret-saldo-preview');
+ const txt=document.getElementById('ret-saldo-txt');
+ if(preview&&txt){
+  if(retirada>0&&saldo>=0){
+   preview.style.display='block';
+   txt.textContent='Saldo: '+saldo.toFixed(1)+' '+un+' (era '+qtdTotal+' '+un+', retirou '+retirada+' '+un+')';
+   txt.style.color=saldo===0?'var(--re)':saldo<qtdTotal*0.2?'var(--ye)':'#fff';
+  }else{
+   preview.style.display='none';
+  }
+ }
+}
+
+function confirmarRetirada(id){
+ const retirada=parseFloat(document.getElementById('ret-qtd')?.value||0);
+ const destino=document.getElementById('ret-destino')?.value||'Pré-preparo';
+ if(!retirada||retirada<=0){alert('Informe a quantidade retirada');return;}
+
+ const db=ldb();
+ const idx=(db.cozinhaItens||[]).findIndex(i=>i.id===id);
+ if(idx<0){alert('Item não encontrado');return;}
+
+ const item=db.cozinhaItens[idx];
+ if(retirada>item.qtd){alert(`Quantidade maior que o estoque (${item.qtd} ${item.un})`);return;}
+
+ const novaQtd=parseFloat((item.qtd-retirada).toFixed(3));
+
+ // Registra movimentação
+ if(!db.cozinhaMovimentos)db.cozinhaMovimentos=[];
+ db.cozinhaMovimentos.push({
+  id:uid(),itemId:id,nome:item.nome,
+  tipo:'retirada',qtd:retirada,un:item.un,
+  destino,data:hj(),hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+ });
+
+ if(novaQtd<=0){
+  // Estoque zerado — remove o item
+  db.cozinhaItens.splice(idx,1);
+  sdb(db);
+  document.querySelector('[style*="inset:0"]')?.remove();
+  alert(`✅ ${item.nome} zerado!\n${retirada} ${item.un} → ${destino}`);
+  render();
+ }else{
+  // Atualiza quantidade
+  db.cozinhaItens[idx].qtd=novaQtd;
+  db.cozinhaItens[idx].ultimaRetirada=hj();
+  sdb(db);
+  document.querySelector('[style*="inset:0"]')?.remove();
+
+  // Gera nova etiqueta automaticamente com saldo
+  const itemAtualizado={...item,qtd:novaQtd,obs:`Saldo após retirada de ${retirada}${item.un} p/ ${destino} em ${hj()}`};
+  _abrirJanelaEtiqueta([itemAtualizado],db.etqConfig||{larg:80,alt:50},'recebimento');
+  render();
+ }
 }
 
 render();
