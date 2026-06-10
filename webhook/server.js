@@ -114,10 +114,20 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
 
+    // Debug: mostra o que chegou
+    console.log('📨 Body recebido:', body.length, 'chars', body.substring(0,200));
+    
     try {
+      if (!body || body.trim() === '') {
+        console.log('⚠️ Body vazio ignorado');
+        return;
+      }
       const data = JSON.parse(body);
-      const evento = data.event || '';
-      if (evento !== 'messages.upsert') { console.log('Ignorado:', evento); return; }
+      const evento = data.event || data.type || '';
+      console.log('📬 Evento:', evento, 'Keys:', Object.keys(data).join(','));
+      if (evento && evento !== 'messages.upsert' && evento !== 'message' && !evento.includes('message')) { 
+        console.log('Ignorado:', evento); return; 
+      }
 
       let msgs = [];
       if (Array.isArray(data.data)) msgs = data.data;
