@@ -18450,6 +18450,7 @@ function _rContagem(){
    <p style="font-size:11px;color:var(--bl);font-weight:700;">📷 Contagem por QR Code</p>
    <p style="font-size:10px;color:var(--mu);margin-top:2px;">Escaneie a etiqueta do produto para lançar na contagem automaticamente</p>
    <button onclick="escanearQRContagem()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📷 Escanear QR Code</button>
+   <button onclick="abrirInventarioFoto()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">📸 Foto da Prateleira — IA lê tudo</button>
   </div>
 
   ${contagem.itens.length>0?`
@@ -18584,34 +18585,58 @@ function previewEtiqueta(){
 }
 
 function _abrirJanelaEtiqueta(itens,cfg,tipo){
- const w=cfg.larg||50;const h=cfg.alt||30;
+ const w=cfg.larg||80;const h=cfg.alt||50;
  const df=gDadosFiscais();
- const empresa=df.razao||'Di Casa Laranjinha';
- const cnpj=df.cnpj||'44.686.412/0001-00';
+ const empresa=(df.razao||'Di Casa Laranjinha').substring(0,25);
 
  const etiquetasHTML=itens.map(item=>{
-  const qrData=gerarQRCodeData(item.id);
-  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(qrData);
+  const qrData='GESTAOERP:'+item.id;
+  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent(qrData);
   const valStr=item.validade?new Date(item.validade+'T12:00:00').toLocaleDateString('pt-BR'):'—';
   const isProducao=tipo==='producao'||!!item.metodo;
+  const diasVal=item.validade?Math.round((new Date(item.validade)-new Date())/(1000*60*60*24)):null;
+  const corVal=diasVal===null?'#000':diasVal<0?'#cc0000':diasVal<=3?'#cc6600':diasVal<=7?'#006600':'#000';
 
-  return`<div style="width:${w}mm;height:${h}mm;border:1px solid #000;padding:1.5mm;display:flex;flex-direction:column;justify-content:space-between;font-family:Arial,sans-serif;page-break-after:always;box-sizing:border-box;overflow:hidden;">
-   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2mm;">
-    <div style="flex:1;min-width:0;">
-     <p style="font-size:7pt;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nome}</p>
-     <p style="font-size:5pt;margin:0;color:#333;">${item.fornecedor||item.responsavel||''}</p>
-     ${isProducao?`<p style="font-size:5pt;margin:0;color:#333;">${item.metodo||''}</p>`:`<p style="font-size:5pt;margin:0;color:#333;">${item.local||''} ${item.temperatura?'· '+item.temperatura+'°C':''}</p>`}
-    </div>
-    <img src="${qrUrl}" style="width:12mm;height:12mm;flex-shrink:0;" />
+  return`<div style="width:${w}mm;min-height:${h}mm;border:2px solid #000;padding:3mm;display:flex;flex-direction:column;gap:1.5mm;font-family:Arial Black,Arial,sans-serif;page-break-after:always;box-sizing:border-box;background:#fff;">
+
+   <!-- Cabeçalho empresa -->
+   <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #000;padding-bottom:1mm;">
+    <p style="font-size:7pt;font-weight:900;margin:0;">${empresa}</p>
+    <p style="font-size:6pt;margin:0;">${isProducao?'PRODUÇÃO':'RECEBIMENTO'}</p>
    </div>
-   <div>
-    <div style="display:flex;justify-content:space-between;font-size:5pt;border-top:0.3mm solid #ccc;padding-top:0.5mm;margin-top:0.5mm;">
-     <span>${isProducao?'Preparo':'Receb.'}: ${item.dtRecebimento||item.dtProducao||hj()}</span>
-     <span style="font-weight:700;">Validade: ${valStr}</span>
+
+   <!-- Nome do produto — GRANDE para IA ler -->
+   <p style="font-size:14pt;font-weight:900;margin:0;line-height:1.1;text-transform:uppercase;">${item.nome}</p>
+
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2mm;">
+    <div style="flex:1;">
+     <!-- Quantidade em destaque -->
+     <div style="background:#000;color:#fff;padding:1.5mm 2mm;border-radius:1mm;display:inline-block;margin-bottom:1.5mm;">
+      <p style="font-size:12pt;font-weight:900;margin:0;">${item.qtd} ${item.un||'un'}</p>
+     </div>
+
+     <!-- Validade em destaque — cor muda conforme prazo -->
+     <div style="border:2px solid ${corVal};padding:1mm 2mm;border-radius:1mm;">
+      <p style="font-size:7pt;font-weight:700;color:#000;margin:0;">VALIDADE</p>
+      <p style="font-size:13pt;font-weight:900;color:${corVal};margin:0;">${valStr}</p>
+      ${diasVal!==null?`<p style="font-size:7pt;font-weight:700;color:${corVal};margin:0;">${diasVal<0?'VENCIDO':diasVal===0?'VENCE HOJE':diasVal+' dias'}</p>`:''}
+     </div>
+
+     <!-- Infos secundárias -->
+     <div style="margin-top:1.5mm;">
+      ${item.lote?`<p style="font-size:7pt;margin:0;">Lote: <b>${item.lote}</b></p>`:''}
+      ${item.fornecedor?`<p style="font-size:7pt;margin:0;">Forn: <b>${item.fornecedor.substring(0,20)}</b></p>`:''}
+      ${item.local?`<p style="font-size:7pt;margin:0;">Local: <b>${item.local}</b></p>`:''}
+      ${item.temperatura?`<p style="font-size:7pt;margin:0;">Temp: <b>${item.temperatura}°C</b></p>`:''}
+      ${item.responsavel?`<p style="font-size:7pt;margin:0;">Resp: <b>${item.responsavel}</b></p>`:''}
+      <p style="font-size:7pt;margin:0;">${isProducao?'Preparo':'Receb.'}: <b>${item.dtRecebimento||item.dtProducao||hj()}</b></p>
+     </div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:4pt;color:#555;">
-     <span>${isProducao?'Resp: '+item.responsavel:'Lote: '+(item.lote||'—')}</span>
-     <span>${empresa.substring(0,20)}</span>
+
+    <!-- QR Code grande -->
+    <div style="text-align:center;flex-shrink:0;">
+     <img src="${qrUrl}" style="width:20mm;height:20mm;display:block;"/>
+     <p style="font-size:5pt;margin:0;text-align:center;">${item.id.slice(-6)}</p>
     </div>
    </div>
   </div>`;
@@ -18619,13 +18644,18 @@ function _abrirJanelaEtiqueta(itens,cfg,tipo){
 
  const win=window.open('','_blank');
  win.document.write(`<!DOCTYPE html><html><head><title>Etiquetas</title>
-  <style>@media print{@page{margin:0;size:${w}mm ${h}mm;}body{margin:0;}}</style>
- </head><body style="margin:0;padding:0;">
-  <div style="display:flex;flex-wrap:wrap;gap:1mm;padding:2mm;">
-   ${etiquetasHTML}
+  <style>
+   @media print{@page{margin:3mm;}body{margin:0;} .no-print{display:none!important;}}
+   body{font-family:Arial,sans-serif;}
+  </style>
+ </head><body>
+  <div class="no-print" style="padding:10px;background:#f5f5f5;text-align:center;border-bottom:1px solid #ddd;">
+   <p style="margin:0 0 8px;font-size:13px;">📏 Etiquetas ${w}mm × ${h}mm — ${itens.length} etiqueta(s)</p>
+   <button onclick="window.print()" style="padding:10px 30px;font-size:14px;background:#000;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-right:8px;">🖨️ Imprimir</button>
+   <button onclick="window.close()" style="padding:10px 20px;font-size:14px;background:#eee;border:none;border-radius:8px;cursor:pointer;">Fechar</button>
   </div>
-  <div style="padding:10px;text-align:center;border-top:1px solid #eee;">
-   <button onclick="window.print()" style="padding:10px 30px;font-size:14px;background:#000;color:#fff;border:none;border-radius:8px;cursor:pointer;">🖨️ Imprimir ${itens.length} etiqueta(s)</button>
+  <div style="display:flex;flex-wrap:wrap;gap:3mm;padding:3mm;">
+   ${etiquetasHTML}
   </div>
  </body></html>`);
  win.document.close();
@@ -18709,6 +18739,139 @@ function exportarContagem(){
  a.href=URL.createObjectURL(blob);
  a.download='contagem-'+c.data.replace(/\//g,'-')+'.csv';
  a.click();
+}
+
+// ═══ INVENTÁRIO POR FOTO DA PRATELEIRA ═══════════════════════
+function abrirInventarioFoto(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+ div.innerHTML=`<div style="text-align:center;max-width:400px;width:100%;">
+  <p style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px;">📸 Inventário por Foto</p>
+  <p style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:16px;">Tire foto da prateleira — IA lê todas as etiquetas e atualiza o estoque automaticamente</p>
+  <input type="file" id="inv-foto-input" accept="image/*" capture="environment" style="display:none" onchange="processarFotoInventario(this)"/>
+  <input type="file" id="inv-foto-galeria" accept="image/*" style="display:none" onchange="processarFotoInventario(this)"/>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+   <button onclick="document.getElementById('inv-foto-input').click()" style="padding:16px;border-radius:12px;border:2px solid rgba(0,255,136,0.5);background:rgba(0,255,136,0.1);color:#00ff88;font-size:15px;font-weight:800;cursor:pointer;">📷 Fotografar prateleira</button>
+   <button onclick="document.getElementById('inv-foto-galeria').click()" style="padding:14px;border-radius:12px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:14px;font-weight:700;cursor:pointer;">🖼️ Da galeria</button>
+  </div>
+  <div style="background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;margin-bottom:12px;text-align:left;">
+   <p style="font-size:11px;color:#4488ff;font-weight:700;margin-bottom:4px;">💡 Como funciona:</p>
+   <p style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.6;">1. Tire foto da prateleira/câmara<br>2. IA lê todas as etiquetas visíveis<br>3. Mostra lista com produtos e quantidades<br>4. Você confirma para atualizar o estoque</p>
+  </div>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Cancelar</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function processarFotoInventario(input){
+ const file=input.files[0];if(!file)return;
+ input.closest('[style*=inset]')?.remove();
+
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+ overlay.innerHTML=`<p style="font-size:40px;">🔍</p>
+  <p style="color:#fff;font-size:14px;font-weight:700;">IA lendo etiquetas...</p>
+  <p style="color:rgba(255,255,255,0.5);font-size:11px;">Identificando produtos e quantidades</p>`;
+ document.body.appendChild(overlay);
+ input.value='';
+
+ try{
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+
+  const result=await claudeAPI({
+   model:MODEL,max_tokens:800,
+   messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+    {type:'text',text:`Analise esta foto de prateleira/câmara fria de restaurante.
+Leia TODAS as etiquetas visíveis e retorne APENAS JSON:
+{"itens":[{"nome":"nome do produto","quantidade":0,"unidade":"kg|L|un","validade":"DD/MM/AAAA","local":"onde está","observacao":""}]}
+Regras:
+- Leia APENAS o que está escrito nas etiquetas
+- Se não conseguir ler quantidade, use 0
+- Se não conseguir ler validade, deixe em branco
+- Se não houver etiquetas visíveis: {"itens":[],"mensagem":"Nenhuma etiqueta identificada"}
+- Seja preciso — não invente dados`}
+   ]}]
+  });
+
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const data=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+  overlay.remove();
+
+  if(!data.itens||data.itens.length===0){
+   alert('Nenhuma etiqueta identificada.\n\nDicas:\n• Mais luz na câmara\n• Aproxime mais a câmera\n• As etiquetas precisam estar visíveis e legíveis');
+   return;
+  }
+
+  // Mostra resultado para confirmar
+  confirmarInventarioFoto(data.itens,b64);
+
+ }catch(e){
+  overlay.remove();
+  alert('Erro ao processar foto: '+e.message);
+ }
+}
+
+function confirmarInventarioFoto(itens,imgB64){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div>
+    <p style="font-weight:800;font-size:14px;">📸 IA identificou ${itens.length} item(ns)</p>
+    <p style="font-size:10px;color:var(--mu);">Revise e confirme para atualizar o estoque</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <img src="data:image/jpeg;base64,${imgB64}" style="width:100%;border-radius:10px;margin-bottom:12px;max-height:160px;object-fit:cover;"/>
+
+  <div id="inv-lista">
+   ${itens.map((item,i)=>`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+     <p style="font-size:13px;font-weight:700;">${item.nome}</p>
+     ${item.validade?`<p style="font-size:10px;color:var(--mu);">Val: ${item.validade}</p>`:''}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+     <label style="font-size:11px;color:var(--mu);">Qtd:</label>
+     <input type="number" value="${item.quantidade||0}" id="inv-qtd-${i}" step="0.1"
+      style="width:70px;padding:5px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:12px;text-align:center;"/>
+     <select id="inv-un-${i}" style="padding:5px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:11px;">
+      ${['kg','g','L','ml','un','cx','pct'].map(u=>`<option ${u===(item.unidade||'un')?'selected':''}>${u}</option>`).join('')}
+     </select>
+    </div>
+    ${item.observacao?`<p style="font-size:10px;color:var(--mu);margin-top:4px;">${item.observacao}</p>`:''}
+   </div>`).join('')}
+  </div>
+
+  <button onclick="salvarInventarioFoto(${JSON.stringify(itens).replace(/"/g,'&quot;')})" 
+   style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;margin-top:4px;">
+   ✅ Confirmar e atualizar estoque (${itens.length} itens)
+  </button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarInventarioFoto(itens){
+ const db=ldb();
+ if(!db.cozinhaContagem)db.cozinhaContagem={data:hj(),itens:[]};
+ db.cozinhaContagem.data=hj();
+
+ itens.forEach((item,i)=>{
+  const qtd=parseFloat(document.getElementById('inv-qtd-'+i)?.value||item.quantidade||0);
+  const un=document.getElementById('inv-un-'+i)?.value||item.unidade||'un';
+  const ex=db.cozinhaContagem.itens.find(x=>x.nome.toLowerCase()===item.nome.toLowerCase());
+  if(ex){ex.qtd=qtd;ex.un=un;}
+  else db.cozinhaContagem.itens.push({id:uid(),nome:item.nome,qtd,un,dtContagem:hj()});
+ });
+
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ window._cozinhaSub='contagem';
+ render();
+ alert(`✅ Estoque atualizado!\n${itens.length} itens registrados na contagem de ${hj()}`);
 }
 
 render();
