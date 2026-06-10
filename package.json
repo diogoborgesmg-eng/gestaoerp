@@ -1,15 +1,5 @@
 {
   "name": "gestaoerp-api",
   "version": "1.0.0",
-  "description": "GestaoERP API - Di Casa Laranjinha",
-  "main": "api/index.js",
-  "scripts": {
-    "start": "node api/index.js"
-  },
-  "dependencies": {
-    "node-fetch": "^2.6.7"
-  },
-  "engines": {
-    "node": "18.x"
-  }
+  "engines": { "node": "18.x" }
 }
