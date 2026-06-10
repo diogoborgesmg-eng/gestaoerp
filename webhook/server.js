@@ -139,6 +139,101 @@ async function analisarImagem(base64Data, mime) {
   }
 }
 
+async function extrairELancar(analise, numero) {
+  try {
+    // Usa Claude para extrair dados estruturados da análise
+    const payload = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `Com base nesta análise de comprovante, extraia os dados em JSON:
+"${analise}"
+
+Retorne APENAS JSON válido:
+{"valor":0.00,"categoria":"Folha CLT|Diária|Freelancer|Entregador|Vale|Fornecedor|Aluguel|Energia|Telecom|Juros|Outros","descricao":"","tipo":"pix|boleto|dinheiro|cartao","data":"DD/MM/AAAA"}
+
+Regras: entregador=Entregador, salário/folha=Folha CLT, fornecedor/empresa=Fornecedor.
+Se não conseguir extrair valor, retorne {"valor":0}`
+      }]
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01'
+        }
+      };
+      const req = https.request(options, (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+      });
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
+
+    const texto = result.content?.[0]?.text || '{}';
+    const match = texto.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    
+    const dados = JSON.parse(match[0]);
+    if (!dados.valor || dados.valor <= 0) return null;
+
+    // Salva no backend Vercel para o sistema buscar
+    const BACKEND_URL = 'https://gestaoerp-api.vercel.app';
+    const BACKEND_TOKEN = 'gestaoerp_diCasa_44686412';
+    
+    const lancPayload = JSON.stringify({
+      valor: dados.valor,
+      categoria: dados.categoria || 'Outros',
+      descricao: dados.descricao || 'Lançamento via WhatsApp',
+      tipo: dados.tipo || 'pix',
+      data: dados.data || new Date().toLocaleDateString('pt-BR'),
+      origem: 'whatsapp',
+      numero: numero
+    });
+
+    await new Promise((resolve) => {
+      const opts = {
+        hostname: 'gestaoerp-api.vercel.app',
+        path: '/api/lancar',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(lancPayload),
+          'x-api-token': BACKEND_TOKEN
+        }
+      };
+      const r = https.request(opts, (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => {
+          console.log('✅ Lançado no backend:', d.substring(0,100));
+          resolve();
+        });
+      });
+      r.on('error', (e) => { console.log('Erro backend:', e.message); resolve(); });
+      r.write(lancPayload);
+      r.end();
+    });
+
+    console.log('✅ Lançamento processado:', dados.valor, dados.categoria);
+    return dados;
+
+  } catch(e) {
+    console.error('Erro extrairELancar:', e.message);
+    return null;
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -212,7 +307,15 @@ const server = http.createServer(async (req, res) => {
           
           await enviarWpp(numero, '✅ Imagem obtida! Analisando com IA...');
           const analise = await analisarImagem(base64, 'image/jpeg');
-          await enviarWpp(numero, `📋 *Análise*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`);
+          
+          // Tenta extrair dados estruturados e lançar no sistema
+          const lancamento = await extrairELancar(analise, numero);
+          
+          let msgResposta = `📋 *Análise*\n\n${analise}\n\n_Di Casa Laranjinha_ ✅`;
+          if(lancamento && lancamento.valor > 0) {
+            msgResposta += `\n\n✅ *Lançado no sistema!*\nValor: R$ ${lancamento.valor.toFixed(2).replace('.',',')}\nCategoria: ${lancamento.categoria}`;
+          }
+          await enviarWpp(numero, msgResposta);
         }
       }
     } catch(e) {
