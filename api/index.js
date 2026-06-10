@@ -169,6 +169,33 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ status: 'ok', mensagem: 'Cancelado', chave, timestamp: new Date().toISOString() });
   }
 
+
+  // ── LANÇAR VIA WHATSAPP BOT ───────────────────────────────
+  if (path === '/api/lancar' && req.method === 'POST') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
+    const { valor, categoria, descricao, tipo, data, origem } = body;
+    if (!valor || valor <= 0) return res.status(400).json({ erro: 'Valor inválido' });
+    const lancamento = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+      valor: parseFloat(valor), categoria: categoria || 'Outros',
+      descricao: descricao || 'WhatsApp Bot', tipo: tipo || 'pix',
+      data: data || new Date().toLocaleDateString('pt-BR'),
+      origem: 'whatsapp', criadoEm: new Date().toISOString(), sincronizado: false
+    };
+    if (!global._botLancamentos) global._botLancamentos = [];
+    global._botLancamentos.push(lancamento);
+    if (global._botLancamentos.length > 200) global._botLancamentos = global._botLancamentos.slice(-200);
+    console.log('✅ Bot lançou:', lancamento.valor, lancamento.categoria);
+    return res.status(200).json({ ok: true, lancamento });
+  }
+
+  if (path === '/api/lancar/pendentes' && req.method === 'GET') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
+    const pendentes = (global._botLancamentos || []).filter(l => !l.sincronizado);
+    (global._botLancamentos || []).forEach(l => l.sincronizado = true);
+    return res.status(200).json({ ok: true, lancamentos: pendentes, total: pendentes.length });
+  }
+
   // 404
   return res.status(404).json({ erro: 'Rota não encontrada', rota: path });
 };
