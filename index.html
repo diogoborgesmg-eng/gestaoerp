@@ -18305,6 +18305,7 @@ function _rValidades(itens,hoje){
      <p style="font-size:11px;font-weight:700;color:${g.cor};">${new Date(i.validade).toLocaleDateString('pt-BR')}</p>
      <div style="display:flex;gap:4px;margin-top:4px;">
       <button onclick="imprimirEtiquetaItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:9px;cursor:pointer;">🏷️</button>
+      <button onclick="abrirTransformacao('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(255,136,68,0.15);color:#ff8844;font-size:9px;cursor:pointer;">🔄</button>
       <button onclick="abrirRetiradaParcial('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:9px;cursor:pointer;">✂️</button>
       <button onclick="descarteItem('${i.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(255,51,102,0.15);color:var(--re);font-size:9px;cursor:pointer;">🗑️</button>
      </div>
@@ -18981,6 +18982,187 @@ function confirmarRetirada(id){
   _abrirJanelaEtiqueta([itemAtualizado],db.etqConfig||{larg:80,alt:50},'recebimento');
   render();
  }
+}
+
+// ═══ TRANSFORMAÇÃO — mp vira produto por setor ══════════════
+function abrirTransformacao(id){
+ const db=ldb();
+ const item=(db.cozinhaItens||[]).find(i=>i.id===id)||(db.cozinhaProducao||[]).find(p=>p.id===id);
+ if(!item){alert('Item não encontrado');return;}
+
+ const setores=[
+  {id:'restaurante',nome:'🍽️ Restaurante',cor:'#00cc66'},
+  {id:'espetaria',nome:'🍢 Espetaria',cor:'#ff8844'},
+  {id:'pizzaria',nome:'🍕 Pizzaria',cor:'#ff3366'},
+  {id:'hamburgueria',nome:'🍔 Hamburgueria',cor:'#ffcc00'},
+ ];
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div>
+    <p style="font-weight:800;font-size:14px;">🔄 Transformação</p>
+    <p style="font-size:11px;color:var(--mu);">Registra como a MP vira produto por setor</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Matéria-prima de origem -->
+  <div style="background:rgba(255,255,255,0.05);border:1px solid var(--br);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:10px;color:var(--mu);margin-bottom:2px;">MATÉRIA-PRIMA</p>
+   <p style="font-size:15px;font-weight:800;">${item.nome}</p>
+   <p style="font-size:12px;color:var(--gr);">Disponível: <b>${item.qtd} ${item.un}</b></p>
+  </div>
+
+  <!-- Produtos gerados -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Produtos gerados (adicione quantos precisar):</p>
+  <div id="transf-lista">
+   ${[0,1].map(i=>`<div class="transf-item" style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+     <div><label class="lbl">Produto</label><input class="inpm transf-nome" placeholder="Ex: Bife"/></div>
+     <div><label class="lbl">Setor</label>
+      <select class="inpm transf-setor">
+       ${setores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('')}
+      </select>
+     </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+     <div><label class="lbl">Qtd</label><input class="inpm transf-qtd" type="number" placeholder="0" step="0.1" min="0" oninput="calcSaldoTransf(${item.qtd})"/></div>
+     <div><label class="lbl">Unid</label>
+      <select class="inpm transf-un">
+       ${['kg','g','un','pç','L'].map(u=>`<option>${u}</option>`).join('')}
+      </select>
+     </div>
+     <div><label class="lbl">Validade</label><input class="inpm transf-val" type="date"/></div>
+    </div>
+   </div>`).join('')}
+  </div>
+
+  <button onclick="adicionarLinhaTransf()" style="width:100%;padding:9px;border-radius:9px;border:1px dashed rgba(255,255,255,0.2);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;margin-bottom:10px;">+ Adicionar produto</button>
+
+  <!-- Saldo -->
+  <div id="transf-saldo" style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <div style="display:flex;justify-content:space-between;">
+    <span style="font-size:12px;font-weight:700;">Entrada: ${item.qtd} ${item.un}</span>
+    <span style="font-size:12px;font-weight:700;" id="transf-saida-txt">Saída: 0 ${item.un}</span>
+   </div>
+   <div style="display:flex;justify-content:space-between;margin-top:4px;">
+    <span style="font-size:11px;color:var(--mu);">Perda/Aparas:</span>
+    <span style="font-size:12px;font-weight:800;" id="transf-perda-txt" style="color:var(--gr);">0 ${item.un}</span>
+   </div>
+  </div>
+
+  <button onclick="confirmarTransformacao('${item.id}',${item.qtd},'${item.un}')" style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">✅ Confirmar Transformação + Etiquetas</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function adicionarLinhaTransf(){
+ const lista=document.getElementById('transf-lista');
+ if(!lista)return;
+ const setores=[
+  {id:'restaurante',nome:'🍽️ Restaurante'},{id:'espetaria',nome:'🍢 Espetaria'},
+  {id:'pizzaria',nome:'🍕 Pizzaria'},{id:'hamburgueria',nome:'🍔 Hamburgueria'}
+ ];
+ const div=document.createElement('div');
+ div.className='transf-item';
+ div.style.cssText='background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);';
+ div.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+  <div><label class="lbl">Produto</label><input class="inpm transf-nome" placeholder="Ex: Espetinho"/></div>
+  <div><label class="lbl">Setor</label>
+   <select class="inpm transf-setor">
+    ${setores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('')}
+   </select>
+  </div>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+  <div><label class="lbl">Qtd</label><input class="inpm transf-qtd" type="number" placeholder="0" step="0.1" min="0" oninput="calcSaldoTransf()"/></div>
+  <div><label class="lbl">Unid</label>
+   <select class="inpm transf-un"><option>kg</option><option>g</option><option>un</option><option>pç</option><option>L</option></select>
+  </div>
+  <div><label class="lbl">Validade</label><input class="inpm transf-val" type="date"/></div>
+ </div>`;
+ lista.appendChild(div);
+}
+
+function calcSaldoTransf(qtdTotal){
+ const qtds=Array.from(document.querySelectorAll('.transf-qtd')).map(i=>parseFloat(i.value)||0);
+ const saida=qtds.reduce((a,b)=>a+b,0);
+ const perda=(qtdTotal||0)-saida;
+ const saidaEl=document.getElementById('transf-saida-txt');
+ const perdaEl=document.getElementById('transf-perda-txt');
+ if(saidaEl)saidaEl.textContent='Saída: '+saida.toFixed(2);
+ if(perdaEl){
+  perdaEl.textContent='Perda: '+perda.toFixed(2);
+  perdaEl.style.color=perda<0?'var(--re)':perda===0?'var(--gr)':'var(--ye)';
+ }
+}
+
+function confirmarTransformacao(itemId, qtdOriginal, unOriginal){
+ const nomes=Array.from(document.querySelectorAll('.transf-nome')).map(i=>i.value.trim());
+ const setores=Array.from(document.querySelectorAll('.transf-setor')).map(i=>i.value);
+ const qtds=Array.from(document.querySelectorAll('.transf-qtd')||document.querySelectorAll('.transf-qtd')).map(i=>parseFloat(i.value)||0);
+ const uns=Array.from(document.querySelectorAll('.transf-un')).map(i=>i.value);
+ const vals=Array.from(document.querySelectorAll('.transf-val')).map(i=>i.value);
+
+ const produtos=nomes.map((n,i)=>({nome:n,setor:setores[i],qtd:qtds[i],un:uns[i],validade:vals[i]}))
+  .filter(p=>p.nome&&p.qtd>0);
+
+ if(!produtos.length){alert('Adicione pelo menos um produto');return;}
+
+ const totalSaida=produtos.reduce((a,p)=>a+p.qtd,0);
+ const perda=qtdOriginal-totalSaida;
+
+ if(!confirm(`Confirmar transformação?\n\n${produtos.map(p=>`• ${p.nome}: ${p.qtd}${p.un} → ${p.setor}`).join('\n')}\n\nPerda/Aparas: ${perda.toFixed(2)}${unOriginal}`))return;
+
+ const db=ldb();
+
+ // Remove ou reduz o item original
+ const idx=(db.cozinhaItens||[]).findIndex(i=>i.id===itemId);
+ if(idx>=0){
+  if(db.cozinhaItens[idx].qtd<=totalSaida){
+   db.cozinhaItens.splice(idx,1);
+  }else{
+   db.cozinhaItens[idx].qtd=parseFloat((db.cozinhaItens[idx].qtd-totalSaida).toFixed(3));
+  }
+ }
+
+ // Registra cada produto gerado
+ if(!db.cozinhaProducao)db.cozinhaProducao=[];
+ const novosItens=[];
+ produtos.forEach(p=>{
+  const novo={
+   id:uid(),nome:p.nome,qtd:p.qtd,un:p.un,
+   validade:p.validade,setor:p.setor,
+   metodo:'Refrigerado 0-5°C',
+   responsavel:gDadosFiscais().razao||'Di Casa',
+   dtProducao:hj(),
+   origem:itemId,
+   criadoEm:new Date().toISOString()
+  };
+  db.cozinhaProducao.push(novo);
+  novosItens.push(novo);
+ });
+
+ // Registra perda se houver
+ if(perda>0.01){
+  if(!db.cozinhaPerdas)db.cozinhaPerdas=[];
+  db.cozinhaPerdas.push({id:uid(),nome:'Aparas/Perda',origem:itemId,qtd:perda,un:unOriginal,data:hj()});
+ }
+
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+
+ // Imprime etiquetas de todos os produtos gerados
+ if(novosItens.length>0){
+  _abrirJanelaEtiqueta(novosItens,db.etqConfig||{larg:80,alt:50},'producao');
+ }
+
+ window._cozinhaSub='producao';
+ render();
+ alert(`✅ Transformação registrada!\n${produtos.map(p=>`• ${p.nome}: ${p.qtd}${p.un} → ${p.setor}`).join('\n')}${perda>0.01?'\n• Aparas: '+perda.toFixed(2)+unOriginal:''}`);
 }
 
 render();
