@@ -18730,7 +18730,7 @@ function _abrirJanelaEtiqueta(itens,cfg,tipo){
       ${item.fornecedor?`<p style="font-size:7pt;margin:0;">Forn: <b>${item.fornecedor.substring(0,20)}</b></p>`:''}
       ${item.local?`<p style="font-size:7pt;margin:0;">Local: <b>${item.local}</b></p>`:''}
       ${item.temperatura?`<p style="font-size:7pt;margin:0;">Temp: <b>${item.temperatura}°C</b></p>`:''}
-      ${item.responsavel?`<p style="font-size:7pt;margin:0;">Resp: <b>${item.responsavel}</b></p>`:''}
+      ${item.responsavel?`<p style="font-size:7pt;margin:0;font-weight:900;">${isProducao?'Preparo:':'Conferente:'} <b>${item.responsavel}</b></p>`:''}
       <p style="font-size:7pt;margin:0;">${isProducao?'Preparo':'Receb.'}: <b>${item.dtRecebimento||item.dtProducao||hj()}</b></p>
      </div>
     </div>
