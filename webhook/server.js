@@ -64,7 +64,7 @@ async function salvarGitHub(lanc) {
   try {
     const fi = await req2('GET',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
-      null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json' });
+      null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
     console.log('GitHub resposta:', JSON.stringify(fi).substring(0,200));
     if (!fi.content) { console.error('fi.content undefined! Resposta:', JSON.stringify(fi).substring(0,200)); return; }
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
@@ -75,7 +75,7 @@ async function salvarGitHub(lanc) {
     await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
       { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },
-      { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json' });
+      { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
     console.log('GitHub OK:', lanc.valor, lanc.categoria);
   } catch(eg) {
     console.error('GitHub err:', eg.message);
