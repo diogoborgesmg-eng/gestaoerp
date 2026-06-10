@@ -19463,6 +19463,62 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
  alert('✅ '+novosItens.length+' item(ns) recebido(s) e conferido(s) por '+resp+'!\nEtiquetas geradas.');
 }
 
+// ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
+async function sincronizarBotLancamentos(){
+ try{
+  const df=gDadosFiscais();
+  const backendUrl='https://gestaoerp-api.vercel.app';
+  const token=df.backendToken||'gestaoerp_diCasa_44686412';
+
+  const resp=await fetch(backendUrl+'/api/lancar/pendentes',{
+   headers:{'x-api-token':token}
+  });
+  const data=await resp.json();
+  
+  if(!data.ok||!data.lancamentos?.length)return;
+
+  const db=ldb();
+  const dia=hj();
+  if(!db[dia])db[dia]={r:[],c:[]};
+
+  let count=0;
+  data.lancamentos.forEach(l=>{
+   // Verifica se já foi lançado
+   if(db[dia].c.some(x=>x._botId===l.id))return;
+   
+   db[dia].c.push({
+    id:uid(),
+    d:l.descricao||'WhatsApp Bot',
+    v:Number(l.valor||0),
+    cat:l.categoria||'Outros',
+    seg:l.tipo||'pix',
+    _botId:l.id,
+    _origem:'whatsapp',
+    dt:l.data||dia
+   });
+   count++;
+  });
+
+  if(count>0){
+   sdb(db);
+   // Notificação visual
+   const n=document.createElement('div');
+   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
+   n.textContent='📱 '+count+' lançamento(s) do WhatsApp sincronizado(s)!';
+   document.body.appendChild(n);
+   setTimeout(()=>n.remove(),4000);
+   render();
+  }
+ }catch(e){
+  console.log('Sync bot erro:',e.message);
+ }
+}
+
+// Sincroniza a cada 30 segundos automaticamente
+setInterval(sincronizarBotLancamentos, 30000);
+// Sincroniza ao carregar
+setTimeout(sincronizarBotLancamentos, 3000);
+
 render();
 
 </script>
