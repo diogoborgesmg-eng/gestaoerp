@@ -203,7 +203,7 @@ Se não conseguir extrair valor, retorne {"valor":0}`
 
     await new Promise((resolve) => {
       const opts = {
-        hostname: 'gestaoerp-api.vercel.app',
+        hostname: 'gestaoerp.vercel.app',
         path: '/api/lancar',
         method: 'POST',
         headers: {
