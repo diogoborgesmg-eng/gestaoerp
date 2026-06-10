@@ -169,6 +169,53 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ status: 'ok', mensagem: 'Cancelado', chave, timestamp: new Date().toISOString() });
   }
 
+
+  // ── LANÇAR VIA WHATSAPP ───────────────────────────────────
+  if (path === '/api/lancar' && req.method === 'POST') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
+    try {
+      const { valor, categoria, descricao, tipo, data, origem, numero } = body;
+      if (!valor || valor <= 0) return res.status(400).json({ erro: 'Valor inválido' });
+      
+      // Armazena em memória (KV store via Vercel)
+      // Usa um arquivo JSON simples como buffer temporário
+      const lancamento = {
+        id: Date.now().toString(36),
+        valor: parseFloat(valor),
+        categoria: categoria || 'Outros',
+        descricao: descricao || 'WhatsApp Bot',
+        tipo: tipo || 'pix',
+        data: data || new Date().toLocaleDateString('pt-BR'),
+        origem: origem || 'whatsapp',
+        numero,
+        criadoEm: new Date().toISOString(),
+        sincronizado: false
+      };
+      
+      // Armazena no buffer global (persiste enquanto serverless está ativo)
+      if (!global._lancamentosBuffer) global._lancamentosBuffer = [];
+      global._lancamentosBuffer.push(lancamento);
+      // Mantém só os últimos 100
+      if (global._lancamentosBuffer.length > 100) {
+        global._lancamentosBuffer = global._lancamentosBuffer.slice(-100);
+      }
+      
+      console.log('✅ Lançamento recebido do bot:', lancamento.valor, lancamento.categoria);
+      return res.status(200).json({ ok: true, lancamento });
+    } catch(e) {
+      return res.status(500).json({ erro: e.message });
+    }
+  }
+
+  // ── BUSCAR LANÇAMENTOS PENDENTES ─────────────────────────
+  if (path === '/api/lancar/pendentes' && req.method === 'GET') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
+    const pendentes = (global._lancamentosBuffer || []).filter(l => !l.sincronizado);
+    // Marca como sincronizados
+    (global._lancamentosBuffer || []).forEach(l => l.sincronizado = true);
+    return res.status(200).json({ ok: true, lancamentos: pendentes });
+  }
+
   // 404
   return res.status(404).json({ erro: 'Rota não encontrada', rota: path });
 };
