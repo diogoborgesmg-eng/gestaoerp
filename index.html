@@ -17808,8 +17808,14 @@ function lerXMLNFe(file){
    db.filaNF.push(nf);
    sdb(db);
 
-   alert(`✅ NF-e importada!\n\nEmitente: ${emitNome}\nNF: ${numero} · Série ${serie}\nValor: R$ ${valorTotal.toFixed(2).replace('.',',')}\n${itens.length} item(ns)\n\nAcesse a aba 📥 Fila NF para revisar.`);
-   ir('fila');
+   alert(`✅ NF-e importada!\n\nEmitente: ${emitNome}\nNF: ${numero} · Série ${serie}\nValor: R$ ${valorTotal.toFixed(2).replace('.',',')}\n${itens.length} item(ns)`);
+
+   // Pergunta se quer lançar no recebimento do estoque
+   if(confirm('Lançar itens no Recebimento do Estoque automaticamente?')){
+    preencherRecebimentoNF(nf);
+   }else{
+    ir('fila');
+   }
 
   }catch(err){
    alert('Erro ao ler XML: '+err.message);
@@ -18436,7 +18442,7 @@ function _rRecebimento(){
       <option>Câmara Fria</option><option>Freezer</option><option>Estoque Seco</option><option>Geladeira</option><option>Bancada</option>
      </select>
     </div>
-    <div><label class="lbl">Responsável</label><input id="rec-resp" class="inpm" placeholder="Nome"/></div>
+    <div><label class="lbl">Quem conferiu</label><input id="rec-resp" class="inpm" placeholder="Nome de quem recebeu a entrega"/></div>
    </div>
    <div>
     <label class="lbl">Observação</label>
@@ -19257,6 +19263,128 @@ function confirmarTransformacao(itemId, qtdOriginal, unOriginal){
  window._cozinhaSub='producao';
  render();
  alert(`✅ Transformação registrada!\n${produtos.map(p=>`• ${p.nome}: ${p.qtd}${p.un} → ${p.setor}`).join('\n')}${perda>0.01?'\n• Aparas: '+perda.toFixed(2)+unOriginal:''}`);
+}
+
+// ═══ RECEBIMENTO AUTOMÁTICO VIA NF-e ═════════════════════════
+function preencherRecebimentoNF(nf){
+ if(!nf||!nf.itens||!nf.itens.length){alert('Nenhum item na NF');return;}
+
+ const db=ldb();
+ if(!db.cozinhaItens)db.cozinhaItens=[];
+
+ // Abre modal para confirmar cada item e informar responsável
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
+ div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div>
+    <p style="font-weight:800;font-size:14px;">📥 Recebimento via NF-e</p>
+    <p style="font-size:11px;color:var(--mu);">${nf.emitente||'Fornecedor'} · NF ${nf.numero}</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Quem conferiu -->
+  <div style="margin-bottom:12px;">
+   <label class="lbl">Quem conferiu a entrega *</label>
+   <select id="nf-resp" class="inpm">
+    <option value="">Selecionar...</option>
+    ${(db.funcionarios||[]).filter(f=>f.ativo).map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}
+    <option value="Dono">Dono</option>
+    <option value="Gerente">Gerente</option>
+   </select>
+  </div>
+
+  <!-- Itens da NF -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Itens da NF (${nf.itens.length}):</p>
+  ${nf.itens.map((item,i)=>`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <p style="font-size:12px;font-weight:700;">${item.nome}</p>
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu);">
+     <input type="checkbox" id="nf-sel-${i}" checked style="width:16px;height:16px;cursor:pointer;"/> Incluir
+    </label>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+    <div><label class="lbl">Qtd</label><input id="nf-qtd-${i}" class="inpm" type="number" value="${item.qtd||1}" step="0.1"/></div>
+    <div><label class="lbl">Unid</label><input id="nf-un-${i}" class="inpm" value="${item.unidade||'un'}"/></div>
+    <div><label class="lbl">Validade</label><input id="nf-val-${i}" class="inpm" type="date"/></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+    <div><label class="lbl">Local</label>
+     <select id="nf-loc-${i}" class="inpm">
+      <option>Câmara Fria</option><option>Freezer</option><option>Estoque Seco</option><option>Geladeira</option><option>Bancada</option>
+     </select>
+    </div>
+    <div><label class="lbl">Temperatura (°C)</label><input id="nf-temp-${i}" class="inpm" type="number" placeholder="Ex: 4"/></div>
+   </div>
+  </div>`).join('')}
+
+  <button onclick="confirmarRecebimentoNF('${nf.id}',${nf.itens.length})"
+   style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">
+   ✅ Confirmar Recebimento + Gerar Etiquetas
+  </button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+
+ // Guarda a NF no window para usar na confirmação
+ window._nfRecebimento=nf;
+}
+
+function confirmarRecebimentoNF(nfId,total){
+ const resp=document.getElementById('nf-resp')?.value;
+ if(!resp){alert('Informe quem conferiu a entrega');return;}
+
+ const db=ldb();
+ if(!db.cozinhaItens)db.cozinhaItens=[];
+ const nf=window._nfRecebimento;
+ const novosItens=[];
+
+ for(let i=0;i<total;i++){
+  const sel=document.getElementById('nf-sel-'+i)?.checked;
+  if(!sel)continue;
+  const nome=nf?.itens?.[i]?.nome||'Item '+(i+1);
+  const qtd=parseFloat(document.getElementById('nf-qtd-'+i)?.value||1);
+  const un=document.getElementById('nf-un-'+i)?.value||'un';
+  const val=document.getElementById('nf-val-'+i)?.value||'';
+  const local=document.getElementById('nf-loc-'+i)?.value||'Câmara Fria';
+  const temp=parseFloat(document.getElementById('nf-temp-'+i)?.value||0)||null;
+
+  if(!val){alert('Informe a validade de: '+nome);return;}
+
+  const item={
+   id:uid(),tipo:'recebimento',
+   nome,fornecedor:nf?.emitente||'',
+   qtd,un,validade:val,
+   local,temperatura:temp,
+   responsavel:resp,
+   lote:'NF-'+nf?.numero,
+   dtRecebimento:hj(),
+   nfId:nfId,
+   criadoEm:new Date().toISOString()
+  };
+  db.cozinhaItens.push(item);
+  novosItens.push(item);
+ }
+
+ // Marca NF como recebida na fila
+ if(db.filaNF){
+  const nfIdx=db.filaNF.findIndex(n=>n.id===nfId);
+  if(nfIdx>=0)db.filaNF[nfIdx].status='recebido';
+ }
+
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ window._nfRecebimento=null;
+
+ // Imprime etiquetas de todos os itens
+ if(novosItens.length>0){
+  _abrirJanelaEtiqueta(novosItens,db.etqConfig||{larg:80,alt:50},'recebimento');
+ }
+
+ window._estSub='validades';
+ render();
+ alert('✅ '+novosItens.length+' item(ns) lançado(s) no estoque!\nEtiquetas geradas para impressão.');
 }
 
 render();
