@@ -59,11 +59,14 @@ async function claude(messages, maxTok) {
 }
 
 async function salvarGitHub(lanc) {
-  if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando'); return; }
+  console.log('GHTOKEN presente:', !!GHTOKEN);
+  if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
   try {
     const fi = await req2('GET',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
       null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json' });
+    console.log('GitHub resposta:', JSON.stringify(fi).substring(0,200));
+    if (!fi.content) { console.error('fi.content undefined! Resposta:', JSON.stringify(fi).substring(0,200)); return; }
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
     fd.lancamentos.push({ id: Date.now().toString(36), ...lanc,
@@ -74,7 +77,11 @@ async function salvarGitHub(lanc) {
       { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },
       { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json' });
     console.log('GitHub OK:', lanc.valor, lanc.categoria);
-  } catch(eg) { console.error('GitHub err:', eg.message); }
+  } catch(eg) {
+    console.error('GitHub err:', eg.message);
+    if (eg.message && eg.message.includes('401')) console.error('Token invalido! Verifique GITHUB_TOKEN no Render');
+    if (eg.message && eg.message.includes('404')) console.error('Arquivo bot_lancamentos.json nao encontrado!');
+  }
 }
 
 const server = http.createServer((req, res) => {
