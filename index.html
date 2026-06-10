@@ -19470,12 +19470,12 @@ async function sincronizarBotLancamentos(){
   const backendUrl='https://gestaoerp-api.vercel.app';
   const token=df.backendToken||'gestaoerp_diCasa_44686412';
 
-  const resp=await fetch(backendUrl+'/api/lancar/pendentes',{
+  const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now(),{
    headers:{'x-api-token':token}
   });
   const data=await resp.json();
   
-  if(!data.ok||!data.lancamentos?.length)return;
+  if(!data.lancamentos?.length)return;
 
   const db=ldb();
   const dia=hj();
