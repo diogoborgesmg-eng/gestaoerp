@@ -19272,68 +19272,136 @@ function preencherRecebimentoNF(nf){
  const db=ldb();
  if(!db.cozinhaItens)db.cozinhaItens=[];
 
- // Abre modal para confirmar cada item e informar responsável
+ // Busca pedido de compra relacionado ao fornecedor da NF
+ const pedidos=(db.pedidosCompra||[]).filter(p=>
+  (p.status==='aprovado'||p.status==='aguardando_nf')&&
+  (p.fornecedor?.toLowerCase().includes((nf.emitente||'').toLowerCase().substring(0,6))||
+   p.emitCNPJ===nf.emitCNPJ)
+ );
+ const pedido=pedidos[0]||null;
+
+ // Compara NF com pedido de compra
+ const divergencias=[];
+ if(pedido){
+  nf.itens.forEach(itemNF=>{
+   const itemPC=pedido.itens?.find(p=>
+    p.nome.toLowerCase().includes(itemNF.nome.toLowerCase().substring(0,5))||
+    itemNF.nome.toLowerCase().includes(p.nome.toLowerCase().substring(0,5))
+   );
+   if(itemPC){
+    const diffQtd=Math.abs(itemNF.qtd-itemPC.qtd)/itemPC.qtd;
+    const diffVal=itemPC.custoNovo>0?Math.abs(itemNF.valorUnit-itemPC.custoNovo)/itemPC.custoNovo:0;
+    if(diffQtd>0.05)divergencias.push({tipo:'quantidade',produto:itemNF.nome,esperado:itemPC.qtd,recebido:itemNF.qtd,un:itemPC.unidade||'un'});
+    if(diffVal>0.05)divergencias.push({tipo:'valor',produto:itemNF.nome,esperado:itemPC.custoNovo,recebido:itemNF.valorUnit});
+   }else if(pedido.itens?.length){
+    divergencias.push({tipo:'produto_extra',produto:itemNF.nome,obs:'Não estava no pedido de compra'});
+   }
+  });
+  // Verifica itens do pedido que não vieram na NF
+  pedido.itens?.forEach(itemPC=>{
+   const veio=nf.itens.find(n=>n.nome.toLowerCase().includes(itemPC.nome.toLowerCase().substring(0,5)));
+   if(!veio)divergencias.push({tipo:'faltando',produto:itemPC.nome,obs:'Item do pedido não veio na NF'});
+  });
+ }
+
  const div=document.createElement('div');
  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;overflow-y:auto;';
  div.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:14px 14px 40px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
    <div>
-    <p style="font-weight:800;font-size:14px;">📥 Recebimento via NF-e</p>
-    <p style="font-size:11px;color:var(--mu);">${nf.emitente||'Fornecedor'} · NF ${nf.numero}</p>
+    <p style="font-weight:800;font-size:14px;">📥 Conferência de Recebimento</p>
+    <p style="font-size:11px;color:var(--mu);">${nf.emitente||'Fornecedor'} · NF ${nf.numero} · ${new Date(nf.data).toLocaleDateString('pt-BR')}</p>
    </div>
    <button onclick="this.closest('[style*=inset]').remove()" style="padding:6px 12px;border-radius:7px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:12px;cursor:pointer;">✕</button>
   </div>
 
-  <!-- Quem conferiu -->
-  <div style="margin-bottom:12px;">
-   <label class="lbl">Quem conferiu a entrega *</label>
-   <select id="nf-resp" class="inpm">
-    <option value="">Selecionar...</option>
+  <!-- Comparação com Pedido de Compra -->
+  ${pedido?`<div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:11px;font-weight:700;color:var(--gr);">✅ Pedido de Compra encontrado: ${pedido.fornecedor}</p>
+   <p style="font-size:10px;color:var(--mu);">Data: ${pedido.data} · Total aprovado: ${brl(pedido.totalCotado||0)}</p>
+  </div>`:`<div style="background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:11px;color:var(--ye);">⚠️ Nenhum pedido de compra aprovado encontrado para este fornecedor</p>
+  </div>`}
+
+  <!-- Divergências -->
+  ${divergencias.length>0?`<div style="background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:12px;font-weight:700;color:var(--re);margin-bottom:6px;">🚨 Divergências detectadas (${divergencias.length})</p>
+   ${divergencias.map(d=>`<div style="font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+    ${d.tipo==='quantidade'?`⚖️ <b>${d.produto}</b>: pedido ${d.esperado}${d.un} · recebido ${d.recebido}${d.un}`:
+      d.tipo==='valor'?`💰 <b>${d.produto}</b>: cotado ${brl(d.esperado)} · NF ${brl(d.recebido)}`:
+      d.tipo==='faltando'?`❌ <b>${d.produto}</b>: não veio na NF`:
+      `➕ <b>${d.produto}</b>: ${d.obs}`}
+   </div>`).join('')}
+  </div>`:''}
+
+  <!-- Totais NF vs PC -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+   <div style="background:var(--sf2);border-radius:9px;padding:10px;text-align:center;">
+    <p style="font-size:10px;color:var(--mu);">Total da NF</p>
+    <p style="font-size:14px;font-weight:900;">${brl(nf.valorTotal||0)}</p>
+   </div>
+   <div style="background:var(--sf2);border-radius:9px;padding:10px;text-align:center;">
+    <p style="font-size:10px;color:var(--mu);">Total do Pedido</p>
+    <p style="font-size:14px;font-weight:900;color:${pedido?((nf.valorTotal||0)>(pedido.totalCotado||0)*1.05?'var(--re)':'var(--gr)'):'var(--mu)'};">${pedido?brl(pedido.totalCotado||0):'—'}</p>
+   </div>
+  </div>
+
+  <!-- Conferente -->
+  <div style="margin-bottom:12px;background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;">
+   <label class="lbl" style="color:var(--bl);">👤 Conferente — quem recebeu e conferiu *</label>
+   <select id="nf-resp" class="inpm" style="margin-top:4px;">
+    <option value="">Selecionar conferente...</option>
     ${(db.funcionarios||[]).filter(f=>f.ativo).map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('')}
     <option value="Dono">Dono</option>
     <option value="Gerente">Gerente</option>
    </select>
+   <p style="font-size:10px;color:var(--mu);margin-top:4px;">Este nome ficará registrado na etiqueta e no histórico de rastreabilidade</p>
   </div>
 
-  <!-- Itens da NF -->
-  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Itens da NF (${nf.itens.length}):</p>
-  ${nf.itens.map((item,i)=>`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;">
-   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-    <p style="font-size:12px;font-weight:700;">${item.nome}</p>
-    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu);">
-     <input type="checkbox" id="nf-sel-${i}" checked style="width:16px;height:16px;cursor:pointer;"/> Incluir
-    </label>
-   </div>
-   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-    <div><label class="lbl">Qtd</label><input id="nf-qtd-${i}" class="inpm" type="number" value="${item.qtd||1}" step="0.1"/></div>
-    <div><label class="lbl">Unid</label><input id="nf-un-${i}" class="inpm" value="${item.unidade||'un'}"/></div>
-    <div><label class="lbl">Validade</label><input id="nf-val-${i}" class="inpm" type="date"/></div>
-   </div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-    <div><label class="lbl">Local</label>
-     <select id="nf-loc-${i}" class="inpm">
-      <option>Câmara Fria</option><option>Freezer</option><option>Estoque Seco</option><option>Geladeira</option><option>Bancada</option>
-     </select>
+  <!-- Itens -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Itens recebidos (${nf.itens.length}):</p>
+  ${nf.itens.map((item,i)=>{
+   const div_conf=divergencias.find(d=>d.produto===item.nome);
+   return`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid ${div_conf?'rgba(255,51,102,0.4)':'var(--br)'};">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+     <div>
+      <p style="font-size:12px;font-weight:700;">${item.nome}</p>
+      ${div_conf?`<p style="font-size:10px;color:var(--re);">⚠️ Divergência detectada</p>`:''}
+     </div>
+     <label style="display:flex;align-items:center;gap:5px;font-size:11px;">
+      <input type="checkbox" id="nf-sel-${i}" checked style="width:16px;height:16px;cursor:pointer;"/>
+      <span style="color:var(--mu);">Incluir</span>
+     </label>
     </div>
-    <div><label class="lbl">Temperatura (°C)</label><input id="nf-temp-${i}" class="inpm" type="number" placeholder="Ex: 4"/></div>
-   </div>
-  </div>`).join('')}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+     <div><label class="lbl">Qtd recebida</label><input id="nf-qtd-${i}" class="inpm" type="number" value="${item.qtd||1}" step="0.1"/></div>
+     <div><label class="lbl">Unid</label><input id="nf-un-${i}" class="inpm" value="${item.unidade||'un'}"/></div>
+     <div><label class="lbl">Validade *</label><input id="nf-val-${i}" class="inpm" type="date"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+     <div><label class="lbl">Local</label>
+      <select id="nf-loc-${i}" class="inpm">
+       <option>Câmara Fria</option><option>Freezer</option><option>Estoque Seco</option><option>Geladeira</option><option>Bancada</option>
+      </select>
+     </div>
+     <div><label class="lbl">Temperatura (°C)</label><input id="nf-temp-${i}" class="inpm" type="number" placeholder="Ex: 4"/></div>
+    </div>
+   </div>`;}).join('')}
 
-  <button onclick="confirmarRecebimentoNF('${nf.id}',${nf.itens.length})"
+  <button onclick="confirmarRecebimentoNF('${nf.id}',${nf.itens.length},'${pedido?.id||''}')"
    style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">
    ✅ Confirmar Recebimento + Gerar Etiquetas
   </button>
+  ${divergencias.length>0?`<p style="text-align:center;font-size:11px;color:var(--ye);margin-top:8px;">⚠️ Há divergências — confirme apenas se estiver ciente</p>`:''}
  </div>`;
  div.onclick=e=>{if(e.target===div)div.remove();};
  document.body.appendChild(div);
-
- // Guarda a NF no window para usar na confirmação
  window._nfRecebimento=nf;
 }
 
-function confirmarRecebimentoNF(nfId,total){
+function confirmarRecebimentoNF(nfId,total,pedidoId){
  const resp=document.getElementById('nf-resp')?.value;
- if(!resp){alert('Informe quem conferiu a entrega');return;}
+ if(!resp){alert('Informe o conferente');return;}
 
  const db=ldb();
  if(!db.cozinhaItens)db.cozinhaItens=[];
@@ -19355,36 +19423,44 @@ function confirmarRecebimentoNF(nfId,total){
   const item={
    id:uid(),tipo:'recebimento',
    nome,fornecedor:nf?.emitente||'',
-   qtd,un,validade:val,
-   local,temperatura:temp,
+   qtd,un,validade:val,local,temperatura:temp,
    responsavel:resp,
-   lote:'NF-'+nf?.numero,
+   lote:'NF-'+(nf?.numero||''),
    dtRecebimento:hj(),
-   nfId:nfId,
+   nfId,pedidoId,
    criadoEm:new Date().toISOString()
   };
   db.cozinhaItens.push(item);
   novosItens.push(item);
  }
 
- // Marca NF como recebida na fila
+ // Marca pedido como concluído
+ if(pedidoId){
+  const pc=(db.pedidosCompra||[]).findIndex(p=>p.id===pedidoId);
+  if(pc>=0){
+   db.pedidosCompra[pc].status='concluido';
+   db.pedidosCompra[pc].dtRecebimento=hj();
+   db.pedidosCompra[pc].conferente=resp;
+  }
+ }
+
+ // Marca NF como recebida
  if(db.filaNF){
   const nfIdx=db.filaNF.findIndex(n=>n.id===nfId);
-  if(nfIdx>=0)db.filaNF[nfIdx].status='recebido';
+  if(nfIdx>=0){db.filaNF[nfIdx].status='recebido';db.filaNF[nfIdx].conferente=resp;}
  }
 
  sdb(db);
  document.querySelector('[style*="inset:0"]')?.remove();
  window._nfRecebimento=null;
 
- // Imprime etiquetas de todos os itens
  if(novosItens.length>0){
   _abrirJanelaEtiqueta(novosItens,db.etqConfig||{larg:80,alt:50},'recebimento');
  }
 
  window._estSub='validades';
  render();
- alert('✅ '+novosItens.length+' item(ns) lançado(s) no estoque!\nEtiquetas geradas para impressão.');
+ alert('✅ '+novosItens.length+' item(ns) recebido(s) e conferido(s) por '+resp+'!\nEtiquetas geradas.');
 }
 
 render();
