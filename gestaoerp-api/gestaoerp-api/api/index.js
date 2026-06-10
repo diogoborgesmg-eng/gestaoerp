@@ -36,7 +36,8 @@ module.exports = async function handler(req, res) {
 
   // ── Health check ─────────────────────────────────────────
   if (path === '/' || path === '') {
-    return res.status(200).json({
+    console.log('API v1781122513 iniciada');
+  return res.status(200).json({
       status: 'online',
       sistema: 'GestaoERP API v3.0',
       empresa: 'Di Casa Laranjinha',
