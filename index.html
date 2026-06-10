@@ -117,7 +117,6 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div></div></div>
 <div class="tnav">
 <button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
-<button class="tb" onclick="ir('cozinha')">🧑‍🍳 Cozinha</button>
 <button class="tb" onclick="ir('cad')">📦 Cadastros</button>
 <button class="tb a" onclick="ir('dre')">📊 DRE</button>
 <button class="tb" onclick="ir('fin')">💰 Financeiro</button>
@@ -10616,76 +10615,171 @@ ${(()=>{const metaM=parseFloat(localStorage.getItem("erp_meta_mensal")||0);const
 
 function rEst(){
  const db=ldb();
- const estVista=db._estVista||"bruto";
- const est=gest().slice().sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
- const estPreparo=(db.estPreparo||[]).slice().sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
- const alertas=est.filter(e=>e.q<=e.min*1.2&&e.min>0);
- const valorEstoque=est.reduce((a,e)=>a+e.q*(e.cu||0),0);
- const totalPerdas=est.reduce((a,e)=>a+(e.perdas||[]).reduce((b,p)=>b+p.q*(p.cu||e.cu||0),0),0);
- const itensSemGiro=est.filter(e=>{
- if(!e.s||!e.s.length)return e.qi>0; // nunca saiu
- const ultimaSaida=e.s[e.s.length-1];
- if(!ultimaSaida?.dt)return true;
- const[d,m,y]=ultimaSaida.dt.split('/');
- return(new Date()-new Date(y,m-1,d))/(1000*60*60*24)>30;
- }).length;
- const hoje2=new Date();hoje2.setHours(0,0,0,0);
- const vencidos=est.filter(e=>{if(!e.validade)return false;return new Date(e.validade)<hoje2;});
- const venceEm7=est.filter(e=>{if(!e.validade)return false;const dv=new Date(e.validade);const dias=Math.ceil((dv-hoje2)/(1000*60*60*24));return dias>=0&&dias<=7;});
- const cats={
- venda_direta:{label:"🛒 Venda Direta",items:[]},
- materia_prima:{label:"🥩 Matéria Prima",items:[]},
- limpeza_embalagem:{label:"🧹 Limpeza e Embalagem",items:[]},
- sem_categoria:{label:"📋 Sem Categoria",items:[]}
- };
- est.forEach(e=>{
- const grp=e.grupo||detectarGrupo(e.n);
- const cat=grp.cat||"sem_categoria";
- if(cats[cat])cats[cat].items.push({...e,grp});
- else cats.sem_categoria.items.push({...e,grp});
+ const sub=window._estSub||'overview';
+ const est=gest()||[];
+ const cozItens=db.cozinhaItens||[];
+ const cozProd=db.cozinhaProducao||[];
+
+ // Alertas de validade
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const vencidos=cozItens.filter(i=>new Date(i.validade)<hoje);
+ const vencendoHoje=cozItens.filter(i=>{const d=new Date(i.validade);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();});
+ const vencendo3=cozItens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>0&&diff<=3;});
+
+ // Estoque mínimo
+ const estBaixo=est.filter(e=>Number(e.q||0)<=Number(e.min||0));
+
+ const subs=[
+  ['overview','📊 Visão Geral'],
+  ['recebimento','📥 Recebimento'],
+  ['validades','⏰ Validades'+(vencidos.length+vencendoHoje.length>0?` 🔴`:'')],
+  ['transformacao','🔄 Transformação'],
+  ['producao','🍳 Produção'],
+  ['materia','📦 MP/Ingredientes'],
+  ['contagem','📊 Contagem'],
+  ['etiquetas','🏷️ Etiquetas'],
+ ];
+
+ return`<div class="si">
+<div style="display:flex;gap:5px;overflow-x:auto;padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;">
+ ${subs.map(([k,l])=>'<button onclick="window._estSub=\''+k+'\';render()" style="padding:5px 12px;border-radius:15px;border:none;background:'+(sub===k?'var(--bl)':'rgba(255,255,255,0.06)')+';color:'+(sub===k?'#fff':'var(--mu)')+';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+l+'</button>').join('')}
+</div>
+
+${vencidos.length>0||vencendoHoje.length>0||estBaixo.length>0?`
+<div style="padding:6px 12px;background:rgba(255,51,102,0.08);border-bottom:1px solid rgba(255,51,102,0.2);">
+ ${vencidos.length>0?`<p style="font-size:11px;color:var(--re);font-weight:700;">🚨 ${vencidos.length} item(ns) VENCIDO(S)</p>`:''}
+ ${vencendoHoje.length>0?`<p style="font-size:11px;color:var(--ye);font-weight:700;">⚠️ ${vencendoHoje.length} vence(m) HOJE</p>`:''}
+ ${estBaixo.length>0?`<p style="font-size:11px;color:var(--ye);">📉 ${estBaixo.length} item(ns) abaixo do mínimo</p>`:''}
+</div>`:''}
+
+${sub==='overview'?_estOverview(est,cozItens,cozProd,db):
+  sub==='recebimento'?_rRecebimento():
+  sub==='validades'?_rValidades(cozItens,hoje):
+  sub==='transformacao'?_estTransfLista(cozItens,cozProd):
+  sub==='producao'?_rProducao():
+  sub==='materia'?_estMateria(est):
+  sub==='contagem'?_rContagem():
+  _rEtiquetas()}
+</div>`;
+}
+
+function _estOverview(est,cozItens,cozProd,db){
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const totalMP=est.length;
+ const totalCoz=cozItens.length;
+ const totalProd=cozProd.length;
+ const venc=cozItens.filter(i=>new Date(i.validade)<hoje).length;
+ const ok=cozItens.filter(i=>{const d=new Date(i.validade);return(d-hoje)/(1000*60*60*24)>3;}).length;
+
+ // Agrupa por setor
+ const porSetor={};
+ cozProd.forEach(p=>{
+  const s=p.setor||'geral';
+  if(!porSetor[s])porSetor[s]={itens:0,qtd:0};
+  porSetor[s].itens++;porSetor[s].qtd+=Number(p.qtd||0);
  });
- const filtro=db._estFiltro||"todos";
- const busca=(db._estBusca||"").toLowerCase();
 
-return`<div class="si">
-${vencidos.length>0?`<div class="ial ar" style="margin-bottom:6px;"><span>🗑️</span><span><strong>${vencidos.length} produto(s) VENCIDO(S):</strong> ${vencidos.map(e=>e.n).join(",")}</span></div>`:""}
-${venceEm7.length>0?`<div class="ial ay" style="margin-bottom:6px;"><span>⏰</span><span><strong>${venceEm7.length} produto(s) vence(m) em 7 dias:</strong> ${venceEm7.map(e=>`${e.n} (${new Date(e.validade).toLocaleDateString('pt-BR')})`).join(",")}</span></div>`:""}
-${alertas.length>0?`<div class="ial ar" style="margin-bottom:8px;"><span>🚨</span><span>${alertas.length} produto(s) abaixo do mínimo: ${alertas.map(e=>e.n).join(",")}</span></div>`:""}
-<div class="sh" style="margin-bottom:8px;"><span class="st">📦 Estoque</span><div style="display:flex;gap:4px;">
-<button class="badd" onclick="abrir('ein')">+ Entrada</button>
-<button class="badd" style="background:rgba(255,51,102,0.15);border-color:rgba(255,51,102,0.3);color:var(--re);" onclick="abrir('esa')">− Saída</button>
-<button class="badd" style="background:rgba(68,136,255,0.15);border-color:rgba(68,136,255,0.3);color:var(--bl);" onclick="abrir('cont')">📷</button>
-<button class="badd" style="background:rgba(255,204,0,0.15);border-color:rgba(255,204,0,0.3);color:var(--ye);" onclick="gerarEtiquetasEstoque(null)" title="Gerar etiquetas">🏷️</button>
-<button class="badd" style="background:rgba(255,106,0,0.15);border-color:rgba(255,106,0,0.3);color:#ff6a00;" onclick="verRelatorioPerdas()" title="Relatório de perdas">⚠️</button>
-</div></div>
+ const setorNomes={restaurante:'🍽️ Restaurante',espetaria:'🍢 Espetaria',pizzaria:'🍕 Pizzaria',hamburgueria:'🍔 Hamburgueria',geral:'📦 Geral'};
 
-<!-- GAUGES DO ESTOQUE -->
-${est.length>0?`<div style="display:flex;justify-content:space-around;background:var(--sf2);border-radius:12px;padding:10px;margin-bottom:10px;">
-<div style="text-align:center;">
-${gauge(alertas.length,0,Math.max(10,est.length),"Críticos","",[{val:0,cor:"#00ff88"},{val:Math.ceil(est.length*0.1),cor:"#ffcc00"},{val:Math.ceil(est.length*0.2),cor:"#f59e0b"},{val:est.length,cor:"#ff3366"}])}
-</div>
-<div style="text-align:center;">
-${gauge(Math.min(100,Math.round((est.filter(e=>e.min>0&&e.q>e.min).length/Math.max(est.filter(e=>e.min>0).length,1))*100)),0,100,"Nível OK","%",[{val:50,cor:"#ff3366"},{val:70,cor:"#f59e0b"},{val:85,cor:"#ffcc00"},{val:100,cor:"#00ff88"}])}
-</div>
-<div style="text-align:center;">
-${gauge(totalPerdas>0?Math.min(100,(totalPerdas/Math.max(valorEstoque,1))*100):0,0,30,"Perda","%",[{val:2,cor:"#00ff88"},{val:5,cor:"#ffcc00"},{val:10,cor:"#f59e0b"},{val:30,cor:"#ff3366"}])}
-</div>
-</div>`:""}
+ return`<div style="padding:12px;">
+ <!-- KPIs -->
+ <div class="kg" style="margin-bottom:12px;">
+  <div class="kpi"><p class="kl">Estoque MP</p><p class="kv">${totalMP}</p></div>
+  <div class="kpi"><p class="kl">Na Câmara</p><p class="kv" style="color:var(--bl);">${totalCoz}</p></div>
+  <div class="kpi"><p class="kl">Vencidos</p><p class="kv" style="color:var(--re);">${venc}</p></div>
+  <div class="kpi"><p class="kl">OK</p><p class="kv" style="color:var(--gr);">${ok}</p></div>
+ </div>
 
-<!-- KPIs DO ESTOQUE -->
-<div class="kg" style="margin-bottom:10px;">
-<div class="kpi"><p class="kl">Valor Total</p><p class="kv" style="color:var(--bl);">${brl(valorEstoque)}</p><p class="ks">${est.length} itens</p></div>
-<div class="kpi"><p class="kl">Críticos</p><p class="kv" style="color:${alertas.length>0?'#ff3366':'#00ff88'};">${alertas.length}</p><p class="ks">abaixo min.</p></div>
-<div class="kpi"><p class="kl">Perdas</p><p class="kv" style="color:${totalPerdas>0?'#ff6a00':'#00ff88'};">${brl(totalPerdas)}</p><p class="ks">registradas</p></div>
-<div class="kpi"><p class="kl">Sem Giro</p><p class="kv" style="color:${itensSemGiro>0?'#ffcc00':'#00ff88'};">${itensSemGiro}</p><p class="ks">>30 dias</p></div>
-</div>
-<div style="display:flex;gap:4px;margin-bottom:10px;">
-<button onclick="const d=ldb();d._estVista='bruto';sdb(d);render();" style="flex:1;padding:7px;border-radius:8px;border:1px solid ${estVista==='bruto'?'var(--gr)':'var(--br)'};background:${estVista==='bruto'?'rgba(0,255,136,0.15)':'transparent'};color:${estVista==='bruto'?'var(--gr)':'var(--mu)'};font-size:11px;font-weight:700;cursor:pointer;">📦 Bruto</button>
-<button onclick="const d=ldb();d._estVista='preparo';sdb(d);render();" style="flex:1;padding:7px;border-radius:8px;border:1px solid ${estVista==='preparo'?'var(--ye)':'var(--br)'};background:${estVista==='preparo'?'rgba(255,204,0,0.15)':'transparent'};color:${estVista==='preparo'?'var(--ye)':'var(--mu)'};font-size:11px;font-weight:700;cursor:pointer;">🔪 Pré-Preparo</button>
-</div>
+ <!-- Ações rápidas -->
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">⚡ Ações rápidas</p>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+  <button onclick="window._estSub='recebimento';render()" style="padding:12px;border-radius:10px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:var(--gr);font-size:12px;font-weight:700;cursor:pointer;">📥 Registrar<br>Recebimento</button>
+  <button onclick="window._estSub='transformacao';render()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,136,68,0.3);background:rgba(255,136,68,0.08);color:#ff8844;font-size:12px;font-weight:700;cursor:pointer;">🔄 Transformar<br>MP → Produto</button>
+  <button onclick="window._estSub='producao';render()" style="padding:12px;border-radius:10px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:12px;font-weight:700;cursor:pointer;">🍳 Registrar<br>Produção</button>
+  <button onclick="abrirInventarioFoto()" style="padding:12px;border-radius:10px;border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.08);color:var(--pu);font-size:12px;font-weight:700;cursor:pointer;">📸 Inventário<br>por Foto</button>
+ </div>
 
-${estVista==='preparo'?renderEstPreparo(estPreparo):renderEstBruto(cats,filtro,busca,db)}
-</div>`;}
+ <!-- Por setor -->
+ ${Object.keys(porSetor).length>0?`
+ <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🏭 Produção por setor (hoje)</p>
+ ${Object.entries(porSetor).map(([s,d])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--sf2);border-radius:8px;margin-bottom:5px;">
+  <span style="font-size:12px;font-weight:700;">${setorNomes[s]||s}</span>
+  <span style="font-size:12px;color:var(--gr);font-weight:700;">${d.itens} item(ns)</span>
+ </div>`).join('')}`:''}
+
+ <!-- Itens vencendo -->
+ ${cozItens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>=0&&diff<=3;}).length>0?`
+ <p style="font-size:12px;font-weight:700;margin:10px 0 8px;color:var(--ye);">⚠️ Atenção — vencendo em breve</p>
+ ${cozItens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(1000*60*60*24);return diff>=0&&diff<=3;}).map(i=>`
+ <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.2);border-radius:8px;margin-bottom:5px;">
+  <div>
+   <p style="font-size:12px;font-weight:700;">${i.nome}</p>
+   <p style="font-size:10px;color:var(--mu);">${i.qtd} ${i.un} · ${i.local||'—'}</p>
+  </div>
+  <div style="text-align:right;">
+   <p style="font-size:11px;font-weight:700;color:var(--ye);">${new Date(i.validade+'T12:00:00').toLocaleDateString('pt-BR')}</p>
+   <div style="display:flex;gap:3px;margin-top:3px;justify-content:flex-end;">
+    <button onclick="abrirTransformacao('${i.id}')" style="padding:3px 6px;border-radius:4px;border:none;background:rgba(255,136,68,0.2);color:#ff8844;font-size:9px;cursor:pointer;">🔄</button>
+    <button onclick="abrirRetiradaParcial('${i.id}')" style="padding:3px 6px;border-radius:4px;border:none;background:rgba(0,255,136,0.2);color:var(--gr);font-size:9px;cursor:pointer;">✂️</button>
+    <button onclick="imprimirEtiquetaItem('${i.id}')" style="padding:3px 6px;border-radius:4px;border:none;background:rgba(68,136,255,0.2);color:var(--bl);font-size:9px;cursor:pointer;">🏷️</button>
+   </div>
+  </div>
+ </div>`).join('')}`:''}
+</div>`;
+}
+
+function _estMateria(est){
+ if(!est.length) return`<div style="padding:20px;text-align:center;color:var(--mu);">
+  <p style="font-size:24px;margin-bottom:8px;">📦</p>
+  <p style="font-size:13px;">Nenhuma matéria-prima cadastrada</p>
+  <button onclick="abrirForm('materia')" style="margin-top:10px;padding:9px 18px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;cursor:pointer;">+ Cadastrar</button>
+ </div>`;
+
+ return`<div style="padding:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+   <p style="font-size:13px;font-weight:700;">📦 Matéria-Prima (${est.length})</p>
+   <button onclick="abrirForm('materia')" style="padding:7px 12px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:11px;font-weight:800;cursor:pointer;">+ Novo</button>
+  </div>
+  ${est.map(e=>{
+   const abaixo=Number(e.q||0)<=Number(e.min||0);
+   return`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:${abaixo?'rgba(255,51,102,0.08)':'var(--sf2)'};border:1px solid ${abaixo?'rgba(255,51,102,0.3)':'var(--br)'};border-radius:9px;margin-bottom:6px;">
+    <div>
+     <p style="font-size:12px;font-weight:700;">${e.n}</p>
+     <p style="font-size:10px;color:var(--mu);">${e.cat||'—'} · Mín: ${e.min||0}${e.u}</p>
+    </div>
+    <div style="text-align:right;">
+     <p style="font-size:13px;font-weight:900;color:${abaixo?'var(--re)':'var(--gr)'};">${e.q||0} ${e.u}</p>
+     ${abaixo?'<p style="font-size:9px;color:var(--re);">REPOR</p>':''}
+    </div>
+   </div>`;}).join('')}
+ </div>`;
+}
+
+function _estTransfLista(cozItens,cozProd){
+ if(!cozItens.length) return`<div style="padding:20px;text-align:center;color:var(--mu);">
+  <p style="font-size:24px;margin-bottom:8px;">🔄</p>
+  <p style="font-size:13px;">Nenhum item em estoque de cozinha</p>
+  <p style="font-size:11px;margin-top:4px;">Registre um recebimento primeiro</p>
+  <button onclick="window._estSub='recebimento';render()" style="margin-top:10px;padding:9px 18px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;cursor:pointer;">📥 Ir para Recebimento</button>
+ </div>`;
+
+ return`<div style="padding:12px;">
+  <p style="font-size:13px;font-weight:700;margin-bottom:4px;">🔄 Transformação de MP</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Selecione a matéria-prima para transformar em produto(s) por setor</p>
+  ${cozItens.map(i=>`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--br);">
+   <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+     <p style="font-size:13px;font-weight:700;">${i.nome}</p>
+     <p style="font-size:10px;color:var(--mu);">${i.qtd} ${i.un} · Val: ${new Date(i.validade+'T12:00:00').toLocaleDateString('pt-BR')} · ${i.local||'—'}</p>
+    </div>
+    <div style="display:flex;gap:5px;">
+     <button onclick="abrirRetiradaParcial('${i.id}')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:11px;font-weight:700;cursor:pointer;">✂️ Retirar</button>
+     <button onclick="abrirTransformacao('${i.id}')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(255,136,68,0.15);color:#ff8844;font-size:11px;font-weight:700;cursor:pointer;">🔄 Transformar</button>
+    </div>
+   </div>
+  </div>`).join('')}
+ </div>`;
+}
 
 function renderEstPreparo(est){
  return`
