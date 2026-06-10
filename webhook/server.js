@@ -115,11 +115,15 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true }));
 
     // Debug: mostra o que chegou
-    console.log('📨 Body recebido:', body.length, 'chars', body.substring(0,200));
+    console.log('📨 Body recebido:', body.length, 'chars');
+    console.log('📋 Headers:', JSON.stringify(req.headers).substring(0,300));
+    if(body.length > 0) console.log('📄 Body preview:', body.substring(0,500));
     
     try {
       if (!body || body.trim() === '') {
-        console.log('⚠️ Body vazio ignorado');
+        // Verifica se tem dados na query string (alguns webhooks usam GET)
+        const qs = new URL('http://x'+req.url).searchParams;
+        console.log('⚠️ Body vazio — URL params:', req.url.substring(0,200));
         return;
       }
       const data = JSON.parse(body);
