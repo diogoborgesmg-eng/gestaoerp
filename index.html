@@ -19571,7 +19571,7 @@ async function buscarNFsSEFAZ(){
   const db=ldb();
   const ultNSU=db.ultNSU||'000000000000000';
   
-  const resp=await fetch('https://gestaoerp-api.vercel.app/api/nfe/consultar',{
+  const resp=await fetch('/api/nfe/sefaz',{
    method:'POST',
    headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
    body:JSON.stringify({
