@@ -10266,7 +10266,7 @@ function getDREData(){
  return gdia();
 }
 
-async function rDRE(){
+function rDRE(){
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  if(!empresa.nome){
