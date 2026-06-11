@@ -196,6 +196,28 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, lancamentos: pendentes, total: pendentes.length });
   }
 
+
+  // ── BOT WHATSAPP — PENDENTES ─────────────────────────────
+  if (path.startsWith('/api/bot/pendentes')) {
+    // Lê bot_lancamentos.json do GitHub e retorna pendentes
+    try {
+      const ghResp = await fetch(
+        'https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t=' + Date.now(),
+        { headers: { 'User-Agent': 'GestaoERP/1.0' } }
+      );
+      const ghData = await ghResp.json();
+      const pendentes = (ghData.lancamentos || []).filter(l => !l.sincronizado);
+      return res.status(200).json({ ok: true, lancamentos: pendentes, total: pendentes.length });
+    } catch(e) {
+      return res.status(200).json({ ok: true, lancamentos: [], total: 0 });
+    }
+  }
+
+  // ── BOT WHATSAPP — MARCAR SINCRONIZADO ───────────────────
+  if (path === '/api/bot/marcar' && req.method === 'POST') {
+    return res.status(200).json({ ok: true });
+  }
+
   // 404
   return res.status(404).json({ erro: 'Rota não encontrada', rota: path });
 };
