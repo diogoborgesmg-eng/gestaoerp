@@ -10267,13 +10267,7 @@ function getDREData(){
 }
 
 async function rDRE(){
- // Busca pendentes do bot ANTES de renderizar
- let _botPend=[];
- try{
-  const _r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
-  const _d=await _r.json();
-  _botPend=(_d.lancamentos||[]).filter(l=>!l.sincronizado);
- }catch(e){}
+
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  if(!empresa.nome){
