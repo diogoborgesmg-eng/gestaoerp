@@ -129,16 +129,146 @@ module.exports = async function handler(req, res) {
   // ── SEFAZ: CONSULTAR NF-e ─────────────────────────────────
   if (path === '/api/nfe/consultar' && req.method === 'POST') {
     if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
-    const { cnpj, uf } = body;
+    const { cnpj, pfxBase64, pfxSenha, dtInicio, ultNSU } = body;
     if (!cnpj) return res.status(400).json({ erro: 'CNPJ obrigatório' });
+    if (!pfxBase64) return res.status(400).json({ erro: 'Certificado digital obrigatório' });
 
     try {
-      // Consulta pública da Receita Federal
+      const forge = require('node-forge');
+      const https = require('https');
+      
+      // Descompacta o certificado PFX
+      const pfxDer = forge.util.decode64(pfxBase64);
+      const pfxAsn1 = forge.asn1.fromDer(pfxDer);
+      const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
+      
+      // Extrai chave privada e certificado
+      let privateKey = null;
+      let certificate = null;
+      
+      pfx.safeContents.forEach(sc => {
+        sc.safeBags.forEach(bag => {
+          if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) {
+            privateKey = forge.pki.privateKeyToPem(bag.key);
+          }
+          if (bag.type === forge.pki.oids.certBag) {
+            certificate = forge.pki.certificateToPem(bag.cert);
+          }
+        });
+      });
+      
+      if (!privateKey || !certificate) {
+        return res.status(400).json({ erro: 'Certificado inválido ou senha incorreta' });
+      }
+
       const cnpjLimpo = cnpj.replace(/\D/g, '');
-      const resp = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjLimpo}`);
-      if (!resp.ok) throw new Error('CNPJ não encontrado');
-      const dados = await resp.json();
-      return res.status(200).json({ ok: true, dados, msg: 'Use XML para importar NF-e' });
+      const nsu = ultNSU || '000000000000000';
+      const dtIni = dtInicio || '2026-06-01T00:00:00-03:00';
+      
+      // Monta SOAP para consulta de DF-e destinatário
+      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfeDist="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+ <soapenv:Header/>
+ <soapenv:Body>
+  <nfeDist:nfeDistDFeInteresse>
+   <nfeDist:nfeDadosMsg>
+    <distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
+     <tpAmb>1</tpAmb>
+     <cUFAutor>31</cUFAutor>
+     <CNPJ>${cnpjLimpo}</CNPJ>
+     <distNSU>
+      <ultNSU>${nsu}</ultNSU>
+     </distNSU>
+    </distDFeInt>
+   </nfeDist:nfeDadosMsg>
+  </nfeDist:nfeDistDFeInteresse>
+ </soapenv:Body>
+</soapenv:Envelope>`;
+
+      // Assina e envia para SEFAZ
+      const sefazResp = await new Promise((resolve, reject) => {
+        const options = {
+          hostname: 'www.nfe.fazenda.gov.br',
+          port: 443,
+          path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/xml;charset=UTF-8',
+            'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse',
+            'Content-Length': Buffer.byteLength(soapBody)
+          },
+          key: privateKey,
+          cert: certificate,
+          rejectUnauthorized: false
+        };
+        
+        const req2 = https.request(options, (res2) => {
+          let data = '';
+          res2.on('data', c => data += c);
+          res2.on('end', () => resolve({ status: res2.statusCode, data }));
+        });
+        req2.on('error', reject);
+        req2.write(soapBody);
+        req2.end();
+      });
+
+      if (sefazResp.status !== 200) {
+        return res.status(200).json({ ok: false, erro: 'SEFAZ retornou: ' + sefazResp.status, raw: sefazResp.data.substring(0, 500) });
+      }
+
+      // Parse da resposta SOAP
+      const xmlResp = sefazResp.data;
+      
+      // Extrai os documentos fiscais
+      const nfsEncontradas = [];
+      const matches = xmlResp.matchAll(/<docZip[^>]*>([^<]+)<\/docZip>/g);
+      for (const m of matches) {
+        try {
+          const xmlDoc = Buffer.from(m[1], 'base64').toString('utf8');
+          // Extrai dados básicos da NF
+          const chave = (xmlDoc.match(/chNFe>([^<]+)/) || [])[1] || '';
+          const emitNome = (xmlDoc.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
+          const emitCNPJ = (xmlDoc.match(/emit>[\s\S]*?CNPJ>([^<]+)/) || [])[1] || '';
+          const valor = parseFloat((xmlDoc.match(/vNF>([^<]+)/) || [])[1] || '0');
+          const numero = (xmlDoc.match(/nNF>([^<]+)/) || [])[1] || '';
+          const serie = (xmlDoc.match(/serie>([^<]+)/) || [])[1] || '';
+          const dhEmi = (xmlDoc.match(/dhEmi>([^<]+)/) || [])[1] || '';
+          
+          if (chave) {
+            nfsEncontradas.push({
+              id: chave,
+              chave, numero, serie,
+              emitente: emitNome,
+              emitCNPJ,
+              valor,
+              data: dhEmi.substring(0, 10),
+              status: 'pendente',
+              xml: xmlDoc
+            });
+          }
+        } catch(ep) {}
+      }
+
+      // Extrai novo NSU
+      const novoNSU = (xmlResp.match(/ultNSU>([^<]+)/) || [])[1] || nsu;
+      const maxNSU = (xmlResp.match(/maxNSU>([^<]+)/) || [])[1] || nsu;
+      const cStat = (xmlResp.match(/cStat>([^<]+)/) || [])[1] || '';
+
+      return res.status(200).json({
+        ok: true,
+        nfs: nfsEncontradas,
+        total: nfsEncontradas.length,
+        ultNSU: novoNSU,
+        maxNSU,
+        cStat,
+        msg: nfsEncontradas.length > 0 ? nfsEncontradas.length + ' NF(s) encontrada(s)' : 'Nenhuma NF nova'
+      });
+
+    } catch(e) {
+      return res.status(200).json({ ok: false, erro: e.message });
+    }
+  
+  } else if (path === );
     } catch(e) {
       return res.status(500).json({ erro: e.message });
     }
