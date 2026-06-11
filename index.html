@@ -10265,6 +10265,8 @@ function getDREData(){
 }
 
 function rDRE(){
+ // Sincroniza bot ao abrir DRE
+ sincronizarBotLancamentos();
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  if(!empresa.nome){
@@ -16779,7 +16781,7 @@ function lancarReciboBot(dados){
 async 
 
 // Roda a verificação a cada 30 segundos quando o sistema está aberto
-setInterval(sincronizarBotLancamentos, 30000);
+
 
 function rBotWhatsapp(){
  const df=gDadosFiscais();
@@ -19493,11 +19495,14 @@ async function sincronizarBotLancamentos(){
 }
 
 // Sincroniza a cada 30 segundos automaticamente
-setInterval(sincronizarBotLancamentos, 30000);
+
 // Sincroniza ao carregar
-setTimeout(sincronizarBotLancamentos, 3000);
+
 
 render();
+// Sync inicial do bot
+setTimeout(sincronizarBotLancamentos, 2000);
+setInterval(sincronizarBotLancamentos, 30000);
 
 </script>
 </body>
