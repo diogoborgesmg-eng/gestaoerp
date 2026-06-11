@@ -2650,33 +2650,6 @@ function resetar(){
   <p style="font-size:8px;color:rgba(255,255,255,0.5);text-align:center;margin-top:2px;">NF/Foto</p>
  </div>
 </div>
-
-<!-- BOT WHATSAPP BUTTON -->
-<div id="bot-float" style="display:none;position:fixed;bottom:70px;right:12px;z-index:500;">
- <button onclick="confirmarLancamentosBot()" 
-  style="background:#00ff88;color:#000;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,136,0.5);">
-  📱 <span id="bot-float-count">0</span> do WhatsApp
- </button>
-</div>
-<script>
-async function checkBotPending(){
- try{
-  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
-  const d=await r.json();
-  const p=(d.lancamentos||[]).filter(l=>!l.sincronizado);
-  const el=document.getElementById('bot-float');
-  const ct=document.getElementById('bot-float-count');
-  if(el&&ct){
-   ct.textContent=p.length;
-   el.style.display=p.length>0?'block':'none';
-  }
-  window._botPendentes=p;
- }catch(e){}
-}
-checkBotPending();
-setInterval(checkBotPending,30000);
-</script>
-
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
  window.open(URL.createObjectURL(blob),"_blank");
@@ -10291,30 +10264,19 @@ function getDREData(){
  return gdia();
 }
 
-function rDRE(){
- // Banner bot carrega após render via setTimeout
- setTimeout(async()=>{
-  try{
-   const _r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
-   const _d=await _r.json();
-   const _p=(_d.lancamentos||[]).filter(l=>!l.sincronizado);
-   if(_p.length>0){
-    const el=document.getElementById('bot-pending-banner');
-    if(el)el.innerHTML='<div style="margin:8px 12px 0;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.4);border-radius:10px;padding:10px 12px;">'
-     +'<p style="font-size:12px;font-weight:800;color:#00ff88;margin-bottom:6px;">📱 '+_p.length+' lançamento(s) do WhatsApp</p>'
-     +_p.map(l=>'<div style="display:flex;justify-content:space-between;padding:3px 0;"><span style="font-size:11px;color:var(--mu);">'+l.descricao+'</span><span style="font-size:12px;font-weight:800;color:#00ff88;">R$ '+Number(l.valor).toFixed(2).replace('.',',')+'</span></div>').join('')
-     +'<button onclick="confirmarLancamentosBot()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:#00ff88;color:#000;font-size:12px;font-weight:800;cursor:pointer;">✅ Lançar no sistema</button>'
-     +'</div>';
-   }
-  }catch(e){}
- },800);
+async function rDRE(){
+ // Busca pendentes do bot ANTES de renderizar
  let _botPend=[];
+ try{
+  const _r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const _d=await _r.json();
+  _botPend=(_d.lancamentos||[]).filter(l=>!l.sincronizado);
+ }catch(e){}
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  if(!empresa.nome){
  return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclir('dre')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📊 DRE</button><button onclick="ir('resultado')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📅 Resultado</button><button onclick="ir('vendas')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">💰 Vendas</button><button onclick="ir('buffet')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🍽️ Buffet</button></div>
-<div id="bot-pending-banner"></div>
-<div class="si">
+${_botPend.length>0?`<div style="margin:8px 12px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.4);border-radius:10px;padding:10px 12px;"><p style="font-size:12px;font-weight:800;color:var(--gr);margin-bottom:6px;">📱 ${_botPend.length} lançamento(s) do WhatsApp</p>${_botPend.map(l=>'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="font-size:11px;">'+l.descricao+'</span><span style="font-weight:800;color:var(--gr);">R$ '+Number(l.valor).toFixed(2).replace('.',',')+'</span></div>').join('')}<button onclick="confirmarLancamentosBot()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">✅ Lançar no sistema</button></div>`:''}<div class="si">
 <div style="text-align:center;padding:20px 10px 10px;">
 <div style="font-size:52px;margin-bottom:12px;">🍽️</div>
 <p style="font-size:22px;font-weight:900;margin-bottom:6px;">GestaoERP</p>
@@ -19563,10 +19525,22 @@ async function confirmarLancamentosBot(){
  }catch(e){alert('Erro: '+e.message);}
 }
 
+// ═══ BOT FLUTUANTE ══════════════════════════════════════════
+async function checkBotPending(){
+ try{
+  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const d=await r.json();
+  const p=(d.lancamentos||[]).filter(l=>!l.sincronizado);
+  const el=document.getElementById('bot-float');
+  const ct=document.getElementById('bot-float-count');
+  if(el&&ct){ct.textContent=p.length;el.style.display=p.length>0?'block':'none';}
+  window._botPendentes=p;
+ }catch(e){}
+}
+
 render();
-// Sync inicial do bot
-setTimeout(sincronizarBotLancamentos, 2000);
-setInterval(sincronizarBotLancamentos, 30000);
+setTimeout(checkBotPending,2000);
+setInterval(checkBotPending,30000);
 
 </script>
 </body>
