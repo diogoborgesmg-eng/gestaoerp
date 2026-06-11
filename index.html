@@ -10265,7 +10265,6 @@ function getDREData(){
 }
 
 function rDRE(){
- // Sincroniza bot ao abrir DRE
  sincronizarBotLancamentos();
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -19498,6 +19497,26 @@ async function sincronizarBotLancamentos(){
 
 // Sincroniza ao carregar
 
+
+async function confirmarLancamentosBot(){
+ try{
+  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const d=await r.json();
+  const pend=(d.lancamentos||[]).filter(l=>!l.sincronizado);
+  if(!pend.length){alert('Nenhum lançamento pendente');return;}
+  const db=ldb();
+  const dia=hj();
+  if(!db[dia])db[dia]={r:[],c:[]};
+  if(!db[dia].c)db[dia].c=[];
+  pend.forEach(l=>{
+   if(db[dia].c.some(x=>x._botId===l.id))return;
+   db[dia].c.push({id:uid(),d:l.descricao||'WhatsApp',v:Number(l.valor||0),cat:l.categoria||'Outros',seg:l.tipo||'pix',_botId:l.id,_origem:'whatsapp',dt:dia});
+  });
+  sdb(db);
+  alert('✅ '+pend.length+' lançamento(s) adicionado(s) ao DRE!');
+  render();
+ }catch(e){alert('Erro: '+e.message);}
+}
 
 render();
 // Sync inicial do bot
