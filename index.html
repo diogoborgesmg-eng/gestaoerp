@@ -19525,22 +19525,10 @@ async function confirmarLancamentosBot(){
  }catch(e){alert('Erro: '+e.message);}
 }
 
-// ═══ BOT FLUTUANTE ══════════════════════════════════════════
-async function checkBotPending(){
- try{
-  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
-  const d=await r.json();
-  const p=(d.lancamentos||[]).filter(l=>!l.sincronizado);
-  const el=document.getElementById('bot-float');
-  const ct=document.getElementById('bot-float-count');
-  if(el&&ct){ct.textContent=p.length;el.style.display=p.length>0?'block':'none';}
-  window._botPendentes=p;
- }catch(e){}
-}
-
 render();
-setTimeout(checkBotPending,2000);
-setInterval(checkBotPending,30000);
+// Sync inicial do bot
+setTimeout(sincronizarBotLancamentos, 2000);
+setInterval(sincronizarBotLancamentos, 30000);
 
 </script>
 </body>
