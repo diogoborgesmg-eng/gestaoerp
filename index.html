@@ -2650,6 +2650,7 @@ function resetar(){
   <p style="font-size:8px;color:rgba(255,255,255,0.5);text-align:center;margin-top:2px;">NF/Foto</p>
  </div>
 </div>
+<div id="bot-float" style="display:none;position:fixed;bottom:70px;right:12px;z-index:500;"><button onclick="confirmarLancamentosBot()" style="background:#00ff88;color:#000;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,136,0.5);">📱 <span id="bot-float-count">0</span> do WhatsApp</button></div>
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
  window.open(URL.createObjectURL(blob),"_blank");
@@ -19525,7 +19526,21 @@ async function confirmarLancamentosBot(){
  }catch(e){alert('Erro: '+e.message);}
 }
 
+async function checkBotPending(){
+ try{
+  const _resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const _data=await _resp.json();
+  const _pend=(_data.lancamentos||[]).filter(function(l){return !l.sincronizado;});
+  const _el=document.getElementById('bot-float');
+  const _ct=document.getElementById('bot-float-count');
+  if(_el&&_ct){_ct.textContent=_pend.length;_el.style.display=_pend.length>0?'block':'none';}
+  window._botPendentes=_pend;
+ }catch(_e){}
+}
+
 render();
+setTimeout(checkBotPending,2000);
+setInterval(checkBotPending,30000);
 // Sync inicial do bot
 setTimeout(sincronizarBotLancamentos, 2000);
 setInterval(sincronizarBotLancamentos, 30000);
