@@ -20805,6 +20805,140 @@ async function confirmarContagem(){
  render();
 }
 
+// ═══ ETIQUETAS AUTOMÁTICAS ═══════════════════════════════════
+function gerarEtiqueta(item){
+ // Gera etiqueta HTML para impressão
+ const hoje=new Date();
+ const prep=hoje.toLocaleDateString('pt-BR');
+ const val=item.validade||'';
+ const setor=item.setor||'Geral';
+ 
+ const etiq=`
+  <div style="width:80mm;border:2px solid #000;padding:4mm;font-family:monospace;font-size:10pt;page-break-after:always;">
+   <div style="text-align:center;font-weight:bold;font-size:12pt;border-bottom:1px solid #000;padding-bottom:2mm;margin-bottom:2mm;">
+    DI CASA LARANJINHA
+   </div>
+   <div style="font-size:14pt;font-weight:bold;margin-bottom:2mm;">${item.nome}</div>
+   <div>Qtd: <b>${item.qtd} ${item.un||''}</b></div>
+   <div>Preparo: ${prep}</div>
+   ${val?`<div style="color:#cc0000;font-weight:bold;">Validade: ${val}</div>`:''}
+   <div>Setor: ${setor}</div>
+   ${item.local?`<div>Local: ${item.local}</div>`:''}
+   <div style="border-top:1px dashed #000;margin-top:2mm;padding-top:1mm;font-size:8pt;text-align:center;">
+    ${item.id?item.id.slice(-6).toUpperCase():'------'}
+   </div>
+  </div>`;
+ return etiq;
+}
+
+function imprimirEtiquetas(itens){
+ if(!itens||!itens.length){alert('Nenhum item para imprimir');return;}
+ const w=window.open('','_blank','width=400,height=600');
+ w.document.write(`<html><head><title>Etiquetas</title>
+  <style>
+   @media print{body{margin:0;}@page{margin:2mm;size:80mm auto;}}
+   body{font-family:monospace;background:#fff;color:#000;}
+  </style></head><body>`);
+ itens.forEach(it=>w.document.write(gerarEtiqueta(it)));
+ w.document.write('</body></html>');
+ w.document.close();
+ w.focus();
+ setTimeout(()=>w.print(),500);
+}
+
+function abrirEtiquetas(){
+ const db=ldb();
+ const itens=db.cozinhaItens||[];
+ const hoje=hj();
+ // Itens recebidos hoje
+ const hoje_itens=itens.filter(i=>i.ultContagem===hoje||i.dtRecebimento===hoje);
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 60px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <p style="font-size:16px;font-weight:900;">🏷️ Etiquetas</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  ${hoje_itens.length>0?`
+  <div style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:12px;padding:12px;margin-bottom:12px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <p style="font-size:12px;font-weight:800;color:#00ff88;">📦 Recebidos hoje (${hoje_itens.length})</p>
+    <button onclick="imprimirEtiquetas(${JSON.stringify(hoje_itens).replace(/"/g,'&quot;')}.map?window._etiqHoje:[])" style="padding:7px 12px;border-radius:7px;border:none;background:#00ff88;color:#000;font-size:11px;font-weight:800;cursor:pointer;" onclick2="imprimirEtiquetasHoje()">🖨️ Imprimir todos</button>
+   </div>
+   ${hoje_itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:6px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:4px;">
+    <span style="font-size:12px;">${i.nome}</span>
+    <button onclick="imprimirEtiquetas([${JSON.stringify(i)}])" style="padding:3px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.2);color:var(--bl);font-size:10px;cursor:pointer;">🏷️</button>
+   </div>`).join('')}
+  </div>`:
+  '<div style="text-align:center;padding:16px;color:rgba(255,255,255,0.4);"><p>Nenhum item recebido hoje</p></div>'}
+
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">Todos os itens</p>
+  ${itens.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:5px;">
+   <div>
+    <p style="font-size:12px;font-weight:700;">${i.nome}</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.4);">${i.qtd||0} ${i.un||''} · ${i.local||'Estoque'}</p>
+   </div>
+   <button onclick="imprimirEtiquetas([${JSON.stringify(i).replace(/"/g,"'")}])" style="padding:6px 10px;border-radius:6px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:11px;cursor:pointer;">🏷️</button>
+  </div>`).join('')}
+
+  <button onclick="imprimirEtiquetas(JSON.parse(localStorage.getItem('erp_db')||'{}').cozinhaItens||[])" style="width:100%;padding:11px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);color:#fff;font-size:12px;cursor:pointer;margin-top:10px;">🖨️ Imprimir TODOS</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+// ═══ NF → ESTOQUE AUTOMÁTICO ═════════════════════════════════
+async function lancarNFnoEstoque(nfId){
+ const db=ldb();
+ const fila=gFila();
+ const nf=fila.find(f=>f.id===nfId);
+ if(!nf){alert('NF não encontrada');return;}
+ if(!nf.xml){alert('XML da NF não disponível');return;}
+
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+ overlay.innerHTML='<p style="font-size:28px;">📦</p><p style="color:#fff;font-size:14px;font-weight:700;">Lançando itens no estoque...</p>';
+ document.body.appendChild(overlay);
+
+ try{
+  // Usa IA para extrair itens do XML da NF
+  const result=await claudeAPI({model:MODEL,max_tokens:1000,messages:[{role:'user',content:
+   'Extraia os itens desta NF-e XML e retorne APENAS JSON: {"itens":[{"nome":"","qtd":0,"un":"kg","valorUnit":0}]}. XML: '+nf.xml.substring(0,3000)
+  }]});
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{"itens":[]}');
+
+  if(!db.cozinhaItens)db.cozinhaItens=[];
+  let count=0;
+  const dataValidade=new Date();dataValidade.setDate(dataValidade.getDate()+7);
+  const valStr=dataValidade.toISOString().slice(0,10);
+
+  dados.itens.forEach(it=>{
+   const existente=db.cozinhaItens.find(e=>e.nome.toLowerCase()===it.nome.toLowerCase());
+   if(existente){
+    existente.qtd=Number(existente.qtd||0)+Number(it.qtd||0);
+    existente.dtRecebimento=hj();
+    existente.validade=existente.validade||valStr;
+   }else{
+    db.cozinhaItens.push({id:uid(),nome:it.nome,qtd:it.qtd,un:it.un||'kg',
+     valorUnit:it.valorUnit||0,dtRecebimento:hj(),validade:valStr,local:'Estoque',_nfId:nfId});
+   }
+   count++;
+  });
+
+  // Marca NF como processada
+  const nfIdx=fila.findIndex(f=>f.id===nfId);
+  if(nfIdx>=0)fila[nfIdx].status='lancado';
+  sFila(fila);
+  sdb(db);
+  overlay.remove();
+  alert('✅ '+count+' item(ns) lançado(s) no estoque!\nSugestão de validade: 7 dias — ajuste conforme necessário.');
+  render();
+ }catch(e){overlay.remove();alert('Erro: '+e.message);}
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
