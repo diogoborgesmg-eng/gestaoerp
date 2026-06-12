@@ -20939,6 +20939,91 @@ async function lancarNFnoEstoque(nfId){
  }catch(e){overlay.remove();alert('Erro: '+e.message);}
 }
 
+// ═══ FICHA TÉCNICA COM IA ════════════════════════════════════
+async function gerarFichaIA(){
+ const nome=document.getElementById('ficha-nome')?.value?.trim();
+ if(!nome){alert('Digite o nome do produto primeiro');return;}
+
+ const btn=document.querySelector('[onclick="gerarFichaIA()"]');
+ if(btn){btn.textContent='⏳ Gerando...';btn.disabled=true;}
+
+ try{
+  const est=gest();
+  const insumos=est.map(e=>e.n).join(', ');
+  
+  const result=await claudeAPI({model:MODEL,max_tokens:600,messages:[{role:'user',content:
+   'Crie uma ficha técnica para "'+nome+'" de um restaurante brasileiro. '+(insumos?'Insumos disponíveis no estoque: '+insumos+'. Prefira esses insumos.':'')+
+   ' Retorne APENAS JSON: {"rendimento":1,"unidade":"un","ingredientes":[{"nome":"","qtd":0,"unid":"g"}],"tempoPreparo":15,"categoriaCardapio":"pizza|prato|sobremesa|bebida|entrada","obs":"dica de preparo"}. '+ 
+   'Use quantidades realistas para 1 unidade/porção. Nomes dos ingredientes em português.'
+  }]});
+  
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+  
+  if(!dados.ingredientes?.length){
+   alert('Não consegui gerar a ficha. Tente um nome mais específico.');
+   return;
+  }
+
+  // Preenche o rendimento
+  const rendEl=document.getElementById('ficha-rend');
+  if(rendEl)rendEl.value=dados.rendimento||1;
+  const unEl=document.getElementById('ficha-unidade');
+  if(unEl)unEl.value=dados.unidade||'un';
+  const obsEl=document.getElementById('ficha-obs');
+  if(obsEl)obsEl.value=dados.obs||'';
+  const tempoEl=document.getElementById('ficha-tempo');
+  if(tempoEl)tempoEl.value=dados.tempoPreparo||15;
+
+  // Limpa e preenche ingredientes
+  const cont=document.getElementById('ficha-ings');
+  if(cont){
+   cont.innerHTML='';
+   dados.ingredientes.forEach(ing=>{
+    addIngFicha();
+    const rows=cont.querySelectorAll('.ficha-ing-row');
+    const last=rows[rows.length-1];
+    if(last){
+     const inputs=last.querySelectorAll('input,select');
+     if(inputs[0])inputs[0].value=ing.nome;
+     if(inputs[1])inputs[1].value=ing.qtd;
+     if(inputs[2])inputs[2].value=ing.unid||'g';
+    }
+   });
+  }
+
+  // Atualiza o preview de custo
+  if(typeof atualizarCustoFicha==='function')atualizarCustoFicha();
+  
+  if(btn){btn.textContent='🤖 Gerar com IA';btn.disabled=false;}
+  
+ }catch(e){
+  if(btn){btn.textContent='🤖 Gerar com IA';btn.disabled=false;}
+  alert('Erro: '+e.message);
+ }
+}
+
+// Recalcula custo da ficha quando preço do insumo muda
+function recalcularFichas(){
+ const db=ldb();
+ const fichas=gfichas();
+ const est=gest();
+ fichas.forEach(f=>{
+  const custo=(f.ing||[]).reduce((a,ig)=>{
+   const prod=est.find(e=>e.n.toLowerCase()===ig.nome.toLowerCase());
+   if(!prod)return a+(ig.custoManual||0);
+   const precoKg=Number(prod.p||0)/Number(prod.q||1);
+   let qtd=Number(ig.qtd||0);
+   const ui=(ig.unid||'g').toLowerCase();
+   if(ui==='g')qtd/=1000;
+   return a+(precoKg*qtd);
+  },0);
+  f._custoAtual=custo;
+  f._custoAtualizado=hj();
+ });
+ const d=ldb();d.fichas=fichas;sdb(d);
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
