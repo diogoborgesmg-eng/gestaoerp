@@ -20507,6 +20507,138 @@ function abrirModoCozinha(){
  document.body.appendChild(div);
 }
 
+// ═══ ALERTAS AUTOMÁTICOS WHATSAPP ═══════════════════════════
+async function enviarAlertasWhatsApp(){
+ try{
+  const db=ldb();
+  const df=gDadosFiscais();
+  const grupo=df.whatsappGrupo||'';
+  if(!grupo)return;
+
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const cozItens=db.cozinhaItens||[];
+  const vencidos=cozItens.filter(i=>new Date(i.validade)<hoje);
+  const vencendoHoje=cozItens.filter(i=>{const d=new Date(i.validade);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();});
+  const vencendo2=cozItens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/86400000;return diff>0&&diff<=2;});
+  const estBaixo=(db.estoque||[]).filter(e=>Number(e.q||0)<=Number(e.min||0)&&e.min>0);
+
+  if(vencidos.length===0&&vencendoHoje.length===0&&vencendo2.length===0&&estBaixo.length===0)return;
+
+  let msg='🔔 *Alerta de Estoque — Di Casa Laranjinha*\n\n';
+  if(vencidos.length>0)msg+='🚨 *VENCIDOS (descartar):*\n'+vencidos.map(i=>'• '+i.nome+' ('+i.qtd+i.un+')').join('\n')+'\n\n';
+  if(vencendoHoje.length>0)msg+='⚠️ *Vence HOJE:*\n'+vencendoHoje.map(i=>'• '+i.nome+' ('+i.qtd+i.un+')').join('\n')+'\n\n';
+  if(vencendo2.length>0)msg+='📅 *Vence em até 2 dias:*\n'+vencendo2.map(i=>'• '+i.nome).join('\n')+'\n\n';
+  if(estBaixo.length>0)msg+='📉 *Estoque baixo — pedir:*\n'+estBaixo.map(e=>'• '+e.n+': '+e.q+e.u+' (mín: '+e.min+e.u+')').join('\n');
+
+  // Envia via Evolution API
+  await fetch('https://evolution-api-latest-lrlv.onrender.com/message/sendText/dicasalaranjinha',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','apikey':'dicasalaranjinha2024'},
+   body:JSON.stringify({number:grupo,text:msg})
+  });
+  console.log('✅ Alerta enviado para o grupo');
+ }catch(e){console.log('Erro alerta WPP:',e.message);}
+}
+
+// Roda alerta todos os dias às 7h (verifica a cada hora)
+function verificarHoraAlerta(){
+ const agora=new Date();
+ const db=ldb();
+ const ultimoAlerta=db.ultimoAlertaEstoque||'';
+ const hoje=agora.toLocaleDateString('pt-BR');
+ if(agora.getHours()>=7&&ultimoAlerta!==hoje){
+  db.ultimoAlertaEstoque=hoje;
+  sdb(db);
+  enviarAlertasWhatsApp();
+ }
+}
+setInterval(verificarHoraAlerta,3600000); // verifica a cada hora
+setTimeout(verificarHoraAlerta,5000); // verifica ao abrir
+
+// ═══ RENDIMENTO REAL ═════════════════════════════════════════
+function registrarRendimento(itemId, qtdEntrada, produtosGerados){
+ const db=ldb();
+ if(!db.rendimentos)db.rendimentos=[];
+ const totalSaida=produtosGerados.reduce((a,p)=>a+Number(p.qtd||0),0);
+ const perda=qtdEntrada-totalSaida;
+ const pctRendimento=qtdEntrada>0?(totalSaida/qtdEntrada*100):0;
+
+ db.rendimentos.push({
+  id:uid(),
+  itemId,
+  dtRegistro:hj(),
+  qtdEntrada,
+  qtdSaida:totalSaida,
+  perda,
+  pctRendimento,
+  produtos:produtosGerados,
+  criadoEm:new Date().toISOString()
+ });
+
+ // Alerta se rendimento abaixo do esperado
+ const item=(db.cozinhaItens||[]).find(i=>i.id===itemId);
+ const rendEsperado=item?.rendimentoEsperado||85;
+ if(pctRendimento<rendEsperado){
+  const msg='⚠️ Rendimento abaixo do esperado!\n'+
+   (item?.nome||'Item')+': '+pctRendimento.toFixed(1)+'% (esperado: '+rendEsperado+'%)\n'+
+   'Perda: '+perda.toFixed(2)+(item?.un||'kg');
+  // Registra como extravio
+  if(!db[hj()])db[hj()]={r:[],c:[]};
+  if(!db[hj()].c)db[hj()].c=[];
+  db[hj()].c.push({id:uid(),d:'Perda/Extravio: '+(item?.nome||''),
+   v:0,cat:'⚠️ Extravio / Perda',seg:'geral',_perda:true,dt:hj()});
+ }
+
+ sdb(db);
+ return{pctRendimento,perda};
+}
+
+// ═══ PEDIDO AUTOMÁTICO — estoque mínimo ══════════════════════
+function verificarEstoqueMinimoAutomatico(){
+ const db=ldb();
+ const est=db.estoque||[];
+ const baixo=est.filter(e=>Number(e.q||0)<=Number(e.min||0)&&e.min>0);
+ if(!baixo.length)return;
+
+ // Verifica se já gerou pedido hoje
+ const hoje=hj();
+ const pedidoHoje=(db.pedidosCompra||[]).find(p=>p.data===hoje&&p._automatico);
+ if(pedidoHoje)return;
+
+ // Gera sugestão de pedido automático
+ const db2=ldb();
+ if(!db2.pedidosCompra)db2.pedidosCompra=[];
+ const itensPedido=baixo.map(e=>({
+  id:uid(),
+  nome:e.n,
+  qtdAtual:e.q||0,
+  qtdMinima:e.min,
+  qtdSugerida:Math.max(e.min*2,Number(e.compraUlt||e.min*3)),
+  unidade:e.u,
+  fornecedor:e.fornecedor||''
+ }));
+
+ db2.pedidosCompra.push({
+  id:uid(),
+  data:hoje,
+  status:'sugestao',
+  _automatico:true,
+  itens:itensPedido,
+  obs:'Gerado automaticamente — estoque mínimo atingido'
+ });
+ sdb(db2);
+
+ // Notifica no sistema
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#ff8844;color:#fff;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(255,136,68,0.5);cursor:pointer;';
+ n.textContent='📦 '+baixo.length+' item(ns) com estoque baixo — Pedido criado em Compras!';
+ n.onclick=()=>{ir('compras');n.remove();};
+ document.body.appendChild(n);
+ setTimeout(()=>n.remove(),8000);
+}
+setInterval(verificarEstoqueMinimoAutomatico,3600000);
+setTimeout(verificarEstoqueMinimoAutomatico,10000);
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
