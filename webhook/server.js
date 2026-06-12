@@ -106,14 +106,34 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Leia este comprovante de pagamento. Retorne APENAS JSON valido sem texto adicional.\n\nTAREFA: Este recibo e de um pagamento feito pela empresa Di Casa Gastronomia. Liste TODOS os nomes de pessoas ou empresas que aparecem neste comprovante. O nome de Di Casa Gastronomia ou Di Casa Laranjinha e o PAGADOR — ignore esse. O OUTRO nome que aparecer e quem recebeu o pagamento.\n\nSe so aparecer Di Casa Gastronomia no recibo, procure: nome do destinatario, favorecido, beneficiario, para, recebedor, nome da conta destino — qualquer campo que nao seja o pagador.\n\nRetorne APENAS:\n{"valor":0.00,"descricao":"nome de quem RECEBEU (nao Di Casa)","categoria":"👥 RH / Mão de Obra (diaria/salario/freelancer) | 🥩 Matéria Prima | 🔧 Manutenção | 💡 Energia/Utilidades | 🚚 Frete/Entregador | 🏢 Aluguel/Fixos | 📦 Embalagem | 🍺 Bebidas/Bar | 🧹 Limpeza | 💳 Taxas/Impostos | 📱 Telecom | 🎤 Shows/Eventos | 📣 Marketing | ⚠️ Extravio | 🔄 Outros","tipo":"pix","data":"DD/MM/YYYY","setor":"Restaurante|Pizzaria|Espetaria|Hamburgueria|Geral"}' }
-        ]}], 500);
-        const texto1 = r1.content && r1.content[0] ? r1.content[0].text : '{}';
-        const analise = texto1;
-        console.log('Analise:', analise.substring(0,150));
-        // Extrai JSON direto da resposta
-        const jsonMatch = texto1.match(/\{[\s\S]*\}/);
-        const texto2 = jsonMatch ? jsonMatch[0] : '{}';
-        const texto2final = texto2;
+          { type:'text', text:'Leia este comprovante de pagamento PIX. A empresa Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR total pago, (2) NOME de quem RECEBEU - esse nome nao e Di Casa Gastronomia, procure nos campos Favorecido/Para/Recebedor/Beneficiario/Nome da conta destino, (3) DATA do comprovante, (4) TIPO pix/boleto/cartao, (5) MOTIVO se houver. Liste cada campo claramente em portugues.' }
+        ]}], 800);
+        const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
+        console.log('Analise:', analise.substring(0,100));
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"categoria":"🥩 Matéria Prima|👥 RH / Mão de Obra|🔧 Manutenção|💡 Energia / Utilidades|🚚 Frete / Entregador|🏢 Aluguel / Fixos|📦 Embalagem|🍺 Bebidas / Bar|🧹 Limpeza / Higiene|💳 Taxas / Impostos|📱 Telecom / Internet|🔄 Outros","tipo":"pix|boleto|dinheiro|cartao","data":"DD/MM/AAAA","descricao":""}. Se nao tiver valor retorne {"valor":0}';
+        const r2 = await claude([{ role:'user', content: prompt2 }], 200);
+        const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
+        const match = texto2.match(/\{[\s\S]*\}/);
+        let lanc = null;
+        if (match) {
+          try {
+            const d = JSON.parse(match[0]);
+            if (d.valor > 0) {
+              lanc = { valor: d.valor, categoria: d.categoria||'Outros', descricao: d.descricao||'WhatsApp', tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), origem: 'whatsapp' };
+              await salvarGitHub(lanc);
+            }
+          } catch(ep) { console.error('parse err:', ep.message); }
+        }
+        let resp = 'Analise:\n' + analise + '\n\n_Di Casa Laranjinha_';
+        if (lanc) resp += '\n\nLancado! R$ ' + lanc.valor.toFixed(2) + ' - ' + lanc.categoria;
+        await wpp(num, resp);
+      }
+    } catch(e) { console.error('Erro:', e.message); }
+  });
+});
 
-
+server.listen(PORT, () => {
+  console.log('Webhook v8 porta', PORT);
+  console.log('API Key:', AKEY ? 'OK' : 'FALTA');
+  console.log('GitHub Token:', GHTOKEN ? 'OK' : 'FALTA');
+});
