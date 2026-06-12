@@ -106,7 +106,23 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Analise este comprovante de pagamento PIX. A empresa Di Casa Gastronomia/Di Casa Laranjinha fez pagamentos para funcionarios e fornecedores. Extraia: (1) VALOR pago, (2) NOME de quem RECEBEU o pagamento — procure campos como Favorecido, Destinatario, Recebedor, Para, Nome do recebedor — esse nome NAO e Di Casa Gastronomia, e a outra pessoa ou empresa, (3) DATA do comprovante, (4) TIPO (pix/boleto/cartao/dinheiro), (5) DESCRICAO ou motivo se houver. Responda em portugues listando cada campo claramente.' }
+          { type:'text', text:'Analise este comprovante PIX com muito cuidado. Siga esta logica:
+
+PASSO 1 — Identifique o PAGADOR (quem enviou o dinheiro) e o RECEBEDOR (quem recebeu).
+
+PASSO 2 — Se Di Casa Gastronomia ou Di Casa Laranjinha for o PAGADOR (enviou o dinheiro): o RECEBEDOR e o nome que interessa — informe esse nome.
+
+PASSO 3 — Se Di Casa Gastronomia for o RECEBEDOR (recebeu o dinheiro): o PAGADOR e o nome que interessa — informe esse nome e indique que e uma RECEITA.
+
+Extraia e informe claramente:
+- VALOR: valor da transacao
+- NOME DA OUTRA PARTE: nome do recebedor OU pagador (nunca Di Casa)
+- DATA: data do comprovante
+- TIPO: pix/boleto/cartao/dinheiro
+- DIRECAO: CUSTO (Di Casa pagou) ou RECEITA (Di Casa recebeu)
+- MOTIVO: descricao ou observacao se houver
+
+Responda em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
@@ -245,7 +261,23 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Analise este comprovante de pagamento PIX. A empresa Di Casa Gastronomia/Di Casa Laranjinha fez pagamentos para funcionarios e fornecedores. Extraia: (1) VALOR pago, (2) NOME de quem RECEBEU o pagamento — procure campos como Favorecido, Destinatario, Recebedor, Para, Nome do recebedor — esse nome NAO e Di Casa Gastronomia, e a outra pessoa ou empresa, (3) DATA do comprovante, (4) TIPO (pix/boleto/cartao/dinheiro), (5) DESCRICAO ou motivo se houver. Responda em portugues listando cada campo claramente.' }
+          { type:'text', text:'Analise este comprovante PIX com muito cuidado. Siga esta logica:
+
+PASSO 1 — Identifique o PAGADOR (quem enviou o dinheiro) e o RECEBEDOR (quem recebeu).
+
+PASSO 2 — Se Di Casa Gastronomia ou Di Casa Laranjinha for o PAGADOR (enviou o dinheiro): o RECEBEDOR e o nome que interessa — informe esse nome.
+
+PASSO 3 — Se Di Casa Gastronomia for o RECEBEDOR (recebeu o dinheiro): o PAGADOR e o nome que interessa — informe esse nome e indique que e uma RECEITA.
+
+Extraia e informe claramente:
+- VALOR: valor da transacao
+- NOME DA OUTRA PARTE: nome do recebedor OU pagador (nunca Di Casa)
+- DATA: data do comprovante
+- TIPO: pix/boleto/cartao/dinheiro
+- DIRECAO: CUSTO (Di Casa pagou) ou RECEITA (Di Casa recebeu)
+- MOTIVO: descricao ou observacao se houver
+
+Responda em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
