@@ -21024,6 +21024,65 @@ function recalcularFichas(){
  const d=ldb();d.fichas=fichas;sdb(d);
 }
 
+// ═══ GERAR FICHA TÉCNICA AUTOMATICAMENTE ══════════════════════
+async function gerarFichaAutoIA(prodId, nome, cat, preco){
+ try{
+  const est=gest();
+  const insumos=est.slice(0,20).map(e=>e.n).join(', ');
+  
+  const result=await claudeAPI({model:MODEL,max_tokens:600,messages:[{role:'user',content:
+   'Crie ficha técnica para "'+nome+'" de restaurante brasileiro. Categoria: '+cat+'. Preço de venda: R$'+preco+'. '+
+   (insumos?'Insumos do estoque: '+insumos+'. Prefira esses.':'')+
+   ' Retorne APENAS JSON: {"rendimento":1,"unidade":"un","tempoPreparo":15,"ingredientes":[{"nome":"","qtd":0,"unid":"g","custoManual":0}],"obs":""}. '+
+   'Quantidades para 1 porção/unidade. Nomes em português do Brasil.'
+  }]});
+  
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+  if(!dados.ingredientes?.length)return;
+
+  // Calcula custo
+  const custoTotal=(dados.ingredientes||[]).reduce((a,ig)=>{
+   const prod=est.find(e=>e.n.toLowerCase()===ig.nome.toLowerCase());
+   if(!prod)return a+(ig.custoManual||0);
+   const precoKg=Number(prod.p||0)/Number(prod.q||1);
+   let qtd=Number(ig.qtd||0);
+   if((ig.unid||'g').toLowerCase()==='g')qtd/=1000;
+   return a+(precoKg*qtd);
+  },0);
+
+  const novaFicha={
+   id:uid(),
+   nome,
+   prodId,
+   cat,
+   precoVenda:preco,
+   rend:dados.rendimento||1,
+   unid:dados.unidade||'un',
+   tempo:dados.tempoPreparo||15,
+   ing:dados.ingredientes,
+   obs:dados.obs||'',
+   custoTotal,
+   margemBruta:preco>0?((preco-custoTotal)/preco*100):0,
+   criadoEm:new Date().toISOString(),
+   _geradoPorIA:true
+  };
+
+  const db=ldb();
+  if(!db.fichas)db.fichas=[];
+  db.fichas.push(novaFicha);
+  sdb(db);
+  
+  // Notifica
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#aa44ff;color:#fff;padding:10px 16px;border-radius:10px;z-index:999;font-size:12px;font-weight:800;';
+  n.innerHTML='📋 Ficha técnica de "'+nome+'" gerada! <a onclick="ir(\'ficha\')" style="color:#fff;text-decoration:underline;cursor:pointer;">Ver</a>';
+  document.body.appendChild(n);
+  setTimeout(()=>n.remove(),5000);
+
+ }catch(e){console.log('Erro gerarFichaAutoIA:',e.message);}
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
