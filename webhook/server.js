@@ -106,7 +106,7 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Analise este comprovante. Extraia: valor, destinatario, data, tipo (pix/boleto/cartao/dinheiro), observacao. Responda em portugues.' }
+          { type:'text', text:'Analise este comprovante de pagamento PIX. A empresa Di Casa Gastronomia/Di Casa Laranjinha fez pagamentos para funcionarios e fornecedores. Extraia: (1) VALOR pago, (2) NOME de quem RECEBEU o pagamento — procure campos como Favorecido, Destinatario, Recebedor, Para, Nome do recebedor — esse nome NAO e Di Casa Gastronomia, e a outra pessoa ou empresa, (3) DATA do comprovante, (4) TIPO (pix/boleto/cartao/dinheiro), (5) DESCRICAO ou motivo se houver. Responda em portugues listando cada campo claramente.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
@@ -245,7 +245,7 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Analise este comprovante. Extraia: valor, destinatario, data, tipo (pix/boleto/cartao/dinheiro), observacao. Responda em portugues.' }
+          { type:'text', text:'Analise este comprovante de pagamento PIX. A empresa Di Casa Gastronomia/Di Casa Laranjinha fez pagamentos para funcionarios e fornecedores. Extraia: (1) VALOR pago, (2) NOME de quem RECEBEU o pagamento — procure campos como Favorecido, Destinatario, Recebedor, Para, Nome do recebedor — esse nome NAO e Di Casa Gastronomia, e a outra pessoa ou empresa, (3) DATA do comprovante, (4) TIPO (pix/boleto/cartao/dinheiro), (5) DESCRICAO ou motivo se houver. Responda em portugues listando cada campo claramente.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
