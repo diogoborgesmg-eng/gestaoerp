@@ -21614,17 +21614,7 @@ ${itens.map(p=>`<div class="item" data-cat="${cat}">
  </div>
 </div>`).join('')}`).join('')}
 </div>
-<script>
-function filtrar(cat){
- document.querySelectorAll('.segs button').forEach(b=>b.classList.remove('ativo'));
- event.target.classList.add('ativo');
- document.querySelectorAll('.item,.cat-title').forEach(el=>{
-  if(!cat||el.dataset.cat===cat)el.style.display='';
-  else el.style.display='none';
- });
-}
-</script>
-</body></html>`;
+<scr'+'ipt>function filtrar(cat){document.querySelectorAll(".segs button").forEach(b=>b.classList.remove("ativo"));event.target.classList.add("ativo");document.querySelectorAll(".item,.cat-title").forEach(el=>{if(!cat||el.dataset.cat===cat)el.style.display="";else el.style.display="none";});}<\/scr'+'ipt></body></html>`;
  return html;
 }
 
