@@ -8502,6 +8502,7 @@ function rCfg(){
  return`<div class="si">
 <div style="display:flex;gap:6px;margin-bottom:12px;">
  <button onclick="exportarBackup()" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:var(--gr);font-size:12px;font-weight:700;cursor:pointer;">💾 Exportar Backup</button>
+<button onclick="backupAutomatico(true)" style="padding:8px 14px;border-radius:7px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;">☁️ Backup GitHub</button><button onclick="restaurarBackupGitHub()" style="padding:8px 14px;border-radius:7px;border:none;background:rgba(255,136,0,0.15);color:#ff8800;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;">♻️ Restaurar</button>
  <label style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.08);color:var(--ye);font-size:12px;font-weight:700;cursor:pointer;text-align:center;">
   📂 Restaurar
   <input type="file" accept=".json" style="display:none" onchange="importarBackup(this)"/>
@@ -21395,6 +21396,130 @@ function rLogGarcom(garcomNome){
   </div>
   <p style="font-size:10px;color:var(--mu);">${l.garcom} · ${l.detalhe||''}</p>
  </div>`).join('');
+}
+
+// ═══ BACKUP AUTOMÁTICO ═══════════════════════════════════════
+async function backupAutomatico(forcado){
+ try{
+  const db=ldb();
+  const hoje=hj();
+  const ultimoBackup=db.ultimoBackup||'';
+
+  // Só faz backup 1x por dia (a não ser que forçado)
+  if(!forcado&&ultimoBackup===hoje)return;
+
+  const apiKey=getApiKey();
+  if(!apiKey)return; // Sem API key não faz backup
+
+  const dados=JSON.stringify(db);
+  const b64=btoa(unescape(encodeURIComponent(dados)));
+  const nomeArq='backup_'+hoje.replace(/\//g,'-')+'.json';
+
+  // Verifica se arquivo já existe
+  let shaExist='';
+  try{
+   const check=await fetch('https://api.github.com/repos/'+
+    'diogoborgesmg-eng/gestaoerp/contents/backups/'+nomeArq,{
+    headers:{'Authorization':'token '+db.githubToken||'',
+     'Accept':'application/vnd.github.v3+json'}});
+   if(check.ok){const d=await check.json();shaExist=d.sha||'';}
+  }catch(e){}
+
+  // Usa o token salvo no sistema
+  const ghToken=db.githubToken||db.cfg?.githubToken||'';
+  if(!ghToken){
+   // Salva localmente como fallback
+   const blob=new Blob([dados],{type:'application/json'});
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement('a');
+   a.href=url;a.download=nomeArq;
+   // Não faz download automático — apenas marca
+   db.ultimoBackup=hoje;
+   db.backupPendente=true;
+   sdb(db);
+   return;
+  }
+
+  const payload={
+   message:'backup: '+hoje,
+   content:b64
+  };
+  if(shaExist)payload.sha=shaExist;
+
+  const resp=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/backups/'+nomeArq,{
+   method:'PUT',
+   headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json',
+    'Accept':'application/vnd.github.v3+json'},
+   body:JSON.stringify(payload)
+  });
+
+  if(resp.ok){
+   db.ultimoBackup=hoje;
+   db.backupPendente=false;
+   db.ultimoBackupSize=Math.round(dados.length/1024)+'KB';
+   sdb(db);
+   if(forcado)alert('✅ Backup salvo!\n'+nomeArq+'\nTamanho: '+Math.round(dados.length/1024)+'KB');
+   console.log('✅ Backup automático: '+nomeArq);
+  }else{
+   console.log('Backup falhou HTTP:'+resp.status);
+   // Fallback: salva localmente
+   if(forcado)exportarBackup();
+  }
+ }catch(e){
+  console.log('Backup erro:',e.message);
+  if(forcado)exportarBackup();
+ }
+}
+
+// Verifica backup 1x por hora
+function verificarBackup(){
+ const db=ldb();
+ const hoje=hj();
+ if(db.ultimoBackup!==hoje){
+  const agora=new Date();
+  if(agora.getHours()>=23){
+   backupAutomatico(false);
+  }
+ }
+}
+setInterval(verificarBackup,3600000);
+setTimeout(()=>{
+ // Backup nas primeiras horas do dia
+ const h=new Date().getHours();
+ if(h>=1&&h<=6)backupAutomatico(false);
+},10000);
+
+// Restaurar backup do GitHub
+async function restaurarBackupGitHub(){
+ const db=ldb();
+ const ghToken=db.githubToken||'';
+ if(!ghToken){alert('Configure o GitHub Token em ⚙️ Config para restaurar backups.');return;}
+
+ try{
+  const resp=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/backups',{
+   headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
+  if(!resp.ok){alert('Não foi possível listar backups.');return;}
+  const files=await resp.json();
+  if(!files.length){alert('Nenhum backup encontrado.');return;}
+
+  const lista=files.sort((a,b)=>b.name.localeCompare(a.name)).slice(0,10);
+  const opcoes=lista.map((f,i)=>i+': '+f.name).join('\n');
+  const sel=prompt('Escolha o backup para restaurar:\n'+opcoes,'0');
+  if(sel===null)return;
+  const idx=parseInt(sel)||0;
+  const arquivo=lista[idx];
+  if(!arquivo){alert('Opção inválida');return;}
+
+  const r2=await fetch(arquivo.download_url);
+  const dados=await r2.json();
+  if(!dados||typeof dados!=='object'){alert('Backup inválido');return;}
+
+  if(!confirm('Restaurar backup de '+arquivo.name+'?\n⚠️ Os dados atuais serão substituídos!'))return;
+  
+  localStorage.setItem('erp_db',JSON.stringify(dados));
+  alert('✅ Backup restaurado! A página vai recarregar.');
+  location.reload();
+ }catch(e){alert('Erro ao restaurar: '+e.message);}
 }
 
 render();
