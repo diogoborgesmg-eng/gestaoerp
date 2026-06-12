@@ -2652,6 +2652,11 @@ function resetar(){
  </div>
 </div>
 
+<div id="cozinha-btn" style="position:fixed;bottom:70px;left:12px;z-index:500;">
+ <button onclick="abrirModoCozinha()" style="background:#ff8844;color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(255,136,68,0.5);">
+  👨‍🍳 Cozinha
+ </button>
+</div>
 <div id="bot-float" style="display:none;position:fixed;bottom:70px;right:12px;z-index:500;"><button onclick="confirmarLancamentosBot()" style="background:#00ff88;color:#000;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,136,0.5);">📱 <span id="bot-float-count">0</span> do WhatsApp</button></div>
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
@@ -20392,6 +20397,114 @@ function salvarPlanejamento(chave){
  };
  sdb(db);render();
  alert('✅ Planejamento salvo!');
+}
+
+// ═══ MODO COZINHA — tela simplificada para funcionário ══════
+function abrirModoCozinha(){
+ const db=ldb();
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const cozItens=db.cozinhaItens||[];
+
+ // Alertas
+ const vencidos=cozItens.filter(i=>new Date(i.validade)<hoje);
+ const vencendoHoje=cozItens.filter(i=>{const d=new Date(i.validade);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();});
+ const vencendo2=cozItens.filter(i=>{const d=new Date(i.validade);const diff=(d-hoje)/(86400000);return diff>0&&diff<=2;});
+ const estBaixo=(db.estoque||[]).filter(e=>Number(e.q||0)<=Number(e.min||0)&&e.min>0);
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0a0a0f;z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <div>
+    <p style="font-size:18px;font-weight:900;">👨‍🍳 Cozinha</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕ Fechar</button>
+  </div>
+
+  <!-- ALERTAS em destaque -->
+  ${vencidos.length>0?`<div onclick="ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:#ff0033;border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;">
+   <p style="font-size:28px;margin-bottom:4px;">🚨</p>
+   <p style="font-size:16px;font-weight:900;">${vencidos.length} item(ns) VENCIDO(S)</p>
+   <p style="font-size:12px;opacity:0.8;">Toque para ver e descartar</p>
+  </div>`:''}
+
+  ${vencendoHoje.length>0?`<div onclick="ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:#ff8800;border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;">
+   <p style="font-size:24px;margin-bottom:4px;">⚠️</p>
+   <p style="font-size:15px;font-weight:900;">${vencendoHoje.length} item(ns) vence(m) HOJE</p>
+   <p style="font-size:12px;opacity:0.8;">${vencendoHoje.map(i=>i.nome).join(', ')}</p>
+  </div>`:''}
+
+  ${vencendo2.length>0?`<div style="background:rgba(255,204,0,0.15);border:2px solid #ffcc00;border-radius:12px;padding:12px;margin-bottom:10px;">
+   <p style="font-size:14px;font-weight:800;color:#ffcc00;">📅 Vence em 2 dias</p>
+   <p style="font-size:12px;color:rgba(255,255,255,0.7);">${vencendo2.map(i=>i.nome+' ('+i.qtd+i.un+')').join(' · ')}</p>
+  </div>`:''}
+
+  ${vencidos.length===0&&vencendoHoje.length===0&&vencendo2.length===0?`<div style="background:rgba(0,255,136,0.1);border:2px solid rgba(0,255,136,0.3);border-radius:12px;padding:14px;margin-bottom:10px;text-align:center;">
+   <p style="font-size:28px;">✅</p>
+   <p style="font-size:14px;font-weight:800;color:#00ff88;">Estoque OK!</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.5);">Nenhum alerta de validade</p>
+  </div>`:''}
+
+  <!-- 3 AÇÕES PRINCIPAIS -->
+  <p style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">O que fazer?</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+
+   <button onclick="window._estSub='recebimento';ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:rgba(0,255,136,0.12);border:2px solid rgba(0,255,136,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:28px;margin-bottom:6px;">📥</p>
+    <p style="font-size:13px;font-weight:900;color:#00ff88;">Chegou mercadoria</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.5);">Registrar recebimento</p>
+   </button>
+
+   <button onclick="window._estSub='transformacao';ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:rgba(255,136,68,0.12);border:2px solid rgba(255,136,68,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:28px;margin-bottom:6px;">🔄</p>
+    <p style="font-size:13px;font-weight:900;color:#ff8844;">Vou preparar</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.5);">Retirar do estoque</p>
+   </button>
+
+   <button onclick="abrirInventarioFoto();document.querySelector('[style*=inset]')?.remove()" style="background:rgba(170,68,255,0.12);border:2px solid rgba(170,68,255,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:28px;margin-bottom:6px;">📸</p>
+    <p style="font-size:13px;font-weight:900;color:#aa44ff;">Contar estoque</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.5);">Foto da prateleira</p>
+   </button>
+
+   <button onclick="window._estSub='etiquetas';ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:rgba(68,136,255,0.12);border:2px solid rgba(68,136,255,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:28px;margin-bottom:6px;">🏷️</p>
+    <p style="font-size:13px;font-weight:900;color:#4488ff;">Imprimir etiquetas</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.5);">Etiquetas de hoje</p>
+   </button>
+  </div>
+
+  <!-- Estoque baixo -->
+  ${estBaixo.length>0?`<div style="background:rgba(255,51,102,0.1);border:1px solid rgba(255,51,102,0.3);border-radius:12px;padding:12px;margin-bottom:10px;">
+   <p style="font-size:13px;font-weight:800;color:var(--re);margin-bottom:6px;">📉 Estoque baixo — avisar o dono</p>
+   ${estBaixo.slice(0,5).map(e=>`<p style="font-size:12px;color:rgba(255,255,255,0.7);">• ${e.n}: ${e.q||0}${e.u} (mín: ${e.min}${e.u})</p>`).join('')}
+  </div>`:''}
+
+  <!-- O que temos hoje -->
+  <p style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">No estoque agora</p>
+  ${cozItens.slice(0,8).map(i=>{
+   const d=new Date(i.validade);
+   const diff=Math.round((d-hoje)/86400000);
+   const cor=diff<0?'#ff3366':diff<=2?'#ff8800':diff<=7?'#ffcc00':'rgba(255,255,255,0.6)';
+   return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.04);border-radius:9px;margin-bottom:6px;">
+    <div>
+     <p style="font-size:13px;font-weight:700;">${i.nome}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.4);">${i.local||'Câmara'}</p>
+    </div>
+    <div style="text-align:right;">
+     <p style="font-size:14px;font-weight:900;">${i.qtd} ${i.un}</p>
+     <p style="font-size:10px;color:${cor};font-weight:700;">${diff<0?'Vencido':diff===0?'Vence hoje':'Val: '+d.toLocaleDateString('pt-BR')}</p>
+    </div>
+   </div>`;
+  }).join('')}
+  ${cozItens.length>8?`<p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;">+${cozItens.length-8} itens no estoque</p>`:''}
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
 }
 
 render();
