@@ -16579,32 +16579,7 @@ function verExtratoBanco(bancoId){
 // ═══════════════════════════════════════════════════════════════
 // DINHEIRO EXTRAVIADO — saiu do banco mas não está no sistema
 // ═══════════════════════════════════════════════════════════════
-function rExtraviado(){
- const db=ldb();
- const extravios=[];
- Object.keys(db).forEach(function(dia){
-  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(dia))return;
-  (db[dia].c||[]).forEach(function(l){
-   if((l.cat||'').indexOf('Extravio')>=0||(l.cat||'').indexOf('Perda')>=0){
-    extravios.push(Object.assign({},l,{dia:dia}));
-   }
-  });
- });
- (db.cozinhaDescartes||[]).forEach(function(d){
-  extravios.push({id:d.id,d:d.nome,v:0,cat:'Extravio Estoque',dia:d.dtDescarte||'',_estoque:true});
- });
- const total=extravios.reduce(function(a,e){return a+Number(e.v||0);},0);
- return`<div class="si"><div style="padding:12px;">
-  <div class="kg" style="margin-bottom:12px;">
-   <div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">${extravios.length}</p></div>
-   <div class="kpi"><p class="kl">Valor</p><p class="kv" style="color:var(--re);">${brl(total)}</p></div>
-  </div>
-  ${extravios.length===0
-   ?'<div style="text-align:center;padding:20px;color:var(--mu);"><p style="font-size:24px;">✅</p><p>Nenhum extravio registrado</p></div>'
-   :extravios.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:9px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:9px;margin-bottom:6px;"><div><p style="font-size:12px;font-weight:700;">'+e.d+'</p><p style="font-size:10px;color:var(--mu);">'+e.dia+(e._estoque?' · Estoque':'')+'</p></div><p style="font-size:13px;font-weight:800;color:var(--re);">'+(e.v>0?brl(e.v):'—')+'</p></div>';}).join('')
-  }
- </div></div>`;
-}
+
 
 function lancarExtraviado(ofxId,desc,valor,data){
  const div=document.createElement('div');
@@ -19807,43 +19782,17 @@ function salvarSetorBot(lancId, dia, setor){
  render();
 }
 
+
 function rExtraviado(){
- const db=ldb();
- const extravios=[];
- // Busca lançamentos marcados como extravio em todos os dias
- Object.keys(db).forEach(dia=>{
-  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(dia))return;
-  (db[dia].c||[]).forEach(l=>{
-   if((l.cat||'').includes('Extravio')||(l.cat||'').includes('Perda')||(l._descarte)){
-    extravios.push({...l,dia});
-   }
+ var db=ldb(),ext=[],total=0;
+ Object.keys(db).forEach(function(d){
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(d))return;
+  (db[d].c||[]).forEach(function(l){
+   if((l.cat||'').indexOf('Extravio')>=0||(l.cat||'').indexOf('Perda')>=0){ext.push({n:l.d,v:Number(l.v||0),d:d});total+=Number(l.v||0);}
   });
  });
- // Busca descartes do estoque
- (db.cozinhaDescartes||[]).forEach(d=>{
-  extravios.push({id:d.id,d:d.nome,v:0,cat:'⚠️ Extravio / Perda',dia:d.dtDescarte||'—',_estoque:true,qtd:d.qtd,un:d.un});
- });
-
- return`<div class="si">
- <div style="padding:12px;">
-  <div class="kg" style="margin-bottom:12px;">
-   <div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">${extravios.length}</p></div>
-   <div class="kpi"><p class="kl">Valor perdido</p><p class="kv" style="color:var(--re);">${brl(extravios.reduce((a,e)=>a+Number(e.v||0),0))}</p></div>
-  </div>
-
-  ${extravios.length===0?`<div style="text-align:center;padding:20px;color:var(--mu);">
-   <p style="font-size:24px;">✅</p>
-   <p style="font-size:13px;font-weight:700;">Nenhum extravio registrado</p>
-   <p style="font-size:11px;margin-top:4px;">Extravios aparecem quando você descarta itens do estoque ou lança a categoria "⚠️ Extravio / Perda"</p>
-  </div>`:extravios.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:9px;margin-bottom:6px;">
-   <div>
-    <p style="font-size:12px;font-weight:700;">${e.d}</p>
-    <p style="font-size:10px;color:var(--mu);">${e.dia}${e._estoque?' · Estoque':''}${e.qtd?' · '+e.qtd+' '+(e.un||'')':''}</p>
-   </div>
-   <p style="font-size:13px;font-weight:800;color:var(--re);">${e.v>0?brl(e.v):'—'}</p>
-  </div>`).join('')}
- </div>
-</div>`;
+ (db.cozinhaDescartes||[]).forEach(function(dc){ext.push({n:dc.nome,v:0,d:dc.dtDescarte||'',est:true});});
+ return '<div class="si"><div style="padding:12px;"><div class="kg" style="margin-bottom:12px;"><div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">'+ext.length+'</p></div><div class="kpi"><p class="kl">Valor</p><p class="kv" style="color:var(--re);">'+brl(total)+'</p></div></div>'+(ext.length===0?'<p style="text-align:center;padding:20px;color:var(--mu);">✅ Nenhum extravio registrado</p>':ext.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:8px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:8px;margin-bottom:5px;"><div><p style="font-size:12px;font-weight:700;">'+e.n+'</p><p style="font-size:10px;color:var(--mu);">'+e.d+(e.est?' · Estoque':'')+'</p></div><p style="font-weight:800;color:var(--re);">'+(e.v>0?brl(e.v):'—')+'</p></div>';}).join(''))+'</div></div>';
 }
 
 render();
