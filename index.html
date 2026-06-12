@@ -8213,7 +8213,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8225,7 +8225,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','conciliacao','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
+ const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores','planejamento'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','conciliacao','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
     const _grupoLabel={cad:'📝 Produtos',forn:'🏭 Fornecedores',ficha:'📋 Fichas',est:'📦 Estoque',compras:'🛒 Compras',pedido:'📋 Pedidos',dre:'📊 DRE',resultado:'📅 Resultado',vendas:'💰 Vendas',buffet:'🍽️ Buffet',fin:'💳 Financeiro',fluxo:'💧 Fluxo',cpagar:'💳 C.Pagar',bancos:'🏦 Bancos',extrav:'🔍 Extraviado',fixos:'📌 Fixos',caixa:'🏦 Fechamento',bot:'🤖 Bot',openfinance:'🔗 Open Finance',rh:'👥 RH',comp:'✅ Compliance',aval:'⭐ Avaliações',mkt:'📣 Marketing',dashm:'📅 Mensal',dasha:'📈 Anual',bi:'📊 BI',cfo:'🧠 CFO',plano:'📑 Plano',dashc:'🗂️ Contas',dashcc:'🏷️ CC'};
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
@@ -20261,6 +20261,137 @@ function atualizarTotalMaquina(maqId){
   }catch(e){overlay.remove();alert('Erro: '+e.message);}
  };
  input.click();
+}
+
+function rPlanejamento(){
+ const db=ldb();
+ const hoje=new Date();
+ const mes=hoje.getMonth();
+ const ano=hoje.getFullYear();
+ const nomeMes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mes];
+ const plano=db.planejamento||{};
+ const planoMes=plano[ano+'-'+String(mes+1).padStart(2,'0')]||{metaRec:0,metaCusto:0,metaCMV:35,metaRH:30,obs:''};
+
+ // Calcula real do mês
+ let recReal=0,custoReal=0,mpReal=0,rhReal=0;
+ const diasNoMes=new Date(ano,mes+1,0).getDate();
+ for(let i=1;i<=diasNoMes;i++){
+  const d=new Date(ano,mes,i);
+  const dia=d.toLocaleDateString('pt-BR');
+  const dd=db[dia];if(!dd)continue;
+  (dd.r||[]).forEach(l=>recReal+=Number(l.v||0));
+  (dd.c||[]).forEach(l=>{
+   const v=Number(l.v||0);custoReal+=v;
+   if((l.cat||'').includes('Matéria')||(l.cat||'').includes('Prima'))mpReal+=v;
+   if((l.cat||'').includes('RH')||(l.cat||'').includes('Mão'))rhReal+=v;
+  });
+ }
+
+ const diasPassados=hoje.getDate();
+ const projecaoRec=diasPassados>0?(recReal/diasPassados)*diasNoMes:0;
+ const projecaoCusto=diasPassados>0?(custoReal/diasPassados)*diasNoMes:0;
+
+ const pctRecMeta=planoMes.metaRec>0?(recReal/planoMes.metaRec*100):0;
+ const pctCustoMeta=planoMes.metaCusto>0?(custoReal/planoMes.metaCusto*100):0;
+ const cmvReal=recReal>0?(mpReal/recReal*100):0;
+ const rhPctReal=recReal>0?(rhReal/recReal*100):0;
+
+ function barProgress(pct,corOk,corRuim,inverso){
+  const cor=inverso?(pct<=100?corOk:corRuim):(pct>=100?corOk:corRuim);
+  const w=Math.min(100,pct);
+  return`<div style="background:rgba(255,255,255,0.08);border-radius:4px;height:8px;overflow:hidden;margin-top:4px;">
+   <div style="background:${cor};height:100%;width:${w}%;border-radius:4px;transition:width 0.3s;"></div>
+  </div>`;
+ }
+
+ return`<div style="padding:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <p style="font-size:14px;font-weight:800;">📅 Planejamento — ${nomeMes}/${ano}</p>
+   <button onclick="salvarPlanejamento('${ano}-${String(mes+1).padStart(2,'0')}')" style="padding:7px 12px;border-radius:7px;border:none;background:var(--gr);color:#000;font-size:11px;font-weight:800;cursor:pointer;">💾 Salvar</button>
+  </div>
+
+  <!-- Metas -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🎯 Definir metas do mês</p>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Meta receita</label><input id="plan-metarec" class="inpm" type="number" value="${planoMes.metaRec||''}" placeholder="R$ meta"/></div>
+    <div><label class="lbl">Meta custo máx.</label><input id="plan-metacusto" class="inpm" type="number" value="${planoMes.metaCusto||''}" placeholder="R$ limite"/></div>
+    <div><label class="lbl">Meta CMV% (máx)</label><input id="plan-cmv" class="inpm" type="number" value="${planoMes.metaCMV||35}" step="0.1"/></div>
+    <div><label class="lbl">Meta RH% (máx)</label><input id="plan-rh" class="inpm" type="number" value="${planoMes.metaRH||30}" step="0.1"/></div>
+   </div>
+   <div style="margin-top:6px;"><label class="lbl">Observações / foco do mês</label><input id="plan-obs" class="inpm" value="${planoMes.obs||''}" placeholder="Ex: lançar hambúrguer, reduzir desperdício..."/></div>
+  </div>
+
+  <!-- Progresso real vs meta -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">📊 Real vs Meta (${diasPassados} de ${diasNoMes} dias)</p>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+   <!-- Receita -->
+   <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+     <span style="font-size:12px;font-weight:700;">💚 Receita</span>
+     <span style="font-size:12px;font-weight:900;color:var(--gr);">${brl(recReal)} / ${planoMes.metaRec>0?brl(planoMes.metaRec):'sem meta'}</span>
+    </div>
+    ${barProgress(pctRecMeta,'var(--gr)','var(--ye)',false)}
+    <div style="display:flex;justify-content:space-between;margin-top:4px;">
+     <span style="font-size:10px;color:var(--mu);">${pctRecMeta.toFixed(1)}% da meta</span>
+     <span style="font-size:10px;color:var(--mu);">Projeção: ${brl(projecaoRec)}</span>
+    </div>
+   </div>
+
+   <!-- Custo -->
+   <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+     <span style="font-size:12px;font-weight:700;">🔴 Custo</span>
+     <span style="font-size:12px;font-weight:900;color:var(--re);">${brl(custoReal)} / ${planoMes.metaCusto>0?brl(planoMes.metaCusto):'sem meta'}</span>
+    </div>
+    ${barProgress(pctCustoMeta,'var(--gr)','var(--re)',true)}
+    <div style="display:flex;justify-content:space-between;margin-top:4px;">
+     <span style="font-size:10px;color:var(--mu);">${pctCustoMeta.toFixed(1)}% do limite</span>
+     <span style="font-size:10px;color:var(--mu);">Projeção: ${brl(projecaoCusto)}</span>
+    </div>
+   </div>
+
+   <!-- CMV -->
+   <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+     <span style="font-size:12px;font-weight:700;">🥩 CMV</span>
+     <span style="font-size:12px;font-weight:900;color:${cmvReal<=(planoMes.metaCMV||35)?'var(--gr)':'var(--re)'};">${cmvReal.toFixed(1)}% / meta ≤${planoMes.metaCMV||35}%</span>
+    </div>
+    ${barProgress(cmvReal/(planoMes.metaCMV||35)*100,'var(--gr)','var(--re)',true)}
+   </div>
+
+   <!-- RH -->
+   <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+     <span style="font-size:12px;font-weight:700;">👥 RH</span>
+     <span style="font-size:12px;font-weight:900;color:${rhPctReal<=(planoMes.metaRH||30)?'var(--gr)':'var(--re)'};">${rhPctReal.toFixed(1)}% / meta ≤${planoMes.metaRH||30}%</span>
+    </div>
+    ${barProgress(rhPctReal/(planoMes.metaRH||30)*100,'var(--gr)','var(--re)',true)}
+   </div>
+  </div>
+
+  <!-- Resultado projetado -->
+  <div style="background:${projecaoRec-projecaoCusto>=0?'rgba(0,255,136,0.08)':'rgba(255,51,102,0.08)'};border:1px solid ${projecaoRec-projecaoCusto>=0?'rgba(0,255,136,0.3)':'rgba(255,51,102,0.3)'};border-radius:10px;padding:12px;">
+   <p style="font-size:11px;color:var(--mu);margin-bottom:4px;">Resultado projetado no fim do mês:</p>
+   <p style="font-size:20px;font-weight:900;color:${projecaoRec-projecaoCusto>=0?'var(--gr)':'var(--re)'};">${brl(projecaoRec-projecaoCusto)}</p>
+   <p style="font-size:10px;color:var(--mu);">Baseado nos ${diasPassados} dias já realizados</p>
+  </div>
+ </div>`;
+}
+
+function salvarPlanejamento(chave){
+ const db=ldb();
+ if(!db.planejamento)db.planejamento={};
+ db.planejamento[chave]={
+  metaRec:parseFloat(document.getElementById('plan-metarec')?.value||0),
+  metaCusto:parseFloat(document.getElementById('plan-metacusto')?.value||0),
+  metaCMV:parseFloat(document.getElementById('plan-cmv')?.value||35),
+  metaRH:parseFloat(document.getElementById('plan-rh')?.value||30),
+  obs:document.getElementById('plan-obs')?.value||''
+ };
+ sdb(db);render();
+ alert('✅ Planejamento salvo!');
 }
 
 render();
