@@ -19665,6 +19665,130 @@ function inferirCategoriaDestinatario(destinatario){
  return null;
 }
 
+// ═══ INTEGRAÇÃO IFOOD ════════════════════════════════════════
+async function conectarIFood(){
+ const df=gDadosFiscais();
+ const clientId=df.ifoodClientId||prompt('Client ID do iFood:','');
+ if(!clientId)return;
+
+ // Salva o clientId
+ const dfUp=gDadosFiscais();
+ dfUp.ifoodClientId=clientId;
+ sDadosFiscais(dfUp);
+
+ // Passo 1: Gera código de autenticação
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ overlay.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;">
+  <p style="font-weight:800;font-size:15px;margin-bottom:4px;">🍔 Conectar iFood</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:14px;">Autenticação via código de autorização</p>
+
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">Passo 1 — Seu Client ID</p>
+   <p style="font-size:13px;font-weight:900;color:var(--bl);">${clientId}</p>
+  </div>
+
+  <div class="card" style="margin-bottom:12px;background:rgba(255,68,0,0.08);border-color:rgba(255,68,0,0.3);">
+   <p style="font-size:12px;font-weight:700;color:#ff4400;margin-bottom:6px;">Passo 2 — Autorizar no iFood</p>
+   <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Acesse o portal iFood Parceiros e autorize este Client ID. O iFood vai gerar um código de 6 dígitos.</p>
+   <button onclick="window.open('https://developer.ifood.com.br','_blank')" style="width:100%;padding:10px;border-radius:8px;border:none;background:#ff4400;color:#fff;font-size:13px;font-weight:800;cursor:pointer;">🌐 Abrir portal iFood</button>
+  </div>
+
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">Passo 3 — Cole o código aqui</p>
+   <input id="ifood-auth-code" class="inpm" placeholder="Código de 6 dígitos do iFood" style="margin-bottom:8px;letter-spacing:4px;font-size:16px;text-align:center;font-weight:900;"/>
+   <button onclick="autenticarIFood('${clientId}')" style="width:100%;padding:11px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Autenticar</button>
+  </div>
+
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
+ </div>`;
+ overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+ document.body.appendChild(overlay);
+}
+
+async function autenticarIFood(clientId){
+ const code=document.getElementById('ifood-auth-code')?.value?.trim();
+ if(!code||code.length<4){alert('Digite o código do iFood');return;}
+
+ const overlay2=document.createElement('div');
+ overlay2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:800;display:flex;align-items:center;justify-content:center;';
+ overlay2.innerHTML='<p style="color:#fff;font-size:14px;">🔄 Autenticando...</p>';
+ document.body.appendChild(overlay2);
+
+ try{
+  const resp=await fetch('/api/ifood/auth',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':(gDadosFiscais().backendToken||'gestaoerp_diCasa_44686412')},
+   body:JSON.stringify({clientId,authorizationCode:code,grantType:'authorization_code'})
+  });
+  const data=await resp.json();
+  overlay2.remove();
+
+  if(!data.ok){
+   alert('Erro: '+(data.erro||data.message||'Falha na autenticação'));
+   return;
+  }
+
+  // Salva tokens
+  const df=gDadosFiscais();
+  df.ifoodAccessToken=data.accessToken;
+  df.ifoodRefreshToken=data.refreshToken;
+  df.ifoodTokenExp=Date.now()+(data.expiresIn||3600)*1000;
+  sDadosFiscais(df);
+
+  document.querySelector('[style*="inset:0"]')?.remove();
+  alert('✅ iFood conectado!\nAgora você pode sincronizar os pedidos.');
+  render();
+
+ }catch(e){
+  overlay2.remove();
+  alert('Erro: '+e.message);
+ }
+}
+
+async function sincronizarIFood(){
+ const df=gDadosFiscais();
+ if(!df.ifoodAccessToken){
+  alert('iFood não conectado. Configure em ⚙️ Config → iFood');
+  return;
+ }
+
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+ overlay.innerHTML='<p style="font-size:28px;">🍔</p><p style="color:#fff;font-size:14px;font-weight:700;">Sincronizando iFood...</p>';
+ document.body.appendChild(overlay);
+
+ try{
+  const resp=await fetch('/api/ifood/pedidos',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+   body:JSON.stringify({accessToken:df.ifoodAccessToken,merchantId:df.ifoodMerchantId||''})
+  });
+  const data=await resp.json();
+  overlay.remove();
+
+  if(!data.ok){alert('Erro iFood: '+(data.erro||''));return;}
+
+  // Lança pedidos no DRE
+  const db=ldb();
+  let count=0;
+  (data.pedidos||[]).forEach(p=>{
+   const dia=p.data||hj();
+   if(!db[dia])db[dia]={r:[],c:[]};
+   if(!db[dia].r)db[dia].r=[];
+   if(db[dia].r.some(x=>x._ifoodId===p.id))return;
+   db[dia].r.push({id:uid(),d:'iFood - '+p.cliente,v:Number(p.valor||0),
+    cat:'iFood',seg:'ifood',_ifoodId:p.id,dt:dia});
+   count++;
+  });
+  sdb(db);
+
+  if(count>0){render();alert('✅ '+count+' pedido(s) do iFood lançado(s) no DRE!');}
+  else alert('Nenhum pedido novo desde a última sincronização.');
+
+ }catch(e){overlay.remove();alert('Erro: '+e.message);}
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
