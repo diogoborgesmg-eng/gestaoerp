@@ -191,7 +191,7 @@ async function claudeAPI(payload, tentativa=1){
 }
 
 const SEGS=[{id:"restaurante",n:"Restaurante",i:"🍽️",c:"#f59e0b"},{id:"hamburgueria",n:"Hamburgueria",i:"🍔",c:"#ef4444"},{id:"espetaria",n:"Espetaria",i:"🍢",c:"#f97316"},{id:"pizzaria",n:"Pizzaria",i:"🍕",c:"#ec4899"},{id:"bar",n:"Bar",i:"🍺",c:"#06b6d4"}];
-const CATS=["Insumos/Matéria-prima","Funcionários/RH","Aluguel","Energia/Água/Gás","Embalagens","Delivery (taxas)","Manutenção","Marketing/Publicidade","Shows/Eventos/Cantores","Despesas Financeiras","Juros/Multas","Cheque Especial","Outros fixos","Outros variáveis"];
+const CATS=["🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","🔄 Outros"];
 const brl=v=>"R$"+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const uid=()=>Math.random().toString(36).slice(2,9);
 const hj=()=>new Date().toLocaleDateString("pt-BR");
