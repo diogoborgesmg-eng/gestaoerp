@@ -19670,43 +19670,75 @@ function inferirCategoriaDestinatario(destinatario){
 
 // ═══ INTEGRAÇÃO IFOOD ════════════════════════════════════════
 async function conectarIFood(){
- const df=gDadosFiscais();
- const clientId=df.ifoodClientId||prompt('Client ID do iFood:','');
- if(!clientId)return;
+ try{
+  const df=gDadosFiscais();
+  const clientId=df.ifoodClientId||prompt('Client ID do iFood:','');
+  if(!clientId)return;
+  const dfUp=gDadosFiscais();dfUp.ifoodClientId=clientId;sDadosFiscais(dfUp);
 
- // Salva o clientId
- const dfUp=gDadosFiscais();
- dfUp.ifoodClientId=clientId;
- sDadosFiscais(dfUp);
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+  overlay.innerHTML='<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;"><p style="font-weight:800;font-size:15px;margin-bottom:14px;">🍔 Conectar iFood</p><p style="font-size:12px;color:var(--mu);">Gerando código...</p></div>';
+  document.body.appendChild(overlay);
 
- // Passo 1: Gera código de autenticação
- const overlay=document.createElement('div');
- overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
- overlay.innerHTML=`<div style="background:var(--sf);min-height:100%;padding:16px 14px 40px;">
-  <p style="font-weight:800;font-size:15px;margin-bottom:4px;">🍔 Conectar iFood</p>
-  <p style="font-size:11px;color:var(--mu);margin-bottom:14px;">Autenticação via código de autorização</p>
+  // Gera o user code
+  const resp=await fetch('/api/ifood/auth',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+   body:JSON.stringify({clientId,step:'generate'})
+  });
+  const data=await resp.json();
 
-  <div class="card" style="margin-bottom:12px;">
-   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">Passo 1 — Seu Client ID</p>
-   <p style="font-size:13px;font-weight:900;color:var(--bl);">${clientId}</p>
+  if(!data.ok){overlay.remove();alert('Erro iFood: '+(data.erro||''));return;}
+
+  // Mostra o código para o usuário colar no iFood
+  const div=overlay.querySelector('div');
+  div.innerHTML=`<p style="font-weight:800;font-size:15px;margin-bottom:14px;">🍔 Conectar iFood</p>
+
+  <div style="background:rgba(255,68,0,0.1);border:2px solid #ff4400;border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">
+   <p style="font-size:11px;color:var(--mu);margin-bottom:6px;">Cole este código no portal iFood:</p>
+   <p style="font-size:32px;font-weight:900;letter-spacing:6px;color:#ff4400;">${data.userCode}</p>
+   <p style="font-size:10px;color:var(--mu);margin-top:4px;">Expira em ${Math.round((data.expiresIn||600)/60)} minutos</p>
   </div>
 
-  <div class="card" style="margin-bottom:12px;background:rgba(255,68,0,0.08);border-color:rgba(255,68,0,0.3);">
-   <p style="font-size:12px;font-weight:700;color:#ff4400;margin-bottom:6px;">Passo 2 — Autorizar no iFood</p>
-   <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Acesse o portal iFood Parceiros e autorize este Client ID. O iFood vai gerar um código de 6 dígitos.</p>
-   <button onclick="window.open('https://developer.ifood.com.br','_blank')" style="width:100%;padding:10px;border-radius:8px;border:none;background:#ff4400;color:#fff;font-size:13px;font-weight:800;cursor:pointer;">🌐 Abrir portal iFood</button>
+  <button onclick="window.open('${data.verificationUrl||'https://portal.ifood.com.br/apps/code'}','_blank')" style="width:100%;padding:11px;border-radius:9px;border:none;background:#ff4400;color:#fff;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;">🌐 Abrir portal iFood</button>
+
+  <div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:12px;">
+   <p style="font-size:11px;color:var(--mu);">1. Toque em "Abrir portal iFood"<br>2. Cole o código acima<br>3. Confirme a autorização<br>4. Volte aqui e toque em "Já autorizei"</p>
   </div>
 
-  <div class="card" style="margin-bottom:12px;">
-   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">Passo 3 — Cole o código aqui</p>
-   <input id="ifood-auth-code" class="inpm" placeholder="Código de 6 dígitos do iFood" style="margin-bottom:8px;letter-spacing:4px;font-size:16px;text-align:center;font-weight:900;"/>
-   <button onclick="autenticarIFood('${clientId}')" style="width:100%;padding:11px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Autenticar</button>
-  </div>
+  <button onclick="verificarTokenIFood('${clientId}','${data.deviceCode||data.userCode}')" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;">✅ Já autorizei!</button>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>`;
 
-  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
- </div>`;
- overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
- document.body.appendChild(overlay);
+ }catch(e){
+  document.querySelector('[style*="inset:0"]')?.remove();
+  alert('Erro: '+e.message);
+ }
+}
+
+async function verificarTokenIFood(clientId,deviceCode){
+ try{
+  const df=gDadosFiscais();
+  const resp=await fetch('/api/ifood/auth',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+   body:JSON.stringify({clientId,step:'token',userCode:deviceCode})
+  });
+  const data=await resp.json();
+  if(!data.ok){
+   if(data.pending)alert('iFood ainda não autorizou. Tente novamente após confirmar no portal.');
+   else alert('Erro: '+(data.erro||''));
+   return;
+  }
+  const dfUp=gDadosFiscais();
+  dfUp.ifoodAccessToken=data.accessToken;
+  dfUp.ifoodRefreshToken=data.refreshToken;
+  dfUp.ifoodTokenExp=Date.now()+(data.expiresIn||3600)*1000;
+  sDadosFiscais(dfUp);
+  document.querySelector('[style*="inset:0"]')?.remove();
+  alert('✅ iFood conectado com sucesso!\nAgora toque em "🔄 Sincronizar Pedidos".');
+  render();
+ }catch(e){alert('Erro: '+e.message);}
 }
 
 async function autenticarIFood(clientId){
