@@ -20710,6 +20710,101 @@ function salvarEditLanc(tipo, id, dia){
  render();
 }
 
+// ═══ CONTAGEM POR FOTO ═══════════════════════════════════════
+async function abrirInventarioFoto(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 60px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <p style="font-size:16px;font-weight:900;">📸 Contar Estoque</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:16px;">Fotografe a prateleira ou freezer. A IA identifica os itens e quantidades automaticamente.</p>
+  
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+   <button onclick="tirarFotoEstoque('camara')" style="background:rgba(170,68,255,0.15);border:2px solid rgba(170,68,255,0.4);border-radius:14px;padding:20px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:32px;margin-bottom:6px;">📷</p>
+    <p style="font-size:13px;font-weight:800;color:#aa44ff;">Câmera</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.4);">Fotografar agora</p>
+   </button>
+   <button onclick="tirarFotoEstoque('galeria')" style="background:rgba(68,136,255,0.15);border:2px solid rgba(68,136,255,0.4);border-radius:14px;padding:20px 10px;cursor:pointer;text-align:center;">
+    <p style="font-size:32px;margin-bottom:6px;">🖼️</p>
+    <p style="font-size:13px;font-weight:800;color:#4488ff;">Galeria</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.4);">Escolher foto</p>
+   </button>
+  </div>
+
+  <div id="contagem-resultado" style="display:none;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;color:#00ff88;">✅ Itens identificados — confirme as quantidades:</p>
+   <div id="contagem-lista"></div>
+   <button onclick="confirmarContagem()" style="width:100%;padding:12px;border-radius:9px;border:none;background:#00ff88;color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:10px;">✅ Confirmar e atualizar estoque</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function tirarFotoEstoque(modo){
+ const input=document.createElement('input');
+ input.type='file';input.accept='image/*';
+ if(modo==='camara')input.capture='environment';
+ input.onchange=async function(){
+  const file=input.files[0];if(!file)return;
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+  overlay.innerHTML='<p style="font-size:40px;">🔍</p><p style="color:#fff;font-size:14px;font-weight:700;">Analisando estoque...</p><p style="color:rgba(255,255,255,0.5);font-size:11px;">A IA está identificando os itens</p>';
+  document.body.appendChild(overlay);
+  try{
+   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+   const result=await claudeAPI({model:MODEL,max_tokens:800,messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+    {type:'text',text:'Identifique TODOS os itens de estoque visíveis nesta foto de prateleira/freezer de restaurante. Para cada item retorne: nome do produto, quantidade estimada e unidade (kg, unidade, litro, pacote, caixa). Retorne APENAS JSON: {"itens":[{"nome":"","qtd":0,"un":"kg"}]}. Seja específico com os nomes.'}
+   ]}]});
+   overlay.remove();
+   const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+   const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{"itens":[]}');
+   window._contagemItens=dados.itens||[];
+   
+   const lista=document.getElementById('contagem-lista');
+   const res=document.getElementById('contagem-resultado');
+   if(!lista||!res){overlay.remove();return;}
+   
+   lista.innerHTML=window._contagemItens.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;">
+     <span style="flex:1;font-size:12px;font-weight:700;">${it.nome}</span>
+     <input type="number" value="${it.qtd}" step="0.1" onchange="window._contagemItens[${i}].qtd=parseFloat(this.value)||0" style="width:60px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;text-align:center;padding:4px;font-size:12px;"/>
+     <span style="font-size:11px;color:rgba(255,255,255,0.5);width:30px;">${it.un}</span>
+     <button onclick="window._contagemItens.splice(${i},1);tirarFotoEstoque('rerender')" style="background:rgba(255,51,102,0.2);border:none;border-radius:4px;color:#ff3366;padding:3px 6px;cursor:pointer;font-size:10px;">✕</button>
+    </div>`).join('');
+   res.style.display='block';
+  }catch(e){overlay.remove();alert('Erro ao analisar foto: '+e.message);}
+ };
+ if(modo!=='rerender')input.click();
+}
+
+async function confirmarContagem(){
+ const itens=window._contagemItens||[];
+ if(!itens.length){alert('Nenhum item para confirmar');return;}
+ const db=ldb();
+ if(!db.cozinhaItens)db.cozinhaItens=[];
+ let atualizados=0,novos=0;
+ itens.forEach(it=>{
+  const existente=db.cozinhaItens.find(e=>e.nome.toLowerCase()===it.nome.toLowerCase());
+  if(existente){
+   existente.qtd=it.qtd;
+   existente.ultContagem=hj();
+   atualizados++;
+  }else{
+   db.cozinhaItens.push({id:uid(),nome:it.nome,qtd:it.qtd,un:it.un,ultContagem:hj(),local:'Estoque'});
+   novos++;
+  }
+ });
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ alert('✅ Estoque atualizado!\n'+atualizados+' item(ns) atualizado(s)\n'+novos+' item(ns) novo(s)');
+ render();
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
