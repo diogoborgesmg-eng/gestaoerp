@@ -69,7 +69,7 @@ async function salvarGitHub(lanc) {
     if (!fi.content) { console.error('fi.content undefined! Resposta:', JSON.stringify(fi).substring(0,200)); return; }
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
-    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc,
+    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, setor: lanc.setor||'Geral',
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
     await req2('PUT',
