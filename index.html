@@ -8218,7 +8218,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8230,7 +8230,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores','planejamento'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','conciliacao','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
+ const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores','planejamento'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','conciliacao','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt','desemp'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
     const _grupoLabel={cad:'📝 Produtos',forn:'🏭 Fornecedores',ficha:'📋 Fichas',est:'📦 Estoque',compras:'🛒 Compras',pedido:'📋 Pedidos',dre:'📊 DRE',resultado:'📅 Resultado',vendas:'💰 Vendas',buffet:'🍽️ Buffet',fin:'💳 Financeiro',fluxo:'💧 Fluxo',cpagar:'💳 C.Pagar',bancos:'🏦 Bancos',extrav:'🔍 Extraviado',fixos:'📌 Fixos',caixa:'🏦 Fechamento',bot:'🤖 Bot',openfinance:'🔗 Open Finance',rh:'👥 RH',comp:'✅ Compliance',aval:'⭐ Avaliações',mkt:'📣 Marketing',dashm:'📅 Mensal',dasha:'📈 Anual',bi:'📊 BI',cfo:'🧠 CFO',plano:'📑 Plano',dashc:'🗂️ Contas',dashcc:'🏷️ CC'};
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
@@ -21146,6 +21146,122 @@ async function sugerirNCM(nome, categoria){
 
  }catch(e){alert('Erro: '+e.message);}
  finally{if(btn){btn.textContent='🔍 Sugerir NCM/CEST';btn.disabled=false;}}
+}
+
+// ═══ DESEMPENHO DO GARÇOM ════════════════════════════════════
+function rDesempenho(){
+ const db=ldb();
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const funcionarios=db.funcionarios||[];
+ const mesas=db.mesas||[];
+ const segs=SEGS||[];
+
+ // Coleta dados dos últimos 30 dias
+ const periodo=30;
+ const stats={};
+
+ for(let i=0;i<periodo;i++){
+  const d=new Date(hoje);d.setDate(d.getDate()-i);
+  const dia=d.toLocaleDateString('pt-BR');
+  const dd=db[dia];if(!dd)continue;
+
+  // Comanda por garçom
+  (dd.r||[]).forEach(l=>{
+   const garc=l.garcom||l.atendente||'Sem registro';
+   if(!stats[garc])stats[garc]={
+    nome:garc,vendas:0,comandas:0,ticketTotal:0,
+    segmentos:{},gorjetas:0,dias:new Set()
+   };
+   stats[garc].vendas+=Number(l.v||0);
+   stats[garc].comandas++;
+   stats[garc].dias.add(dia);
+   const seg=l.seg||'Geral';
+   stats[garc].segmentos[seg]=(stats[garc].segmentos[seg]||0)+Number(l.v||0);
+  });
+ }
+
+ // Calcula ticket médio
+ Object.values(stats).forEach(s=>{
+  s.ticketMedio=s.comandas>0?(s.vendas/s.comandas):0;
+  s.diasAtivos=s.dias.size;
+  s.mediaDiaria=s.diasAtivos>0?(s.vendas/s.diasAtivos):0;
+ });
+
+ const ranking=Object.values(stats).sort((a,b)=>b.vendas-a.vendas);
+ const totalVendas=ranking.reduce((a,s)=>a+s.vendas,0);
+
+ // Funcionários cadastrados sem movimento
+ const semMovimento=funcionarios.filter(f=>!stats[f.nome]&&f.cargo&&
+  (f.cargo.toLowerCase().includes('garçom')||f.cargo.toLowerCase().includes('garcom')||
+   f.cargo.toLowerCase().includes('atendente')));
+
+ return`<div style="padding:12px;">
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Últimos ${periodo} dias · baseado nas comandas do PDV</p>
+
+  ${ranking.length===0?`<div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:12px;padding:16px;text-align:center;">
+   <p style="font-size:24px;margin-bottom:6px;">📊</p>
+   <p style="font-size:13px;font-weight:700;margin-bottom:4px;">Sem dados de desempenho</p>
+   <p style="font-size:11px;color:var(--mu);">Para rastrear o desempenho, registre o garçom nas comandas do PDV ao abrir a mesa.</p>
+  </div>`:`
+
+  <!-- Ranking -->
+  <p style="font-size:12px;font-weight:800;margin-bottom:10px;">🏆 Ranking de Vendas</p>
+  ${ranking.map((s,i)=>{
+   const pct=totalVendas>0?(s.vendas/totalVendas*100):0;
+   const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+   return`<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;${i===0?'border:1px solid rgba(255,204,0,0.3);':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+     <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">${medal||'#'+(i+1)}</span>
+      <div>
+       <p style="font-size:13px;font-weight:800;">${s.nome}</p>
+       <p style="font-size:10px;color:var(--mu);">${s.diasAtivos} dia(s) ativo · ${s.comandas} comanda(s)</p>
+      </div>
+     </div>
+     <div style="text-align:right;">
+      <p style="font-size:15px;font-weight:900;color:var(--gr);">${brl(s.vendas)}</p>
+      <p style="font-size:10px;color:var(--mu);">${pct.toFixed(1)}% do total</p>
+     </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:6px;overflow:hidden;margin-bottom:6px;">
+     <div style="background:${i===0?'#ffcc00':'var(--gr)'};height:100%;width:${pct}%;border-radius:6px;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+     <div style="text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:5px;">
+      <p style="font-size:9px;color:var(--mu);">Ticket Médio</p>
+      <p style="font-size:11px;font-weight:800;">${brl(s.ticketMedio)}</p>
+     </div>
+     <div style="text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:5px;">
+      <p style="font-size:9px;color:var(--mu);">Média/Dia</p>
+      <p style="font-size:11px;font-weight:800;">${brl(s.mediaDiaria)}</p>
+     </div>
+     <div style="text-align:center;background:rgba(255,255,255,0.04);border-radius:6px;padding:5px;">
+      <p style="font-size:9px;color:var(--mu);">Comandas</p>
+      <p style="font-size:11px;font-weight:800;">${s.comandas}</p>
+     </div>
+    </div>
+   </div>`;
+  }).join('')}
+
+  <!-- Total -->
+  <div class="card" style="margin-top:4px;">
+   <div style="display:flex;justify-content:space-between;">
+    <span style="font-size:12px;font-weight:700;">Total geral</span>
+    <span style="font-size:14px;font-weight:900;color:var(--gr);">${brl(totalVendas)}</span>
+   </div>
+  </div>`}
+
+  <!-- Sem registro -->
+  ${semMovimento.length>0?`<div style="background:rgba(255,136,0,0.08);border:1px solid rgba(255,136,0,0.2);border-radius:10px;padding:10px;margin-top:12px;">
+   <p style="font-size:11px;font-weight:700;color:#ff8800;margin-bottom:4px;">⚠️ Sem movimento registrado</p>
+   ${semMovimento.map(f=>`<p style="font-size:11px;color:var(--mu);">• ${f.nome} (${f.cargo})</p>`).join('')}
+   <p style="font-size:10px;color:var(--mu);margin-top:4px;">Esses funcionários não aparecem nas comandas. Cadastre o garçom ao abrir mesa no PDV.</p>
+  </div>`:''}
+
+  <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.15);border-radius:10px;padding:10px;margin-top:10px;">
+   <p style="font-size:11px;color:var(--bl);">💡 Para ativar o rastreio: no PDV ao abrir uma mesa, selecione o garçom responsável. Os dados aparecem aqui automaticamente.</p>
+  </div>
+ </div>`;
 }
 
 render();
