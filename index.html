@@ -21553,6 +21553,142 @@ async function restaurarBackupGitHub(){
  }catch(e){alert('Erro ao restaurar: '+e.message);}
 }
 
+// ═══ CARDÁPIO DIGITAL ════════════════════════════════════════
+function gerarCardapioHTML(){
+ const db=ldb();
+ const prods=db.cardapioPDV||[];
+ const df=gDadosFiscais();
+ const nomeEmpresa=df.nomeFantasia||'Di Casa Laranjinha';
+ 
+ // Agrupa por categoria
+ const grupos={};
+ prods.filter(p=>p.ativo!==false&&p.preco>0).forEach(p=>{
+  const cat=p.cat||'Outros';
+  if(!grupos[cat])grupos[cat]=[];
+  grupos[cat].push(p);
+ });
+
+ const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cardápio — ${nomeEmpresa}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0f;color:#fff;font-family:-apple-system,sans-serif;padding-bottom:40px;}
+.header{background:linear-gradient(135deg,#ff4400,#ff8800);padding:24px 16px;text-align:center;}
+.header h1{font-size:22px;font-weight:900;margin-bottom:4px;}
+.header p{font-size:12px;opacity:0.85;}
+.segs{display:flex;gap:8px;padding:12px 14px;overflow-x:auto;background:#111;scrollbar-width:none;}
+.segs button{white-space:nowrap;padding:7px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;}
+.segs button.ativo{background:#ff4400;color:#fff;border-color:#ff4400;}
+.cat-title{font-size:16px;font-weight:800;padding:14px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.item{display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.item-info{flex:1;}
+.item-nome{font-size:14px;font-weight:700;margin-bottom:3px;}
+.item-desc{font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px;}
+.item-preco{font-size:15px;font-weight:900;color:#ff8800;}
+.item-img{width:70px;height:70px;border-radius:10px;object-fit:cover;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+.sem-imagem{width:70px;height:70px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="header">
+ <h1>${nomeEmpresa}</h1>
+ <p>Cardápio Digital</p>
+</div>
+<div class="segs" id="segs">
+ <button class="ativo" onclick="filtrar('')">Tudo</button>
+ ${Object.keys(grupos).map(cat=>`<button onclick="filtrar('${cat}')">${cat}</button>`).join('')}
+</div>
+<div id="lista">
+${Object.entries(grupos).map(([cat,itens])=>`
+<p class="cat-title" data-cat="${cat}">${cat}</p>
+${itens.map(p=>`<div class="item" data-cat="${cat}">
+ <div class="sem-imagem">${p.emoji||'🍽️'}</div>
+ <div class="item-info">
+  <p class="item-nome">${p.nome}</p>
+  ${p.descricao?`<p class="item-desc">${p.descricao}</p>`:''}
+  <p class="item-preco">R$ ${Number(p.preco||0).toFixed(2).replace('.',',')}</p>
+ </div>
+</div>`).join('')}`).join('')}
+</div>
+<script>
+function filtrar(cat){
+ document.querySelectorAll('.segs button').forEach(b=>b.classList.remove('ativo'));
+ event.target.classList.add('ativo');
+ document.querySelectorAll('.item,.cat-title').forEach(el=>{
+  if(!cat||el.dataset.cat===cat)el.style.display='';
+  else el.style.display='none';
+ });
+}
+</script>
+</body></html>`;
+ return html;
+}
+
+function abrirCardapioDigital(){
+ const html=gerarCardapioHTML();
+ const blob=new Blob([html],{type:'text/html'});
+ const url=URL.createObjectURL(blob);
+ window.open(url,'_blank');
+}
+
+function rQRCodeMesas(){
+ const db=ldb();
+ const mesas=db.mesas||[];
+ const baseUrl=window.location.origin;
+ 
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 60px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <p style="font-size:16px;font-weight:900;">📱 QR Code Mesas</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:14px;">Imprima um QR Code para cada mesa. O cliente escaneia e vê o cardápio completo.</p>
+  
+  <button onclick="abrirCardapioDigital()" style="width:100%;padding:11px;border-radius:9px;border:none;background:#ff4400;color:#fff;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:14px;">🌐 Abrir Cardápio Digital</button>
+  
+  <p style="font-size:12px;font-weight:700;margin-bottom:10px;">Gerar QR por Mesa:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+   ${(mesas.length?mesas:Array.from({length:10},(_,i)=>({id:'m'+(i+1),nome:'Mesa '+(i+1)}))).map(m=>`
+   <div onclick="gerarQRMesa('${m.id}','${m.nome}')" style="background:rgba(255,255,255,0.06);border-radius:12px;padding:14px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.1);">
+    <p style="font-size:24px;margin-bottom:4px;">📱</p>
+    <p style="font-size:13px;font-weight:700;">${m.nome}</p>
+    <p style="font-size:10px;color:rgba(255,255,255,0.4);">Toque para gerar</p>
+   </div>`).join('')}
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function gerarQRMesa(mesaId, mesaNome){
+ const html=gerarCardapioHTML();
+ // Cria uma versão com o nome da mesa no topo
+ const htmlMesa=html.replace('<p>Cardápio Digital</p>',`<p>Cardápio Digital — ${mesaNome}</p>`);
+ 
+ // Abre janela de impressão
+ const w=window.open('','_blank','width=400,height=600');
+ w.document.write(`<!DOCTYPE html>
+<html><head><title>QR ${mesaNome}</title>
+<style>
+ body{font-family:sans-serif;text-align:center;padding:20px;}
+ @media print{button{display:none;}}
+ img{width:200px;height:200px;margin:16px auto;display:block;}
+</style></head><body>
+<h2>Di Casa Laranjinha</h2>
+<p style="font-size:14px;color:#666;margin-bottom:8px;">${mesaNome}</p>
+<p style="font-size:12px;color:#999;margin-bottom:16px;">Escaneie para ver o cardápio</p>
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin+'/cardapio')}" alt="QR Code"/>
+<p style="font-size:11px;color:#aaa;margin-top:8px;">di-casa.vercel.app/cardapio</p>
+<button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#ff4400;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">🖨️ Imprimir</button>
+</body></html>`);
+ w.document.close();
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
