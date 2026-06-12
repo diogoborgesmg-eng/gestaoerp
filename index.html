@@ -20639,6 +20639,66 @@ function verificarEstoqueMinimoAutomatico(){
 setInterval(verificarEstoqueMinimoAutomatico,3600000);
 setTimeout(verificarEstoqueMinimoAutomatico,10000);
 
+function editarCatLanc(tipo, id, dia){
+ const db=ldb();
+ const arr=db[dia]?.[tipo==='c'?'c':'r']||[];
+ const lanc=arr.find(l=>l.id===id);
+ if(!lanc){alert('Lançamento não encontrado');return;}
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:16px 14px 32px;">
+  <p style="font-weight:800;font-size:14px;margin-bottom:12px;">✏️ Editar Lançamento</p>
+
+  <div style="margin-bottom:10px;">
+   <label class="lbl">Nome / Descrição</label>
+   <input id="edit-lanc-nome" class="inpm" value="${lanc.d||''}" placeholder="Nome do destinatário"/>
+  </div>
+
+  <div style="margin-bottom:10px;">
+   <label class="lbl">Categoria</label>
+   <select id="edit-lanc-cat" class="inpm">
+    ${CATS.map(c=>`<option value="${c}" ${c===lanc.cat?'selected':''}>${c}</option>`).join('')}
+   </select>
+  </div>
+
+  <div style="margin-bottom:14px;">
+   <label class="lbl">Setor</label>
+   <select id="edit-lanc-setor" class="inpm">
+    <option value="">Geral (todos)</option>
+    <option value="restaurante" ${lanc.setor==='restaurante'?'selected':''}>🍽️ Restaurante</option>
+    <option value="espetaria" ${lanc.setor==='espetaria'?'selected':''}>🍢 Espetaria</option>
+    <option value="pizzaria" ${lanc.setor==='pizzaria'?'selected':''}>🍕 Pizzaria</option>
+    <option value="hamburgueria" ${lanc.setor==='hamburgueria'?'selected':''}>🍔 Hamburgueria</option>
+   </select>
+  </div>
+
+  <button onclick="salvarEditLanc('${tipo}','${id}','${dia}')" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;">✅ Salvar</button>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarEditLanc(tipo, id, dia){
+ const nome=document.getElementById('edit-lanc-nome')?.value?.trim();
+ const cat=document.getElementById('edit-lanc-cat')?.value;
+ const setor=document.getElementById('edit-lanc-setor')?.value||null;
+ const db=ldb();
+ const arr=db[dia]?.[tipo==='c'?'c':'r']||[];
+ const idx=arr.findIndex(l=>l.id===id);
+ if(idx<0){alert('Não encontrado');return;}
+ if(nome)db[dia][tipo==='c'?'c':'r'][idx].d=nome;
+ if(cat)db[dia][tipo==='c'?'c':'r'][idx].cat=cat;
+ db[dia][tipo==='c'?'c':'r'][idx].setor=setor;
+ db[dia][tipo==='c'?'c':'r'][idx]._semSetor=!setor;
+ // Aprende
+ if(nome&&cat)aprenderDestinatario(nome,cat);
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ render();
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
