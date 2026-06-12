@@ -8213,7 +8213,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8225,7 +8225,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
+ const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
     const _grupoLabel={cad:'📝 Produtos',forn:'🏭 Fornecedores',ficha:'📋 Fichas',est:'📦 Estoque',compras:'🛒 Compras',pedido:'📋 Pedidos',dre:'📊 DRE',resultado:'📅 Resultado',vendas:'💰 Vendas',buffet:'🍽️ Buffet',fin:'💳 Financeiro',fluxo:'💧 Fluxo',cpagar:'💳 C.Pagar',bancos:'🏦 Bancos',extrav:'🔍 Extraviado',fixos:'📌 Fixos',caixa:'🏦 Fechamento',bot:'🤖 Bot',openfinance:'🔗 Open Finance',rh:'👥 RH',comp:'✅ Compliance',aval:'⭐ Avaliações',mkt:'📣 Marketing',dashm:'📅 Mensal',dasha:'📈 Anual',bi:'📊 BI',cfo:'🧠 CFO',plano:'📑 Plano',dashc:'🗂️ Contas',dashcc:'🏷️ CC'};
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
@@ -20024,6 +20024,109 @@ function rDreSetores(){
    <p style="font-size:11px;color:var(--mu);">Rec: ${brl(dados.naoAlocado.rec)} · Custo: ${brl(dados.naoAlocado.custo)}</p>
    <p style="font-size:10px;color:var(--mu);margin-top:3px;">Lançamentos sem setor definido. Edite para alocar.</p>
   </div>`:''}
+ </div>`;
+}
+
+function rIndicadores(){
+ const db=ldb();
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+
+ // Coleta dados dos últimos 30 e 7 dias
+ function coletarPeriodo(dias){
+  let rec=0,custo=0,mp=0,rh=0,pedidos=0;
+  for(let i=0;i<dias;i++){
+   const d=new Date(hoje);d.setDate(d.getDate()-i);
+   const dia=d.toLocaleDateString('pt-BR');
+   const dd=db[dia];if(!dd)continue;
+   (dd.r||[]).forEach(l=>{rec+=Number(l.v||0);pedidos++;});
+   (dd.c||[]).forEach(l=>{
+    const v=Number(l.v||0);custo+=v;
+    if((l.cat||'').includes('Matéria')||(l.cat||'').includes('Prima'))mp+=v;
+    if((l.cat||'').includes('RH')||(l.cat||'').includes('Mão'))rh+=v;
+   });
+  }
+  return{rec,custo,mp,rh,pedidos,margem:rec>0?(rec-custo)/rec*100:0,cmv:rec>0?mp/rec*100:0};
+ }
+
+ const m30=coletarPeriodo(30);
+ const m7=coletarPeriodo(7);
+ const hoje1=coletarPeriodo(1);
+
+ // Comparativo semana vs semana anterior
+ function coletarSemana(offset){
+  let rec=0,custo=0;
+  for(let i=offset;i<offset+7;i++){
+   const d=new Date(hoje);d.setDate(d.getDate()-i);
+   const dd=db[d.toLocaleDateString('pt-BR')];if(!dd)continue;
+   (dd.r||[]).forEach(l=>rec+=Number(l.v||0));
+   (dd.c||[]).forEach(l=>custo+=Number(l.v||0));
+  }
+  return{rec,custo};
+ }
+ const semAtual=coletarSemana(0);
+ const semAnterior=coletarSemana(7);
+ const varRec=semAnterior.rec>0?((semAtual.rec-semAnterior.rec)/semAnterior.rec*100):0;
+
+ function indCard(label,valor,meta,unidade,inverso){
+  const ok=inverso?valor<=meta:valor>=meta;
+  const cor=ok?'var(--gr)':'var(--re)';
+  return`<div style="background:var(--sf2);border-radius:10px;padding:10px;text-align:center;">
+   <p style="font-size:10px;color:var(--mu);margin-bottom:4px;">${label}</p>
+   <p style="font-size:16px;font-weight:900;color:${cor};">${valor.toFixed(1)}${unidade}</p>
+   <p style="font-size:9px;color:var(--mu);">meta: ${meta}${unidade}</p>
+  </div>`;
+ }
+
+ return`<div style="padding:12px;">
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Indicadores de desempenho do negócio</p>
+
+  <!-- Hoje -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">📅 Hoje</p>
+  <div class="kg" style="margin-bottom:14px;">
+   <div class="kpi"><p class="kl">Receita</p><p class="kv" style="color:var(--gr);">${brl(hoje1.rec)}</p></div>
+   <div class="kpi"><p class="kl">Custo</p><p class="kv" style="color:var(--re);">${brl(hoje1.custo)}</p></div>
+   <div class="kpi"><p class="kl">Margem</p><p class="kv" style="color:${hoje1.margem>=10?'var(--gr)':'var(--re)'};">${hoje1.margem.toFixed(1)}%</p></div>
+  </div>
+
+  <!-- Semana comparativo -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">📊 Esta semana vs anterior</p>
+  <div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:14px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+     <p style="font-size:11px;color:var(--mu);">Esta semana</p>
+     <p style="font-size:15px;font-weight:900;color:var(--gr);">${brl(semAtual.rec)}</p>
+    </div>
+    <div style="text-align:center;">
+     <p style="font-size:18px;font-weight:900;color:${varRec>=0?'var(--gr)':'var(--re)'};">${varRec>=0?'▲':'▼'}${Math.abs(varRec).toFixed(1)}%</p>
+     <p style="font-size:9px;color:var(--mu);">vs semana anterior</p>
+    </div>
+    <div style="text-align:right;">
+     <p style="font-size:11px;color:var(--mu);">Semana anterior</p>
+     <p style="font-size:15px;font-weight:900;">${brl(semAnterior.rec)}</p>
+    </div>
+   </div>
+  </div>
+
+  <!-- KPIs 30 dias -->
+  <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🎯 Indicadores 30 dias</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+   ${indCard('CMV (Custo MP/Receita)',m30.cmv,35,'%',true)}
+   ${indCard('Margem Líquida',m30.margem,10,'%',false)}
+   ${indCard('% RH / Receita',m30.rec>0?m30.rh/m30.rec*100:0,30,'%',true)}
+   ${indCard('Resultado Mensal',m30.rec-m30.custo>0?100:0,100,'',false)}
+  </div>
+
+  <!-- Totais 30 dias -->
+  <div class="card">
+   <p style="font-size:11px;font-weight:700;margin-bottom:8px;">📈 Resumo 30 dias</p>
+   <div style="display:flex;flex-direction:column;gap:5px;">
+    <div style="display:flex;justify-content:space-between;"><span style="font-size:11px;color:var(--mu);">Receita total</span><span style="font-size:12px;font-weight:800;color:var(--gr);">${brl(m30.rec)}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="font-size:11px;color:var(--mu);">Custo total</span><span style="font-size:12px;font-weight:800;color:var(--re);">${brl(m30.custo)}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="font-size:11px;color:var(--mu);">Matéria prima</span><span style="font-size:12px;font-weight:800;">${brl(m30.mp)} (${m30.cmv.toFixed(1)}%)</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="font-size:11px;color:var(--mu);">RH</span><span style="font-size:12px;font-weight:800;">${brl(m30.rh)} (${m30.rec>0?(m30.rh/m30.rec*100).toFixed(1):0}%)</span></div>
+    <div style="display:flex;justify-content:space-between;border-top:1px solid var(--br);padding-top:5px;"><span style="font-size:12px;font-weight:700;">Resultado</span><span style="font-size:14px;font-weight:900;color:${m30.rec-m30.custo>=0?'var(--gr)':'var(--re)'};">${brl(m30.rec-m30.custo)}</span></div>
+   </div>
+  </div>
  </div>`;
 }
 
