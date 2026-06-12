@@ -19563,18 +19563,25 @@ async function checkBotPending(){
 async function buscarNFsSEFAZ(){
  try{
   const df=gDadosFiscais();
-  const cnpj=df.cnpj||'44.686.412/0001-00';
   
-  // Pega o certificado configurado
-  const cert=getCertificadoPorCNPJ(cnpj);
-  if(!cert||!cert.pfxBase64){
+  // Pega todos os certificados configurados
+  const certs=[];
+  for(let n=1;n<=2;n++){
+   const pfx=localStorage.getItem('erp_cert_pfx_'+n);
+   const info=JSON.parse(localStorage.getItem('erp_cert_info_'+n)||'{}');
+   if(pfx&&info.cnpj)certs.push({pfxBase64:pfx,info,n});
+  }
+  if(!certs.length){
    alert('⚠️ Configure o Certificado Digital A1 em ⚙️ Config → Certificados Digitais');
    return;
   }
   
-  // Pede a senha do certificado
-  const senha=prompt('🔐 Senha do certificado digital:','');
+  // Pede senha (usa a mesma para todos ou pede separado)
+  const senha=prompt('🔐 Senha do(s) certificado(s) digital(is):','');
   if(senha===null)return;
+  
+  const cnpj=df.cnpj||'44.686.412/0001-00';
+  const cert=certs[0]; // usa primeiro como compatibilidade
   
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
