@@ -106,7 +106,7 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Leia este comprovante de pagamento PIX. A empresa Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR total pago, (2) NOME de quem RECEBEU - esse nome nao e Di Casa Gastronomia, procure nos campos Favorecido/Para/Recebedor/Beneficiario/Nome da conta destino, (3) DATA do comprovante, (4) TIPO pix/boleto/cartao, (5) MOTIVO se houver. Liste cada campo claramente em portugues.' }
+          { type:'text', text:'Leia este comprovante de pagamento PIX. A empresa Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR total pago, (2) NOME de quem RECEBEU - esse nome nao e Di Casa Gastronomia, procure nos campos Favorecido/Para/Recebedor/Beneficiario/Nome da conta destino, (3) DATA do comprovante, (4) TIPO pix/boleto/cartao, (5) MOTIVO/DESCRICAO do pagamento se houver - ex: diarias, entrega, material, fornecedor, manutencao etc. Se nao tiver descricao no recibo informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
