@@ -191,7 +191,7 @@ async function claudeAPI(payload, tentativa=1){
 }
 
 const SEGS=[{id:"restaurante",n:"Restaurante",i:"🍽️",c:"#f59e0b"},{id:"hamburgueria",n:"Hamburgueria",i:"🍔",c:"#ef4444"},{id:"espetaria",n:"Espetaria",i:"🍢",c:"#f97316"},{id:"pizzaria",n:"Pizzaria",i:"🍕",c:"#ec4899"},{id:"bar",n:"Bar",i:"🍺",c:"#06b6d4"}];
-const CATS=["🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","🔄 Outros"];
+const CATS=["🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","⚠️ Extravio / Perda","🔄 Outros"];
 const brl=v=>"R$"+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const uid=()=>Math.random().toString(36).slice(2,9);
 const hj=()=>new Date().toLocaleDateString("pt-BR");
@@ -19856,6 +19856,45 @@ function salvarSetorBot(lancId, dia, setor){
  }
  document.querySelector('[style*="inset:0"]')?.remove();
  render();
+}
+
+function rExtraviado(){
+ const db=ldb();
+ const extravios=[];
+ // Busca lançamentos marcados como extravio em todos os dias
+ Object.keys(db).forEach(dia=>{
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(dia))return;
+  (db[dia].c||[]).forEach(l=>{
+   if((l.cat||'').includes('Extravio')||(l.cat||'').includes('Perda')||(l._descarte)){
+    extravios.push({...l,dia});
+   }
+  });
+ });
+ // Busca descartes do estoque
+ (db.cozinhaDescartes||[]).forEach(d=>{
+  extravios.push({id:d.id,d:d.nome,v:0,cat:'⚠️ Extravio / Perda',dia:d.dtDescarte||'—',_estoque:true,qtd:d.qtd,un:d.un});
+ });
+
+ return`<div class="si">
+ <div style="padding:12px;">
+  <div class="kg" style="margin-bottom:12px;">
+   <div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">${extravios.length}</p></div>
+   <div class="kpi"><p class="kl">Valor perdido</p><p class="kv" style="color:var(--re);">${brl(extravios.reduce((a,e)=>a+Number(e.v||0),0))}</p></div>
+  </div>
+
+  ${extravios.length===0?`<div style="text-align:center;padding:20px;color:var(--mu);">
+   <p style="font-size:24px;">✅</p>
+   <p style="font-size:13px;font-weight:700;">Nenhum extravio registrado</p>
+   <p style="font-size:11px;margin-top:4px;">Extravios aparecem quando você descarta itens do estoque ou lança a categoria "⚠️ Extravio / Perda"</p>
+  </div>`:extravios.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:9px;margin-bottom:6px;">
+   <div>
+    <p style="font-size:12px;font-weight:700;">${e.d}</p>
+    <p style="font-size:10px;color:var(--mu);">${e.dia}${e._estoque?' · Estoque':''}${e.qtd?' · '+e.qtd+' '+(e.un||'')':''}</p>
+   </div>
+   <p style="font-size:13px;font-weight:800;color:var(--re);">${e.v>0?brl(e.v):'—'}</p>
+  </div>`).join('')}
+ </div>
+</div>`;
 }
 
 render();
