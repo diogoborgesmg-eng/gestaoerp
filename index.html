@@ -15480,7 +15480,15 @@ function abrirFormProduto(id){
     <input type="checkbox" id="fp-ativo" ${(prod?.ativo!==false)?'checked':''}/> Ativo no PDV
    </label>
   </div>
-  <div style="display:flex;gap:8px;margin-top:14px;">
+  <div style="margin-bottom:10px;">
+ <label class="lbl">NCM / CEST (Fiscal)</label>
+ <div style="display:flex;gap:6px;margin-bottom:6px;">
+  <input id="prod-ncm" class="inpm" placeholder="NCM ex: 2106.90.10" style="flex:1;" maxlength="12"/>
+  <input id="prod-cest" class="inpm" placeholder="CEST" style="width:110px;" maxlength="9"/>
+ </div>
+ <button onclick="sugerirNCM(document.getElementById('prod-nome')?.value||document.getElementById('np-nome')?.value||'',document.getElementById('prod-cat')?.value||'')" style="width:100%;padding:8px;border-radius:7px;border:none;background:rgba(255,204,0,0.15);color:var(--ye);font-size:11px;font-weight:800;cursor:pointer;">🔍 Sugerir NCM/CEST com menor custo tributário</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:14px;">
    <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>
    <button onclick="salvarProduto('${id||''}')" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">💾 Salvar no PDV</button>
   </div>
@@ -15496,7 +15504,7 @@ function salvarProduto(id){
  const db=ldb();if(!db.cardapioPDV)db.cardapioPDV=[];
  const dados={id:id||uid(),nome,preco,cat:document.getElementById('fp-cat')?.value||'outros',buffet:document.getElementById('fp-buffet')?.checked||false,
   seg:document.getElementById('fp-seg')?.value||'restaurante',cod:document.getElementById('fp-cod')?.value?.trim()||'',
-  ativo:document.getElementById('fp-ativo')?.checked!==false,variacoes:[]};
+  ativo:document.getElementById('fp-ativo')?.checked!==false,variacoes:[],ncm:(document.getElementById('prod-ncm')?.value||'').trim(),cest:(document.getElementById('prod-cest')?.value||'').trim()};
  if(id){const idx=db.cardapioPDV.findIndex(p=>p.id===id);if(idx>=0)db.cardapioPDV[idx]={...db.cardapioPDV[idx],...dados};else db.cardapioPDV.push(dados);}
  else db.cardapioPDV.push(dados);
  sdb(db);document.querySelector('[style*="inset:0"]')?.remove();render();
@@ -21081,6 +21089,63 @@ async function gerarFichaAutoIA(prodId, nome, cat, preco){
   setTimeout(()=>n.remove(),5000);
 
  }catch(e){console.log('Erro gerarFichaAutoIA:',e.message);}
+}
+
+// ═══ NCM/CEST AUTOMÁTICO ═════════════════════════════════════
+async function sugerirNCM(nome, categoria){
+ const btn=document.querySelector('[onclick*="sugerirNCM"]');
+ if(btn){btn.textContent='⏳ Buscando...';btn.disabled=true;}
+ try{
+  const result=await claudeAPI({model:MODEL,max_tokens:500,messages:[{role:'user',content:
+   'Produto: "'+nome+'". Categoria: '+(categoria||'alimento')+'.\n'+
+   'Sugira o NCM correto para este produto de restaurante/alimentação no Brasil.\n'+
+   'Priorize o NCM com MENOR carga tributária (ICMS, PIS, COFINS) que se encaixe corretamente.\n'+
+   'Retorne APENAS JSON:\n'+
+   '{"ncm":"0000.00.00","cest":"00.000.00","descricaoNCM":"descrição oficial","aliquotaMedia":"12%","motivo":"por que esse NCM tem menor carga","alternativas":[{"ncm":"","desc":"","aliquota":""}]}'
+  }]});
+
+  const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+  if(!dados.ncm){alert('Não consegui identificar o NCM. Tente com uma descrição mais detalhada.');return;}
+
+  // Preenche os campos
+  const ncmEl=document.getElementById('prod-ncm');
+  const cestEl=document.getElementById('prod-cest');
+  if(ncmEl)ncmEl.value=dados.ncm;
+  if(cestEl)cestEl.value=dados.cest||'';
+
+  // Mostra modal com resultado e alternativas
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:900;display:flex;align-items:flex-end;justify-content:center;';
+  div.innerHTML=`<div style="background:var(--sf);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:16px 14px 32px;">
+   <p style="font-weight:800;font-size:14px;margin-bottom:4px;">🏷️ NCM Sugerido</p>
+   <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Menor carga tributária para "${nome}"</p>
+
+   <div style="background:rgba(0,255,136,0.08);border:2px solid rgba(0,255,136,0.3);border-radius:12px;padding:12px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+     <span style="font-size:13px;font-weight:900;color:#00ff88;">${dados.ncm}</span>
+     <span style="font-size:12px;font-weight:700;color:var(--ye);">${dados.aliquotaMedia||''}</span>
+    </div>
+    <p style="font-size:11px;color:var(--tx);margin-bottom:4px;">${dados.descricaoNCM||''}</p>
+    ${dados.cest?`<p style="font-size:10px;color:var(--mu);">CEST: ${dados.cest}</p>`:''}
+    <p style="font-size:10px;color:var(--mu);margin-top:4px;">${dados.motivo||''}</p>
+   </div>
+
+   ${dados.alternativas?.length?`
+   <p style="font-size:11px;font-weight:700;color:var(--mu);margin-bottom:6px;">Alternativas:</p>
+   ${dados.alternativas.map(a=>`<div style="display:flex;justify-content:space-between;padding:7px;background:rgba(255,255,255,0.04);border-radius:7px;margin-bottom:4px;cursor:pointer;" onclick="document.getElementById('prod-ncm').value='${a.ncm}';this.closest('[style*=inset]').remove();">
+    <div><p style="font-size:11px;font-weight:700;">${a.ncm}</p><p style="font-size:10px;color:var(--mu);">${a.desc}</p></div>
+    <span style="font-size:11px;color:var(--ye);">${a.aliquota}</span>
+   </div>`).join('')}`:''}
+
+   <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px;">✅ Usar este NCM</button>
+   <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;margin-top:6px;">Cancelar</button>
+  </div>`;
+  div.onclick=e=>{if(e.target===div)div.remove();};
+  document.body.appendChild(div);
+
+ }catch(e){alert('Erro: '+e.message);}
+ finally{if(btn){btn.textContent='🔍 Sugerir NCM/CEST';btn.disabled=false;}}
 }
 
 render();
