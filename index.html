@@ -1298,19 +1298,28 @@ async function consultarNFSefaz(chaveAcesso, cnpjEmitente){
 }
 
 async function emitirNFCe(dados){
- // dados = {itens, total, cpfCliente, cnpjEmitente, pagamento}
- // TODO: Integração real via FocusNFE/NFe.io ou webservice SEFAZ direto
- const cert=getCertificadoPorCNPJ(dados.cnpjEmitente||"");
- if(!cert.pfxBase64){
- return{ok:false,erro:"Certificado não configurado para CNPJ "+dados.cnpjEmitente};
+ // dados = {itens, total, cpfCliente, cnpjEmitente, pagamentos}
+ const df=gDadosFiscais();
+ const cert=getCertificadoPorCNPJ(dados.cnpjEmitente||df.cnpj||'');
+ if(!cert||!cert.pfxBase64){
+  return{ok:false,erro:'Certificado digital não configurado para este CNPJ'};
  }
- console.log("[SEFAZ NFC-e] Emissão solicitada",dados,"cert:",cert.info.cnpj);
- return{
- ok:false,
- pendente:true,
- msg:"⏳ Emissão NFC-e em implementação\nCertificado: "+cert.info.nome+"\nCNPJ: "+cert.info.cnpj,
- cert:cert.info
- };
+ const csc=df.csc||df.cscToken||'92eb516e63e472e5c06b3549d035aaaa';
+ const cscId=df.cscId||'000001';
+ // Retorna promise para uso assíncrono
+ return fetch('/api/nfce/emitir',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+  body:JSON.stringify({
+   itens:dados.itens,total:dados.total,
+   cpfCliente:dados.cpfCliente||'',
+   cnpj:dados.cnpjEmitente||df.cnpj||'44.686.412/0001-00',
+   pfxBase64:cert.pfxBase64,
+   pfxSenha:cert.senha||'',
+   csc,cscId,
+   pagamentos:dados.pagamentos||[{tipo:'01',valor:dados.total}]
+  })
+ }).then(r=>r.json());
 }
 
 // Verifica a cada 30 min se chegaram novas NFs para os CNPJs configurados
@@ -15509,7 +15518,29 @@ function salvarProduto(id){
   ativo:document.getElementById('fp-ativo')?.checked!==false,variacoes:[],ncm:(document.getElementById('prod-ncm')?.value||'').trim(),cest:(document.getElementById('prod-cest')?.value||'').trim()};
  if(id){const idx=db.cardapioPDV.findIndex(p=>p.id===id);if(idx>=0)db.cardapioPDV[idx]={...db.cardapioPDV[idx],...dados};else db.cardapioPDV.push(dados);}
  else db.cardapioPDV.push(dados);
- sdb(db);document.querySelector('[style*="inset:0"]')?.remove();render();
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ // Pergunta se quer emitir NFC-e
+ if(typeof emitirNFCe==='function'&&typeof gDadosFiscais==='function'){
+  const _df=gDadosFiscais();
+  if(_df.cnpj&&_df.csc){
+   const _emitir=confirm('Emitir NFC-e?');
+   if(_emitir){
+    const _cpf=prompt('CPF do cliente (opcional):','');
+    const _itens=(db[dia]?.r||[]).filter(x=>x._comanda===comandaId);
+    emitirNFCe({itens:_itens,total,cpfCliente:_cpf||'',cnpjEmitente:_df.cnpj,
+     pagamentos:[{tipo:tipo==='credito'?'03':tipo==='debito'?'04':tipo==='pix'?'17':'01',valor:total}]
+    }).then(function(r){
+     if(r.ok){
+      alert('✅ NFC-e Autorizada!\nNúmero: '+r.numero+'\nChave: '+r.chave.substring(0,20)+'...');
+     }else{
+      alert('⚠️ NFC-e: '+r.mensagem+'\n'+r.erro);
+     }
+     render();
+    }).catch(function(e){alert('Erro NFC-e: '+e.message);render();});
+   }else{render();}
+  }else{render();}
+ }else{render();}
 }
 
 function editarProdutoPDV(id){abrirFormProduto(id);}
