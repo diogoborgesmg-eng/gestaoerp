@@ -274,20 +274,44 @@ module.exports = async function handler(req, res) {
   // ── IFOOD AUTH ────────────────────────────────────────────
   if (path === '/api/ifood/auth' && req.method === 'POST') {
     if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
-    const { clientId, authorizationCode, grantType } = body;
+    const { clientId, step, userCode, verificationUrlComplete } = body;
     try {
-      const params = new URLSearchParams();
-      params.append('grantType', grantType || 'authorization_code');
-      params.append('clientId', clientId);
-      params.append('authorizationCode', authorizationCode);
-      const resp = await fetch('https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString()
-      });
-      const data = await resp.json();
-      if (!resp.ok) return res.status(200).json({ ok: false, erro: data.message || JSON.stringify(data) });
-      return res.status(200).json({ ok: true, accessToken: data.accessToken, refreshToken: data.refreshToken, expiresIn: data.expiresIn });
+      // Passo 1: Gera o user code que o iFood vai pedir
+      if (step === 'generate' || !step) {
+        const params = new URLSearchParams();
+        params.append('clientId', clientId);
+        const resp = await fetch('https://merchant-api.ifood.com.br/authentication/v1.0/oauth/userCode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+        const data = await resp.json();
+        if (!resp.ok) return res.status(200).json({ ok: false, erro: data.message || JSON.stringify(data).substring(0,200) });
+        return res.status(200).json({ 
+          ok: true, 
+          step: 'show_code',
+          userCode: data.userCode,
+          verificationUrl: data.verificationUrlComplete || 'https://portal.ifood.com.br/apps/code',
+          expiresIn: data.expiresIn || 600,
+          interval: data.interval || 5,
+          deviceCode: data.authorizationCodeVerifier
+        });
+      }
+      // Passo 2: Troca o device code pelo access token (após usuario colar o código)
+      if (step === 'token') {
+        const params2 = new URLSearchParams();
+        params2.append('clientId', clientId);
+        params2.append('grantType', 'device_code');
+        params2.append('authorizationCode', userCode);
+        const resp2 = await fetch('https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params2.toString()
+        });
+        const data2 = await resp2.json();
+        if (!resp2.ok) return res.status(200).json({ ok: false, erro: data2.message || 'Aguardando autorizacao', pending: true });
+        return res.status(200).json({ ok: true, accessToken: data2.accessToken, refreshToken: data2.refreshToken, expiresIn: data2.expiresIn });
+      }
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
 
