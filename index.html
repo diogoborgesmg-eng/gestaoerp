@@ -8213,7 +8213,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8225,7 +8225,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
+ const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
     const _grupoLabel={cad:'📝 Produtos',forn:'🏭 Fornecedores',ficha:'📋 Fichas',est:'📦 Estoque',compras:'🛒 Compras',pedido:'📋 Pedidos',dre:'📊 DRE',resultado:'📅 Resultado',vendas:'💰 Vendas',buffet:'🍽️ Buffet',fin:'💳 Financeiro',fluxo:'💧 Fluxo',cpagar:'💳 C.Pagar',bancos:'🏦 Bancos',extrav:'🔍 Extraviado',fixos:'📌 Fixos',caixa:'🏦 Fechamento',bot:'🤖 Bot',openfinance:'🔗 Open Finance',rh:'👥 RH',comp:'✅ Compliance',aval:'⭐ Avaliações',mkt:'📣 Marketing',dashm:'📅 Mensal',dasha:'📈 Anual',bi:'📊 BI',cfo:'🧠 CFO',plano:'📑 Plano',dashc:'🗂️ Contas',dashcc:'🏷️ CC'};
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
@@ -19793,6 +19793,113 @@ function rExtraviado(){
  });
  (db.cozinhaDescartes||[]).forEach(function(dc){ext.push({n:dc.nome,v:0,d:dc.dtDescarte||'',est:true});});
  return '<div class="si"><div style="padding:12px;"><div class="kg" style="margin-bottom:12px;"><div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">'+ext.length+'</p></div><div class="kpi"><p class="kl">Valor</p><p class="kv" style="color:var(--re);">'+brl(total)+'</p></div></div>'+(ext.length===0?'<p style="text-align:center;padding:20px;color:var(--mu);">✅ Nenhum extravio registrado</p>':ext.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:8px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:8px;margin-bottom:5px;"><div><p style="font-size:12px;font-weight:700;">'+e.n+'</p><p style="font-size:10px;color:var(--mu);">'+e.d+(e.est?' · Estoque':'')+'</p></div><p style="font-weight:800;color:var(--re);">'+(e.v>0?brl(e.v):'—')+'</p></div>';}).join(''))+'</div></div>';
+}
+
+function rDreSetores(){
+ const db=ldb();
+ const dias=[];
+ // Pega os últimos 30 dias
+ const hoje=new Date();
+ for(let i=0;i<30;i++){
+  const d=new Date(hoje);d.setDate(d.getDate()-i);
+  dias.push(d.toLocaleDateString('pt-BR'));
+ }
+
+ const SETORES=[
+  {id:'restaurante',nome:'🍽️ Restaurante',cor:'#00cc66'},
+  {id:'espetaria',nome:'🍢 Espetaria',cor:'#ff8844'},
+  {id:'pizzaria',nome:'🍕 Pizzaria',cor:'#ff3366'},
+  {id:'hamburgueria',nome:'🍔 Hamburgueria',cor:'#ffcc00'},
+  {id:'geral',nome:'📦 Geral',cor:'#8888ff'},
+ ];
+
+ // Calcula por setor
+ const dados={};
+ SETORES.forEach(s=>{dados[s.id]={rec:0,custo:0,rh:0,mp:0};});
+ dados.naoAlocado={rec:0,custo:0,rh:0,mp:0};
+
+ dias.forEach(dia=>{
+  const d=db[dia];if(!d)return;
+  // Receitas — seg define o setor
+  (d.r||[]).forEach(l=>{
+   const seg=(l.seg||'').toLowerCase().replace(/[^a-z]/g,'');
+   const key=SETORES.find(s=>seg.includes(s.id))?SETORES.find(s=>seg.includes(s.id)).id:'naoAlocado';
+   dados[key].rec+=Number(l.v||0);
+  });
+  // Custos — setor define o setor, categoria define o tipo
+  (d.c||[]).forEach(l=>{
+   const setor=(l.setor||'').toLowerCase().replace(/[^a-z]/g,'');
+   const key=SETORES.find(s=>setor.includes(s.id))?SETORES.find(s=>setor.includes(s.id)).id:'naoAlocado';
+   const cat=(l.cat||'').toLowerCase();
+   dados[key].custo+=Number(l.v||0);
+   if(cat.includes('rh')||cat.includes('mao')||cat.includes('folha'))dados[key].rh+=Number(l.v||0);
+   if(cat.includes('mat')||cat.includes('prima')||cat.includes('insumo'))dados[key].mp+=Number(l.v||0);
+  });
+  // Custos de produção do estoque alocados por setor
+  (db.cozinhaProducao||[]).filter(p=>dias.includes(p.dtProducao||'')).forEach(p=>{
+   const setor=(p.setor||'geral').toLowerCase();
+   const key=SETORES.find(s=>setor.includes(s.id))?SETORES.find(s=>setor.includes(s.id)).id:'naoAlocado';
+   // Custo estimado pelo peso (precisa de ficha técnica para ser exato)
+   // Por enquanto registra como existente sem valor
+  });
+ });
+
+ const totalRec=Object.values(dados).reduce((a,d)=>a+d.rec,0);
+ const totalCusto=Object.values(dados).reduce((a,d)=>a+d.custo,0);
+ const totalRes=totalRec-totalCusto;
+
+ return`<div style="padding:12px;">
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Últimos 30 dias — Resultado por setor</p>
+
+  <!-- Totais gerais -->
+  <div class="kg" style="margin-bottom:14px;">
+   <div class="kpi"><p class="kl">Receita Total</p><p class="kv" style="color:var(--gr);">${brl(totalRec)}</p></div>
+   <div class="kpi"><p class="kl">Custo Total</p><p class="kv" style="color:var(--re);">${brl(totalCusto)}</p></div>
+   <div class="kpi"><p class="kl">Resultado</p><p class="kv" style="color:${totalRes>=0?'var(--gr)':'var(--re)'};">${brl(totalRes)}</p></div>
+   <div class="kpi"><p class="kl">Margem</p><p class="kv" style="color:${totalRec>0&&(totalRes/totalRec)>=0.1?'var(--gr)':'var(--re)'};">${totalRec>0?(totalRes/totalRec*100).toFixed(1)+'%':'—'}</p></div>
+  </div>
+
+  <!-- Por setor -->
+  ${SETORES.map(s=>{
+   const d=dados[s.id];
+   const res=d.rec-d.custo;
+   const margem=d.rec>0?(res/d.rec*100):0;
+   const cmv=d.rec>0?(d.mp/d.rec*100):0;
+   if(d.rec===0&&d.custo===0)return'';
+   return`<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;border-left:3px solid ${s.cor};">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+     <p style="font-size:13px;font-weight:800;">${s.nome}</p>
+     <p style="font-size:13px;font-weight:900;color:${res>=0?'var(--gr)':'var(--re)'};">${brl(res)}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;">
+     <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:7px;padding:6px;">
+      <p style="font-size:9px;color:var(--mu);">Receita</p>
+      <p style="font-size:11px;font-weight:800;color:var(--gr);">${brl(d.rec)}</p>
+     </div>
+     <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:7px;padding:6px;">
+      <p style="font-size:9px;color:var(--mu);">Custo</p>
+      <p style="font-size:11px;font-weight:800;color:var(--re);">${brl(d.custo)}</p>
+     </div>
+     <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:7px;padding:6px;">
+      <p style="font-size:9px;color:var(--mu);">Margem</p>
+      <p style="font-size:11px;font-weight:800;color:${margem>=10?'var(--gr)':'var(--re)'};">${margem.toFixed(1)}%</p>
+     </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+     ${d.rh>0?`<span style="font-size:10px;color:var(--mu);">👥 RH: ${brl(d.rh)}</span>`:''}
+     ${d.mp>0?`<span style="font-size:10px;color:var(--mu);">🥩 MP: ${brl(d.mp)} (CMV ${cmv.toFixed(1)}%)</span>`:''}
+    </div>
+   </div>`;
+  }).join('')}
+
+  <!-- Não alocado -->
+  ${dados.naoAlocado.rec>0||dados.naoAlocado.custo>0?`
+  <div style="background:var(--sf2);border-radius:12px;padding:10px;border-left:3px solid var(--mu);opacity:0.7;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:4px;">⚠️ Não alocado por setor</p>
+   <p style="font-size:11px;color:var(--mu);">Rec: ${brl(dados.naoAlocado.rec)} · Custo: ${brl(dados.naoAlocado.custo)}</p>
+   <p style="font-size:10px;color:var(--mu);margin-top:3px;">Lançamentos sem setor definido. Edite para alocar.</p>
+  </div>`:''}
+ </div>`;
 }
 
 render();
