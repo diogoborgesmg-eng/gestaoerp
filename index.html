@@ -19502,32 +19502,45 @@ async function sincronizarBotLancamentos(){
 
 async function confirmarLancamentosBot(){
  try{
-  // Usa pendentes já carregados em memória
   const pend=window._botPendentes||[];
   if(!pend.length){
-   // Tenta buscar novamente se memória vazia
    await checkBotPending();
    const pend2=window._botPendentes||[];
    if(!pend2.length){alert('Nenhum lançamento pendente do WhatsApp.');return;}
    return confirmarLancamentosBot();
   }
   const db=ldb();
-  const dia=hj();
-  if(!db[dia])db[dia]={r:[],c:[]};
-  if(!db[dia].c)db[dia].c=[];
   let count=0;
+
   pend.forEach(l=>{
-   if(db[dia].c.some(x=>x._botId===l.id))return;
-   db[dia].c.push({id:uid(),d:l.descricao||'WhatsApp',v:Number(l.valor||0),
-    cat:l.categoria||'Outros',seg:l.tipo||'pix',
-    _botId:l.id,_origem:'whatsapp',dt:dia});
+   // Usa a DATA DO RECIBO, não de hoje
+   const dataLanc=l.data||hj();
+   if(!db[dataLanc])db[dataLanc]={r:[],c:[]};
+   if(!db[dataLanc].c)db[dataLanc].c=[];
+   if(db[dataLanc].c.some(x=>x._botId===l.id))return;
+
+   // Infere categoria pelo destinatário aprendido
+   const catAprendida=inferirCategoriaDestinatario(l.destinatario||l.descricao);
+   const cat=catAprendida||l.categoria||'Outros';
+
+   // Aprende a associação
+   if(l.destinatario&&cat!=='Outros')aprenderDestinatario(l.destinatario,cat);
+
+   db[dataLanc].c.push({id:uid(),
+    d:l.destinatario||l.descricao||'WhatsApp',
+    v:Number(l.valor||0),
+    cat,seg:l.tipo||'pix',
+    _botId:l.id,_origem:'whatsapp',
+    dt:dataLanc
+   });
    count++;
   });
+
   if(count>0){
    sdb(db);
    window._botPendentes=[];
    render();
-   alert('✅ '+count+' lançamento(s) adicionado(s) ao DRE!');
+   alert('✅ '+count+' lançamento(s) adicionado(s) ao DRE na data correta!');
   }else{
    alert('Lançamentos já foram registrados.');
   }
@@ -19616,6 +19629,33 @@ async function buscarNFsSEFAZ(){
   document.querySelector('[style*="inset:0"]')?.remove();
   alert('Erro: '+e.message);
  }
+}
+
+// ═══ APRENDIZADO BOT — nome → categoria ══════════════════════
+function aprenderDestinatario(destinatario, categoria){
+ if(!destinatario||!categoria)return;
+ const db=ldb();
+ if(!db.botAprendizado)db.botAprendizado={};
+ const nome=destinatario.toLowerCase().trim();
+ db.botAprendizado[nome]=categoria;
+ sdb(db);
+}
+
+function inferirCategoriaDestinatario(destinatario){
+ if(!destinatario)return null;
+ const db=ldb();
+ const aprendizado=db.botAprendizado||{};
+ const nome=destinatario.toLowerCase().trim();
+ // Busca exato
+ if(aprendizado[nome])return aprendizado[nome];
+ // Busca parcial (primeiro nome)
+ const primeiroNome=nome.split(' ')[0];
+ for(const [k,v] of Object.entries(aprendizado)){
+  if(k.includes(primeiroNome)||primeiroNome.includes(k.split(' ')[0])){
+   return v;
+  }
+ }
+ return null;
 }
 
 render();
