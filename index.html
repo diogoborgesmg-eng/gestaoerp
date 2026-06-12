@@ -13712,14 +13712,22 @@ function del(t,id){
  if(!confirm("Remover este lançamento?"))return;
  const db=ldb();
  const dia=getDia();
+ // Se tem _botId, salva como rejeitado para não voltar
+ function rejeitarBotId(arr){
+  const lanc=(arr||[]).find(x=>x.id===id);
+  if(lanc&&lanc._botId){
+   if(!db.botRejeitados)db.botRejeitados=[];
+   if(!db.botRejeitados.includes(lanc._botId))db.botRejeitados.push(lanc._botId);
+  }
+ }
  if(db[dia]){
- if(t==="r"&&db[dia].r?.find(x=>x.id===id)){db[dia].r=db[dia].r.filter(x=>x.id!==id);sdb(db);render();return;}
- if(t==="c"&&db[dia].c?.find(x=>x.id===id)){db[dia].c=db[dia].c.filter(x=>x.id!==id);sdb(db);render();return;}
+  if(t==="r"&&db[dia].r?.find(x=>x.id===id)){rejeitarBotId(db[dia].r);db[dia].r=db[dia].r.filter(x=>x.id!==id);sdb(db);render();return;}
+  if(t==="c"&&db[dia].c?.find(x=>x.id===id)){rejeitarBotId(db[dia].c);db[dia].c=db[dia].c.filter(x=>x.id!==id);sdb(db);render();return;}
  }
  const dias=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
  for(const d of dias){
- if(t==="r"&&db[d].r?.find(x=>x.id===id)){db[d].r=db[d].r.filter(x=>x.id!==id);sdb(db);render();return;}
- if(t==="c"&&db[d].c?.find(x=>x.id===id)){db[d].c=db[d].c.filter(x=>x.id!==id);sdb(db);render();return;}
+  if(t==="r"&&db[d].r?.find(x=>x.id===id)){rejeitarBotId(db[d].r);db[d].r=db[d].r.filter(x=>x.id!==id);sdb(db);render();return;}
+  if(t==="c"&&db[d].c?.find(x=>x.id===id)){rejeitarBotId(db[d].c);db[d].c=db[d].c.filter(x=>x.id!==id);sdb(db);render();return;}
  }
  alert("Lançamento não encontrado.");
 }
@@ -19559,7 +19567,9 @@ async function sincronizarBotLancamentos(){
 
 async function confirmarLancamentosBot(){
  try{
-  const pend=window._botPendentes||[];
+  const db0=ldb();
+  const rejeitados=db0.botRejeitados||[];
+  const pend=(window._botPendentes||[]).filter(l=>!rejeitados.includes(l.id));
   if(!pend.length){
    await checkBotPending();
    const pend2=window._botPendentes||[];
@@ -19612,7 +19622,8 @@ async function checkBotPending(){
  try{
   const _resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
   const _data=await _resp.json();
-  const _pend=(_data.lancamentos||[]).filter(function(l){return !l.sincronizado;});
+  const _rej=(ldb().botRejeitados||[]);
+   const _pend=(_data.lancamentos||[]).filter(function(l){return !l.sincronizado&&!_rej.includes(l.id);});
   const _antes=window._botPendentes?window._botPendentes.length:0;
   window._botPendentes=_pend;
   // Se mudou a quantidade, re-renderiza para mostrar/esconder banner
