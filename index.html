@@ -19889,8 +19889,7 @@ function rExtraviado(){
   </div>`:extravios.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:9px;margin-bottom:6px;">
    <div>
     <p style="font-size:12px;font-weight:700;">${e.d}</p>
-    <p style="font-size:10px;color:var(--mu);">${e.dia}${e._estoque?' · Estoque':''}${e.qtd?' · '+e.qtd+' '+(e.un||'')':''}</p>
-   </div>
+    <p style="font-size:10px;color:var(--mu);">${e.dia}${e._estoque?' · Estoque':''}${e.qtd?' · '+e.qtd+' '+(e.un||''):'>
    <p style="font-size:13px;font-weight:800;color:var(--re);">${e.v>0?brl(e.v):'—'}</p>
   </div>`).join('')}
  </div>
