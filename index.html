@@ -8213,7 +8213,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -8225,7 +8225,7 @@ function render(){
  atualizarAlertas();return;
  }
  try{
- const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
+ const _grupoMap={cad:['cad','forn','ficha','est','compras','pedido','fila'],forn:['cad','forn','ficha','est','compras','pedido'],ficha:['cad','forn','ficha','est','compras','pedido'],est:['cad','forn','ficha','est','compras','pedido'],compras:['cad','forn','ficha','est','compras','pedido'],pedido:['cad','forn','ficha','est','compras','pedido'],dre:['dre','resultado','vendas','buffet','setores','indicadores'],resultado:['dre','resultado','vendas','buffet'],vendas:['dre','resultado','vendas','buffet'],buffet:['dre','resultado','vendas','buffet'],fin:['fin','fluxo','cpagar','bancos','extrav','fixos'],fluxo:['fin','fluxo','cpagar','bancos','extrav','fixos'],cpagar:['fin','fluxo','cpagar','bancos','extrav','fixos'],bancos:['fin','fluxo','cpagar','bancos','extrav','fixos'],extrav:['fin','fluxo','cpagar','bancos','extrav','fixos'],fixos:['fin','fluxo','cpagar','bancos','extrav','fixos'],caixa:['caixa','conciliacao','bot','openfinance'],bot:['caixa','bot','openfinance'],openfinance:['caixa','bot','openfinance'],rh:['rh','comp','aval','mkt'],comp:['rh','comp','aval','mkt'],aval:['rh','comp','aval','mkt'],mkt:['rh','comp','aval','mkt'],dashm:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dasha:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],bi:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],cfo:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],plano:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashc:['dashm','dasha','bi','cfo','plano','dashc','dashcc'],dashcc:['dashm','dasha','bi','cfo','plano','dashc','dashcc']};
     const _grupoLabel={cad:'📝 Produtos',forn:'🏭 Fornecedores',ficha:'📋 Fichas',est:'📦 Estoque',compras:'🛒 Compras',pedido:'📋 Pedidos',dre:'📊 DRE',resultado:'📅 Resultado',vendas:'💰 Vendas',buffet:'🍽️ Buffet',fin:'💳 Financeiro',fluxo:'💧 Fluxo',cpagar:'💳 C.Pagar',bancos:'🏦 Bancos',extrav:'🔍 Extraviado',fixos:'📌 Fixos',caixa:'🏦 Fechamento',bot:'🤖 Bot',openfinance:'🔗 Open Finance',rh:'👥 RH',comp:'✅ Compliance',aval:'⭐ Avaliações',mkt:'📣 Marketing',dashm:'📅 Mensal',dasha:'📈 Anual',bi:'📊 BI',cfo:'🧠 CFO',plano:'📑 Plano',dashc:'🗂️ Contas',dashcc:'🏷️ CC'};
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
@@ -20128,6 +20128,139 @@ function rIndicadores(){
    </div>
   </div>
  </div>`;
+}
+
+function rConciliacao(){
+ const db=ldb();
+ const hoje=new Date();
+ const diaAtual=hoje.toLocaleDateString('pt-BR');
+ const mes=hoje.getMonth();
+ const ano=hoje.getFullYear();
+
+ // Coleta vendas do PDV por forma de pagamento (mês atual)
+ const pdvPorForma={credito:0,debito:0,pix:0,dinheiro:0,voucher:0,fiado:0};
+ const pdvPorDia={};
+
+ for(let i=1;i<=31;i++){
+  const d=new Date(ano,mes,i);
+  if(d.getMonth()!==mes)break;
+  const dia=d.toLocaleDateString('pt-BR');
+  const dd=db[dia];if(!dd)continue;
+  let total=0;
+  (dd.r||[]).forEach(l=>{
+   const seg=(l.seg||'').toLowerCase();
+   const v=Number(l.v||0);total+=v;
+   if(seg.includes('cred'))pdvPorForma.credito+=v;
+   else if(seg.includes('deb'))pdvPorForma.debito+=v;
+   else if(seg.includes('pix'))pdvPorForma.pix+=v;
+   else if(seg.includes('din'))pdvPorForma.dinheiro+=v;
+   else if(seg.includes('vouch'))pdvPorForma.voucher+=v;
+   else if(seg.includes('fiad'))pdvPorForma.fiado+=v;
+  });
+  if(total>0)pdvPorDia[dia]=total;
+ }
+
+ const totalPDV=Object.values(pdvPorForma).reduce((a,b)=>a+b,0);
+
+ // Maquininhas configuradas
+ const maquinas=db.maquinas||[];
+ const totalMaq=maquinas.reduce((a,m)=>a+Number(m.totalMes||0),0);
+ const diferenca=totalPDV-totalMaq;
+
+ // Dias com divergência
+ const fechamentos=db.fechamentos||[];
+ const divergencias=fechamentos.filter(f=>Math.abs(f.diferenca||0)>0.01);
+
+ return`<div style="padding:12px;">
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Vendas PDV vs Maquininhas — ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mes]}/${ano}</p>
+
+  <!-- KPIs -->
+  <div class="kg" style="margin-bottom:14px;">
+   <div class="kpi"><p class="kl">Total PDV</p><p class="kv" style="color:var(--gr);">${brl(totalPDV)}</p></div>
+   <div class="kpi"><p class="kl">Total Máq.</p><p class="kv" style="color:var(--bl);">${brl(totalMaq)}</p></div>
+   <div class="kpi"><p class="kl">Diferença</p><p class="kv" style="color:${Math.abs(diferenca)<1?'var(--gr)':'var(--re)'};">${brl(Math.abs(diferenca))}</p></div>
+   <div class="kpi"><p class="kl">Status</p><p class="kv" style="font-size:16px;">${Math.abs(diferenca)<1?'✅':'⚠️'}</p></div>
+  </div>
+
+  <!-- PDV por forma de pagamento -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">💳 PDV — Por forma de pagamento</p>
+   ${Object.entries({
+    'Crédito':pdvPorForma.credito,
+    'Débito':pdvPorForma.debito,
+    'PIX':pdvPorForma.pix,
+    'Dinheiro':pdvPorForma.dinheiro,
+    'Voucher':pdvPorForma.voucher,
+    'Fiado':pdvPorForma.fiado
+   }).filter(([,v])=>v>0).map(([k,v])=>`
+   <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+    <span style="font-size:12px;">${k}</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+     <span style="font-size:11px;color:var(--mu);">${totalPDV>0?(v/totalPDV*100).toFixed(1)+'%':''}</span>
+     <span style="font-size:13px;font-weight:800;">${brl(v)}</span>
+    </div>
+   </div>`).join('')}
+  </div>
+
+  <!-- Maquininhas -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">🏦 Maquininhas — Totais do mês</p>
+   ${maquinas.length===0
+    ?'<p style="font-size:11px;color:var(--mu);">Configure as maquininhas em 🏦 Caixa → ⚙️ Config</p>'
+    :maquinas.map(m=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+     <span style="font-size:12px;">${m.nome||m.id}</span>
+     <div style="display:flex;gap:8px;">
+      <button onclick="atualizarTotalMaquina('${m.id}')" style="padding:3px 8px;border-radius:5px;border:none;background:rgba(68,136,255,0.15);color:var(--bl);font-size:10px;cursor:pointer;">📷 Atualizar</button>
+      <span style="font-size:13px;font-weight:800;">${brl(Number(m.totalMes||0))}</span>
+     </div>
+    </div>`).join('')
+   }
+  </div>
+
+  <!-- Divergências -->
+  ${divergencias.length>0?`<div class="card" style="border-color:rgba(255,51,102,0.3);background:rgba(255,51,102,0.05);">
+   <p style="font-size:12px;font-weight:700;color:var(--re);margin-bottom:6px;">🚨 Dias com divergência</p>
+   ${divergencias.slice(0,5).map(f=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;">
+    <span>${f.data}</span><span style="color:var(--re);">Diff: ${brl(Math.abs(f.diferenca||0))}</span>
+   </div>`).join('')}
+  </div>`:'<div class="card" style="border-color:rgba(0,255,136,0.3);"><p style="font-size:12px;color:var(--gr);">✅ Nenhuma divergência registrada</p></div>'}
+
+  <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:10px;padding:10px;margin-top:10px;">
+   <p style="font-size:11px;color:var(--bl);">💡 Para atualizar os totais das maquininhas, tire foto do relatório em cada máquina e toque em 📷 Atualizar.</p>
+  </div>
+ </div>`;
+}
+
+function atualizarTotalMaquina(maqId){
+ const input=document.createElement('input');
+ input.type='file';input.accept='image/*';input.capture='environment';
+ input.onchange=async function(){
+  const file=input.files[0];if(!file)return;
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+  overlay.innerHTML='<p style="font-size:32px;">📷</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo relatório da maquininha...</p>';
+  document.body.appendChild(overlay);
+  try{
+   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+   const result=await claudeAPI({model:MODEL,max_tokens:200,messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+    {type:'text',text:'Leia este relatório de maquininha. Retorne APENAS JSON: {"total":0.00,"credito":0.00,"debito":0.00,"pix":0.00}. Use os valores totais do período visível.'}
+   ]}]});
+   const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+   const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+   overlay.remove();
+   if(dados.total>0){
+    const db=ldb();
+    const maq=(db.maquinas||[]).find(m=>m.id===maqId);
+    if(maq){maq.totalMes=dados.total;maq.credito=dados.credito;maq.debito=dados.debito;maq.pix=dados.pix;maq.ultAtualiz=hj();}
+    sdb(db);render();
+    alert('✅ Total atualizado: '+brl(dados.total));
+   }else{
+    alert('Não consegui ler o total. Verifique a foto.');
+   }
+  }catch(e){overlay.remove();alert('Erro: '+e.message);}
+ };
+ input.click();
 }
 
 render();
