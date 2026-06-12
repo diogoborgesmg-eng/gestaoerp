@@ -110,7 +110,7 @@ const server = http.createServer((req, res) => {
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
-        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"categoria":"🥩 Matéria Prima|👥 RH / Mão de Obra|🔧 Manutenção|💡 Energia / Utilidades|🚚 Frete / Entregador|🏢 Aluguel / Fixos|📦 Embalagem|🍺 Bebidas / Bar|🧹 Limpeza / Higiene|💳 Taxas / Impostos|📱 Telecom / Internet|🔄 Outros","tipo":"pix|boleto|dinheiro|cartao","data":"DD/MM/AAAA","descricao":""}. Se nao tiver valor retorne {"valor":0}';
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"categoria":"escolha UMA: 🥩 Matéria Prima (alimentos/insumos/carne/hortifruti), 👥 RH / Mão de Obra (salario/diaria/freelancer/diarista), 🔧 Manutenção, 💡 Energia / Utilidades (luz/agua/gas), 🚚 Frete / Entregador (motoboy/entrega/frete), 🏢 Aluguel / Fixos, 📦 Embalagem, 🍺 Bebidas / Bar (cerveja/refri/drink), 🧹 Limpeza / Higiene, 💳 Taxas / Impostos (ifood/maquina/imposto), 📱 Telecom / Internet, 🎤 Shows / Eventos, 📣 Marketing, ⚠️ Extravio / Perda, 🔄 Outros","tipo":"pix|boleto|dinheiro|cartao","data":"DD/MM/AAAA","descricao":"NOME do destinatario exatamente como no recibo","destinatario":"nome completo"}. Se nao tiver valor retorne {"valor":0}';
         const r2 = await claude([{ role:'user', content: prompt2 }], 200);
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
         const match = texto2.match(/\{[\s\S]*\}/);
