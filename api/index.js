@@ -266,7 +266,7 @@ module.exports = async function handler(req, res) {
           if (chave) nfs.push({ id: chave, chave, numero: (doc.match(/nNF>([^<]+)/) || [])[1]||'', serie: (doc.match(/serie>([^<]+)/) || [])[1]||'', emitente: (doc.match(/xNome>([^<]+)/) || [])[1]||'Fornecedor', emitCNPJ: (doc.match(/CNPJ>([^<]+)/) || [])[1]||'', valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1]||'0'), data: ((doc.match(/dhEmi>([^<]+)/) || [])[1]||'').substring(0,10), status: 'pendente' });
         } catch(ep) {}
       }
-      return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat, xMotivo });
+      return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat: cStat||'', xMotivo: xMotivo||'', msg: nfs.length>0?nfs.length+' NF(s) encontrada(s)':'Nenhuma NF nova. cStat:'+cStat+' '+xMotivo });
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
 
