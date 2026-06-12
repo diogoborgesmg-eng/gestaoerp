@@ -19529,11 +19529,15 @@ async function confirmarLancamentosBot(){
    // Aprende a associação
    if(l.destinatario&&cat!=='Outros')aprenderDestinatario(l.destinatario,cat);
 
+   // Se setor não identificado, usa 'Geral' e marca para revisão
+   const setor=l.setor&&l.setor!=='Geral'?l.setor:null;
    db[dataLanc].c.push({id:uid(),
     d:l.destinatario||l.descricao||'WhatsApp',
     v:Number(l.valor||0),
     cat,seg:l.tipo||'pix',
+    setor,
     _botId:l.id,_origem:'whatsapp',
+    _semSetor:!setor,
     dt:dataLanc
    });
    count++;
@@ -19822,6 +19826,36 @@ async function sincronizarIFood(){
   else alert('Nenhum pedido novo desde a última sincronização.');
 
  }catch(e){overlay.remove();alert('Erro: '+e.message);}
+}
+
+function definirSetorBot(lancId, dia){
+ const setores=['🍽️ Restaurante','🍕 Pizzaria','🍢 Espetaria','🍔 Hamburgueria','📦 Geral'];
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:14px 14px 30px;">
+  <p style="font-weight:800;font-size:14px;margin-bottom:12px;">🏭 Selecionar Setor</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Este gasto pertence a qual setor?</p>
+  ${setores.map(s=>'<button onclick="salvarSetorBot(\''+lancId+'\',\''+dia+'\',\''+s+'\')" style="width:100%;padding:11px;border-radius:9px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;text-align:left;">'+s+'</button>').join('')}
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:9px;border:none;background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Cancelar</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarSetorBot(lancId, dia, setor){
+ const db=ldb();
+ const lancs=db[dia]?.c||[];
+ const idx=lancs.findIndex(l=>l.id===lancId);
+ if(idx>=0){
+  db[dia].c[idx].setor=setor;
+  db[dia].c[idx]._semSetor=false;
+  // Aprende: destinatário → setor
+  const dest=db[dia].c[idx].d;
+  if(dest)aprenderDestinatario(dest,db[dia].c[idx].cat);
+  sdb(db);
+ }
+ document.querySelector('[style*="inset:0"]')?.remove();
+ render();
 }
 
 render();
