@@ -14919,57 +14919,154 @@ function rFluxoCaixa(){
 // ── CONTAS A PAGAR ───────────────────────────────────────
 function rContasPagar(){
  const db=ldb();
- const contas=(db.contasPagar||[]).sort((a,b)=>{
-  if(!a.venc)return 1;if(!b.venc)return -1;
-  const da=new Date(a.venc.split('/').reverse().join('-'));
-  const db2=new Date(b.venc.split('/').reverse().join('-'));
-  return da-db2;
- });
+ const contas=db.contasPagar||[];
  const hoje=new Date();hoje.setHours(0,0,0,0);
- const vencidas=contas.filter(c=>!c.pago&&c.venc&&new Date(c.venc.split('/').reverse().join('-'))<hoje);
- const aVencer=contas.filter(c=>!c.pago&&(!c.venc||new Date(c.venc.split('/').reverse().join('-'))>=hoje));
- const pagas=contas.filter(c=>c.pago);
- const totalVencidas=vencidas.reduce((a,c)=>a+Number(c.valor||0),0);
- const totalAVencer=aVencer.reduce((a,c)=>a+Number(c.valor||0),0);
 
- return`<div class="si">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
- <p style="font-weight:800;font-size:15px;">💳 Contas a Pagar</p>
- <button onclick="novaContaPagar()" style="padding:7px 12px;border-radius:8px;border:none;background:var(--re);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">+ Nova</button>
-</div>
+ // Agrupa por status
+ const vencidas=contas.filter(c=>!c.pago&&new Date(c.vencimento)<hoje);
+ const hoje30=contas.filter(c=>{
+  if(c.pago)return false;
+  const d=new Date(c.vencimento);
+  const diff=(d-hoje)/(1000*60*60*24);
+  return diff>=0&&diff<=7;
+ });
+ const futuras=contas.filter(c=>{
+  if(c.pago)return false;
+  const d=new Date(c.vencimento);
+  return(d-hoje)/(1000*60*60*24)>7;
+ });
+ const pagas=contas.filter(c=>c.pago).slice(-10);
 
-<!-- KPIs -->
-<div class="kg" style="margin-bottom:10px;">
- <div class="kpi"><p class="kl">Vencidas</p><p class="kv" style="color:var(--re);">${brl(totalVencidas)}</p><p class="ks">${vencidas.length} conta(s)</p></div>
- <div class="kpi"><p class="kl">A vencer</p><p class="kv" style="color:var(--ye);">${brl(totalAVencer)}</p><p class="ks">${aVencer.length} conta(s)</p></div>
- <div class="kpi"><p class="kl">Total pendente</p><p class="kv" style="color:var(--re);">${brl(totalVencidas+totalAVencer)}</p></div>
-</div>
+ const totalAberto=contas.filter(c=>!c.pago).reduce((a,c)=>a+Number(c.valor||0),0);
+ const totalVencido=vencidas.reduce((a,c)=>a+Number(c.valor||0),0);
+ const total7dias=hoje30.reduce((a,c)=>a+Number(c.valor||0),0);
 
-${vencidas.length>0?`<div class="card" style="margin-bottom:8px;border-color:rgba(255,51,102,0.3);">
- <p style="font-size:11px;font-weight:700;color:var(--re);margin-bottom:8px;">⚠️ Vencidas (${vencidas.length})</p>
- ${vencidas.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-  <div style="flex:1;">
-   <p style="font-size:12px;font-weight:700;">${c.desc||'Conta'}</p>
-   <p style="font-size:10px;color:var(--re);">Venceu em ${c.venc||'—'} · ${c.cat||''}</p>
+ function cardConta(c){
+  const d=new Date(c.vencimento);
+  const diff=Math.round((d-hoje)/(1000*60*60*24));
+  const cor=diff<0?'var(--re)':diff<=3?'var(--ye)':'var(--mu)';
+  return`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border-left:3px solid ${cor};">
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div style="flex:1;">
+     <p style="font-size:12px;font-weight:700;">${c.desc}</p>
+     <p style="font-size:10px;color:var(--mu);">${c.cat||'—'} · ${c.fornecedor||''}</p>
+     <p style="font-size:10px;color:${cor};font-weight:700;">${diff<0?'Venceu há '+Math.abs(diff)+'d':diff===0?'Vence HOJE':'Vence em '+diff+'d'} · ${d.toLocaleDateString('pt-BR')}</p>
+    </div>
+    <div style="text-align:right;">
+     <p style="font-size:14px;font-weight:900;color:${cor};">${brl(Number(c.valor||0))}</p>
+     <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end;">
+      <button onclick="pagarConta('${c.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(0,255,136,0.2);color:var(--gr);font-size:10px;font-weight:700;cursor:pointer;">✅ Pagar</button>
+      <button onclick="excluirConta('${c.id}')" style="padding:4px 8px;border-radius:5px;border:none;background:rgba(255,51,102,0.15);color:var(--re);font-size:10px;cursor:pointer;">🗑️</button>
+     </div>
+    </div>
+   </div>
+   ${c.recorrente?'<p style="font-size:9px;color:var(--bl);margin-top:3px;">🔄 Recorrente mensal</p>':''}
+  </div>`;
+ }
+
+ return`<div style="padding:12px;">
+  <!-- KPIs -->
+  <div class="kg" style="margin-bottom:14px;">
+   <div class="kpi"><p class="kl">Total aberto</p><p class="kv" style="color:var(--re);">${brl(totalAberto)}</p></div>
+   <div class="kpi"><p class="kl">Vencido</p><p class="kv" style="color:var(--re);">${brl(totalVencido)}</p></div>
+   <div class="kpi"><p class="kl">Próx. 7 dias</p><p class="kv" style="color:var(--ye);">${brl(total7dias)}</p></div>
   </div>
-  <span style="font-size:12px;font-weight:800;color:var(--re);">${brl(c.valor||0)}</span>
-  <button onclick="pagarConta('${c.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">✅ Pagar</button>
- </div>`).join('')}
-</div>`:''}
 
-${aVencer.length>0?`<div class="card" style="margin-bottom:8px;">
- <p style="font-size:11px;font-weight:700;color:var(--ye);margin-bottom:8px;">📅 A vencer (${aVencer.length})</p>
- ${aVencer.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-  <div style="flex:1;">
-   <p style="font-size:12px;font-weight:700;">${c.desc||'Conta'}</p>
-   <p style="font-size:10px;color:var(--mu);">Vence ${c.venc||'sem data'} · ${c.cat||''}</p>
+  <!-- Adicionar conta -->
+  <div class="card" style="margin-bottom:14px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">+ Nova Conta a Pagar</p>
+   <div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+     <div><label class="lbl">Descrição *</label><input id="cp-desc" class="inpm" placeholder="Ex: Conta de luz"/></div>
+     <div><label class="lbl">Valor *</label><input id="cp-valor" class="inpm" type="number" placeholder="0,00" step="0.01"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+     <div><label class="lbl">Vencimento *</label><input id="cp-venc" class="inpm" type="date"/></div>
+     <div><label class="lbl">Categoria</label>
+      <select id="cp-cat" class="inpm">
+       <option>🏢 Aluguel / Fixos</option>
+       <option>💡 Energia / Utilidades</option>
+       <option>📱 Telecom / Internet</option>
+       <option>💳 Taxas / Impostos</option>
+       <option>🥩 Matéria Prima</option>
+       <option>👥 RH / Mão de Obra</option>
+       <option>🔧 Manutenção</option>
+       <option>🔄 Outros</option>
+      </select>
+     </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+     <div><label class="lbl">Fornecedor</label><input id="cp-forn" class="inpm" placeholder="Nome"/></div>
+     <div style="display:flex;align-items:center;gap:8px;padding-top:18px;">
+      <input type="checkbox" id="cp-recorr" style="width:16px;height:16px;"/>
+      <label for="cp-recorr" style="font-size:12px;cursor:pointer;">🔄 Mensal</label>
+     </div>
+    </div>
+    <button onclick="adicionarContaPagar()" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">+ Adicionar</button>
+   </div>
   </div>
-  <span style="font-size:12px;font-weight:800;color:var(--ye);">${brl(c.valor||0)}</span>
-  <button onclick="pagarConta('${c.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">✅ Pagar</button>
- </div>`).join('')}
-</div>`:'<div class="card" style="text-align:center;padding:16px;margin-bottom:8px;"><p style="color:var(--mu);">Nenhuma conta a vencer 🎉</p></div>'}
-</div>`;
+
+  <!-- Vencidas -->
+  ${vencidas.length>0?`<p style="font-size:12px;font-weight:800;color:var(--re);margin-bottom:8px;">🚨 Vencidas (${vencidas.length})</p>${vencidas.map(cardConta).join('')}`:''}
+
+  <!-- Próximos 7 dias -->
+  ${hoje30.length>0?`<p style="font-size:12px;font-weight:800;color:var(--ye);margin-bottom:8px;margin-top:8px;">⚠️ Próximos 7 dias (${hoje30.length})</p>${hoje30.map(cardConta).join('')}`:''}
+
+  <!-- Futuras -->
+  ${futuras.length>0?`<p style="font-size:12px;font-weight:700;color:var(--mu);margin-bottom:8px;margin-top:8px;">📅 Futuras (${futuras.length})</p>${futuras.map(cardConta).join('')}`:''}
+
+  <!-- Pagas recentes -->
+  ${pagas.length>0?`<details style="margin-top:10px;"><summary style="font-size:11px;color:var(--mu);cursor:pointer;">✅ Pagas recentemente (${pagas.length})</summary>${pagas.map(c=>`<div style="display:flex;justify-content:space-between;padding:7px;background:rgba(255,255,255,0.03);border-radius:7px;margin-top:4px;opacity:0.6;"><span style="font-size:11px;">${c.desc}</span><span style="font-size:11px;font-weight:700;">${brl(Number(c.valor||0))}</span></div>`).join('')}</details>`:''}
+
+  ${contas.length===0?`<p style="text-align:center;color:var(--mu);padding:20px;font-size:13px;">Nenhuma conta cadastrada</p>`:''}
+ </div>`;
 }
+
+function adicionarContaPagar(){
+ const desc=document.getElementById('cp-desc')?.value?.trim();
+ const valor=parseFloat(document.getElementById('cp-valor')?.value||0);
+ const venc=document.getElementById('cp-venc')?.value;
+ if(!desc||!valor||!venc){alert('Preencha descrição, valor e vencimento');return;}
+ const db=ldb();
+ if(!db.contasPagar)db.contasPagar=[];
+ db.contasPagar.push({
+  id:uid(),desc,valor,
+  vencimento:venc,
+  cat:document.getElementById('cp-cat')?.value||'Outros',
+  fornecedor:document.getElementById('cp-forn')?.value?.trim()||'',
+  recorrente:document.getElementById('cp-recorr')?.checked||false,
+  pago:false,criadoEm:new Date().toISOString()
+ });
+ sdb(db);render();
+}
+
+function pagarConta(id){
+ const db=ldb();
+ const idx=(db.contasPagar||[]).findIndex(c=>c.id===id);
+ if(idx<0)return;
+ const conta=db.contasPagar[idx];
+ if(!confirm('Confirmar pagamento de '+brl(Number(conta.valor||0))+'?'))return;
+ db.contasPagar[idx].pago=true;
+ db.contasPagar[idx].dtPagamento=hj();
+ // Lança no DRE como custo
+ if(!db[hj()])db[hj()]={r:[],c:[]};
+ if(!db[hj()].c)db[hj()].c=[];
+ db[hj()].c.push({id:uid(),d:conta.desc,v:conta.valor,cat:conta.cat||'Outros',seg:'fixo',dt:hj(),_contaId:id});
+ // Se recorrente, cria nova para próximo mês
+ if(conta.recorrente){
+  const proxVenc=new Date(conta.vencimento);proxVenc.setMonth(proxVenc.getMonth()+1);
+  db.contasPagar.push({...conta,id:uid(),pago:false,vencimento:proxVenc.toISOString().slice(0,10),criadoEm:new Date().toISOString()});
+ }
+ sdb(db);render();
+}
+
+function excluirConta(id){
+ if(!confirm('Excluir esta conta?'))return;
+ const db=ldb();
+ db.contasPagar=(db.contasPagar||[]).filter(c=>c.id!==id);
+ sdb(db);render();
+}
+
 
 function novaContaPagar(){
  const desc=prompt('Descrição da conta:');if(!desc)return;
