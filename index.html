@@ -16581,80 +16581,29 @@ function verExtratoBanco(bancoId){
 // ═══════════════════════════════════════════════════════════════
 function rExtraviado(){
  const db=ldb();
- const bancos=db.bancos||[];
-
- // Coleta todos os lançamentos do OFX de todos os bancos
- const saidasBanco=[];
- bancos.forEach(banco=>{
-  (banco.extrato||[]).filter(l=>l.valor<0&&l.tipo!=='transferencia').forEach(l=>{
-   saidasBanco.push({...l,banco:banco.nome,bancoId:banco.id});
+ const extravios=[];
+ Object.keys(db).forEach(function(dia){
+  if(!/^\d{2}\/\d{2}\/\d{4}$/.test(dia))return;
+  (db[dia].c||[]).forEach(function(l){
+   if((l.cat||'').indexOf('Extravio')>=0||(l.cat||'').indexOf('Perda')>=0){
+    extravios.push(Object.assign({},l,{dia:dia}));
+   }
   });
  });
-
- // Coleta todos os lançamentos de custos no DRE
- const custosSistema=[];
- Object.keys(db).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k)).forEach(dia=>{
-  (db[dia]?.c||[]).forEach(c=>{
-   custosSistema.push({...c,dia,valor:Number(c.v)});
-  });
+ (db.cozinhaDescartes||[]).forEach(function(d){
+  extravios.push({id:d.id,d:d.nome,v:0,cat:'Extravio Estoque',dia:d.dtDescarte||'',_estoque:true});
  });
-
- // Indexa TODOS os ofxId já lançados em qualquer dia
- window._ofxLancados=new Set();
- Object.keys(db).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k)).forEach(dia=>{
-  [...(db[dia]?.r||[]),...(db[dia]?.c||[])].forEach(l=>{if(l._ofxId)window._ofxLancados.add(l._ofxId);});
- });
-
- // Compara: saídas do banco sem correspondente no sistema
- const extraviados=saidasBanco.filter(saida=>{
-  const valorSaida=Math.abs(saida.valor);
-  // Procura no sistema um custo com valor similar (±5%) na mesma data ou ±3 dias
-  const [dd,mm,yyyy]=(saida.data||'').split('/');
-  const dataRef=yyyy&&mm&&dd?new Date(yyyy,mm-1,dd):null;
-  // Verifica em TODOS os dias se o ofxId já foi lançado
-  if(window._ofxLancados?.has(saida.id))return false;
-  // Já existe lançamento manual com valor similar?
-  const temNoSistema=(db[saida.data]?.c||[]).some(c=>{
-   if(c._ofxId)return false; // ignora lançamentos automáticos do OFX
-   return Math.abs(Number(c.v)-valorSaida)/Math.max(valorSaida,1)<0.05;
-  });
-  return!temNoSistema&&valorSaida>10;
- }).sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor));
-
- const totalExtrav=extraviados.reduce((a,l)=>a+Math.abs(l.valor),0);
-
- return`<div class="si">
-<p style="font-weight:800;font-size:15px;margin-bottom:4px;">🔍 Dinheiro Extraviado</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Saídas do banco sem lançamento correspondente no sistema</p>
-
-${extraviados.length===0?`<div class="card" style="text-align:center;padding:20px;">
- <p style="font-size:32px;margin-bottom:8px;">✅</p>
- <p style="font-size:13px;font-weight:700;">Tudo conciliado!</p>
- <p style="font-size:11px;color:var(--mu);">Nenhuma saída sem lançamento encontrada</p>
-</div>`:`
-<div style="background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
- <p style="font-size:13px;font-weight:800;color:var(--re);">⚠️ ${brl(totalExtrav)} sem lançamento</p>
- <p style="font-size:11px;color:var(--mu);">${extraviados.length} saída(s) do banco não encontradas no sistema</p>
-</div>
-
-${extraviados.map(l=>`<div class="card" style="margin-bottom:6px;border-color:rgba(255,51,102,0.2);">
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-  <span style="font-size:12px;font-weight:700;color:var(--re);">${brl(Math.abs(l.valor))}</span>
-  <span style="font-size:10px;color:var(--mu);">${l.data||''} · ${l.banco||''}</span>
- </div>
- <p style="font-size:11px;color:var(--tx);margin-bottom:6px;">${l.descricao||l.memo||'Sem descrição'}</p>
- <p style="font-size:10px;color:var(--mu);">Categoria: ${l.categoria||'Não classificado'}</p>
- <button onclick="lancarExtraviado('${l.id}','${(l.descricao||l.memo||'').replace(/'/g,'')}',${Math.abs(l.valor)},'${l.data||''}')"
-  style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:1px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:11px;font-weight:700;cursor:pointer;">
-  ✅ Lançar no sistema
- </button>
-</div>`).join('')}
-`}
-
-<div class="card" style="margin-top:8px;">
- <p style="font-size:11px;color:var(--mu);">💡 Para aparecer aqui importe o OFX dos seus bancos em Bancos → 📄 OFX</p>
-</div>
-</div>`;
+ const total=extravios.reduce(function(a,e){return a+Number(e.v||0);},0);
+ return`<div class="si"><div style="padding:12px;">
+  <div class="kg" style="margin-bottom:12px;">
+   <div class="kpi"><p class="kl">Extravios</p><p class="kv" style="color:var(--re);">${extravios.length}</p></div>
+   <div class="kpi"><p class="kl">Valor</p><p class="kv" style="color:var(--re);">${brl(total)}</p></div>
+  </div>
+  ${extravios.length===0
+   ?'<div style="text-align:center;padding:20px;color:var(--mu);"><p style="font-size:24px;">✅</p><p>Nenhum extravio registrado</p></div>'
+   :extravios.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:9px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:9px;margin-bottom:6px;"><div><p style="font-size:12px;font-weight:700;">'+e.d+'</p><p style="font-size:10px;color:var(--mu);">'+e.dia+(e._estoque?' · Estoque':'')+'</p></div><p style="font-size:13px;font-weight:800;color:var(--re);">'+(e.v>0?brl(e.v):'—')+'</p></div>';}).join('')
+  }
+ </div></div>`;
 }
 
 function lancarExtraviado(ofxId,desc,valor,data){
