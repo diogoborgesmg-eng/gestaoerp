@@ -119,7 +119,7 @@ const server = http.createServer((req, res) => {
           try {
             const d = JSON.parse(match[0]);
             if (d.valor > 0) {
-              lanc = { valor: d.valor, categoria: d.categoria||'Outros', descricao: d.descricao||'WhatsApp', tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), origem: 'whatsapp' };
+              lanc = { valor: d.valor, categoria: d.categoria||'Outros', descricao: d.descricao||d.destinatario||'WhatsApp', destinatario: d.destinatario||d.descricao||'', tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: d.confianca||'alta', setor: d.setor||'Geral', origem: 'whatsapp' };
               await salvarGitHub(lanc);
             }
           } catch(ep) { console.error('parse err:', ep.message); }
