@@ -270,6 +270,69 @@ module.exports = async function handler(req, res) {
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
 
+
+  // ── IFOOD AUTH ────────────────────────────────────────────
+  if (path === '/api/ifood/auth' && req.method === 'POST') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
+    const { clientId, authorizationCode, grantType } = body;
+    try {
+      const params = new URLSearchParams();
+      params.append('grantType', grantType || 'authorization_code');
+      params.append('clientId', clientId);
+      params.append('authorizationCode', authorizationCode);
+      const resp = await fetch('https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+      });
+      const data = await resp.json();
+      if (!resp.ok) return res.status(200).json({ ok: false, erro: data.message || JSON.stringify(data) });
+      return res.status(200).json({ ok: true, accessToken: data.accessToken, refreshToken: data.refreshToken, expiresIn: data.expiresIn });
+    } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
+  }
+
+  // ── IFOOD PEDIDOS ─────────────────────────────────────────
+  if (path === '/api/ifood/pedidos' && req.method === 'POST') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
+    const { accessToken, merchantId } = body;
+    try {
+      // Busca eventos/pedidos
+      const resp = await fetch('https://merchant-api.ifood.com.br/order/v1.0/events:polling', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }
+      });
+      const events = await resp.json();
+      const pedidos = [];
+      for (const ev of (Array.isArray(events) ? events : [])) {
+        if (ev.code === 'PLACED' || ev.code === 'CONFIRMED') {
+          try {
+            const orderResp = await fetch('https://merchant-api.ifood.com.br/order/v1.0/orders/' + ev.orderId, {
+              headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            const order = await orderResp.json();
+            pedidos.push({
+              id: ev.orderId,
+              cliente: order.customer?.name || 'Cliente iFood',
+              valor: order.totalPrice || 0,
+              data: new Date(order.createdAt || Date.now()).toLocaleDateString('pt-BR'),
+              status: order.fullCode || ev.code
+            });
+          } catch(eo) {}
+        }
+      }
+      // Confirma recebimento dos eventos
+      if (Array.isArray(events) && events.length > 0) {
+        const ids = events.map(e => e.id);
+        await fetch('https://merchant-api.ifood.com.br/order/v1.0/events/acknowledgment', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify(ids.map(id => ({ id })))
+        });
+      }
+      return res.status(200).json({ ok: true, pedidos, total: pedidos.length });
+    } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
+  }
+
   // 404
   return res.status(404).json({ erro: 'Rota não encontrada', rota: path });
 };
