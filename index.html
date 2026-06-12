@@ -17938,7 +17938,7 @@ function confirmarPagamentoPDV(comandaId,tipo,total,obs){
  if(mIdx<0)return;
  const dia=hj();
  if(!db[dia])db[dia]={r:[],c:[]};
- db[dia].r.push({id:uid(),d:'Comanda '+comandaId+(obs?' — '+obs:''),v:total,cat:'Vendas PDV',seg:tipo,_comanda:comandaId,_pgto:tipo,_hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+ const _gc=garcomAtual();logGarcom('fechou_mesa','Comanda '+comandaId+' R$'+total.toFixed(2));db[dia].r.push({id:uid(),d:'Comanda '+comandaId+(obs?' — '+obs:''),v:total,cat:'Vendas PDV',seg:tipo,_comanda:comandaId,_pgto:tipo,_garcom:_gc.nome,_garcomId:_gc.id,_hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
  const m=db.mesas[mIdx];
  m.status='livre';m.comanda=[];m.abertura=null;m.mesa='';
  sdb(db);
@@ -21260,8 +21260,16 @@ function rDesempenho(){
   </div>`:''}
 
   <div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.15);border-radius:10px;padding:10px;margin-top:10px;">
-   <p style="font-size:11px;color:var(--bl);">💡 Para ativar o rastreio: no PDV ao abrir uma mesa, selecione o garçom responsável. Os dados aparecem aqui automaticamente.</p>
+   <p style="font-size:11px;color:var(--bl);">💡 PIN configurado em 👥 RH → cada funcionário tem 4 dígitos únicos. O PDV pede o PIN automaticamente.</p>
   </div>
+
+  <!-- Log de ações recentes -->
+  ${(ldb().logGarcom||[]).length>0?`<div style="margin-top:12px;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:6px;">📋 Ações recentes</p>
+   <div style="background:var(--sf2);border-radius:10px;padding:10px;max-height:200px;overflow-y:auto;">
+    ${rLogGarcom()}
+   </div>
+  </div>`:''}
  </div>`;
 }
 
@@ -21350,6 +21358,43 @@ function validarPin(){
 
 function garcomAtual(){
  return window._garcomAtivo||{id:'dono',nome:'Dono',cargo:'Gerência'};
+}
+
+// ═══ LOG DE AÇÕES DO GARÇOM ══════════════════════════════════
+function logGarcom(acao, detalhe){
+ const db=ldb();
+ if(!db.logGarcom)db.logGarcom=[];
+ const gc=garcomAtual();
+ db.logGarcom.push({
+  ts:new Date().toISOString(),
+  garcom:gc.nome,
+  garcomId:gc.id,
+  acao, // 'abriu_mesa','fechou_mesa','adicionou_item','desconto','transferiu','cancelou'
+  detalhe,
+  dia:hj()
+ });
+ // Mantém só últimos 500 registros
+ if(db.logGarcom.length>500)db.logGarcom=db.logGarcom.slice(-500);
+ sdb(db);
+}
+
+// Relatório de ações por garçom
+function rLogGarcom(garcomNome){
+ const db=ldb();
+ const logs=(db.logGarcom||[])
+  .filter(l=>!garcomNome||l.garcom===garcomNome)
+  .slice(-100)
+  .reverse();
+
+ if(!logs.length)return '<p style="color:var(--mu);padding:10px;font-size:12px;">Sem registros</p>';
+
+ return logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+  <div style="display:flex;justify-content:space-between;">
+   <span style="font-size:11px;font-weight:700;">${l.acao.replace('_',' ')}</span>
+   <span style="font-size:10px;color:var(--mu);">${new Date(l.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+  </div>
+  <p style="font-size:10px;color:var(--mu);">${l.garcom} · ${l.detalhe||''}</p>
+ </div>`).join('');
 }
 
 render();
