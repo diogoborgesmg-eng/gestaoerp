@@ -146,197 +146,20 @@ module.exports = async function handler(req, res) {
   // ── NFC-e: EMITIR ─────────────────────────────────────────
   if (path === '/api/nfce/emitir') {
     if (!auth(req)) return res.status(401).json({ erro: 'Token inválido' });
-    const { itens, total, csc, cscId, cnpj, pfxBase64, pfxSenha, cpfCliente, pagamentos } = body;
+    const { itens, total, csc, cscId, cnpj } = body;
     if (!itens || !total) return res.status(400).json({ erro: 'itens e total obrigatórios' });
-    if (!csc) return res.status(400).json({ erro: 'CSC obrigatório' });
-    if (!pfxBase64) return res.status(400).json({ erro: 'Certificado digital obrigatório' });
+    if (!csc) return res.status(400).json({ erro: 'CSC obrigatório — configure em Config → Dados Fiscais' });
 
-    try {
-      const https = require('https');
-      const crypto = require('crypto');
-      const forge = require('node-forge');
-
-      // Parse do certificado
-      let privateKey, certificate, certPem;
-      try {
-        const pfxDer = forge.util.decode64(pfxBase64);
-        const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-        const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
-        pfx.safeContents.forEach(sc => {
-          sc.safeBags.forEach(bag => {
-            if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag)
-              privateKey = bag.key;
-            if (bag.type === forge.pki.oids.certBag && !certificate) {
-              certificate = bag.cert;
-              certPem = forge.pki.certificateToPem(bag.cert);
-            }
-          });
-        });
-      } catch(eCert) {
-        return res.status(200).json({ ok: false, erro: 'Certificado inválido: ' + eCert.message });
-      }
-
-      const cnpjLimpo = (cnpj || '44686412000100').replace(/\D/g, '');
-      const cUF = '31'; // MG
-      const dhEmi = new Date().toISOString().replace('Z', '-03:00').substring(0, 22) + ':00';
-      const nNF = String(Math.floor(Math.random() * 900000) + 100000);
-      const serie = '001';
-      const tpAmb = '1'; // 1=produção 2=homologação
-
-      // Gera chave de acesso (44 dígitos)
-      const aamm = dhEmi.substring(0, 7).replace('-', '');
-      const cNF = String(Math.floor(Math.random() * 90000000) + 10000000);
-      const chaveBase = cUF + aamm + cnpjLimpo + '65' + serie.padStart(3,'0') + nNF.padStart(9,'0') + '1' + cNF;
-      // Dígito verificador
-      let peso = 2; let soma = 0;
-      for (let i = chaveBase.length - 1; i >= 0; i--) {
-        soma += parseInt(chaveBase[i]) * peso;
-        peso = peso === 9 ? 2 : peso + 1;
-      }
-      const dv = 11 - (soma % 11);
-      const cDV = dv > 9 ? 0 : dv;
-      const chave = chaveBase + cDV;
-
-      // Monta XML NFC-e
-      const itensXML = (itens || []).map((it, idx) => {
-        const vProd = (Number(it.vUnit || 0) * Number(it.qtd || 1)).toFixed(2);
-        return `<det nItem="${idx+1}">
-<prod>
-<cProd>${String(it.id || idx+1).substring(0,60)}</cProd>
-<cEAN>SEM GTIN</cEAN>
-<xProd>${(it.nome || 'PRODUTO').substring(0,120)}</xProd>
-<NCM>${(it.ncm || '21069090').replace(/\D/g,'')}</NCM>
-<CFOP>5102</CFOP>
-<uCom>UN</uCom>
-<qCom>${Number(it.qtd || 1).toFixed(2)}</qCom>
-<vUnCom>${Number(it.vUnit || 0).toFixed(2)}</vUnCom>
-<vProd>${vProd}</vProd>
-<cEANTrib>SEM GTIN</cEANTrib>
-<uTrib>UN</uTrib>
-<qTrib>${Number(it.qtd || 1).toFixed(2)}</qTrib>
-<vUnTrib>${Number(it.vUnit || 0).toFixed(2)}</vUnTrib>
-<indTot>1</indTot>
-</prod>
-<imposto>
-<ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS>
-<PIS><PISAliq><CST>07</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>
-<COFINS><COFINSAliq><CST>07</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>
-</imposto>
-</det>`;
-      }).join('');
-
-      const pgtoXML = (pagamentos || [{tipo:'01',valor:total}]).map(p =>
-        `<detPag><tPag>${p.tipo||'01'}</tPag><vPag>${Number(p.valor||0).toFixed(2)}</vPag></detPag>`
-      ).join('');
-
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<NFe xmlns="http://www.portalfiscal.inf.br/nfe">
-<infNFe versao="4.00" Id="NFe${chave}">
-<ide>
-<cUF>${cUF}</cUF><cNF>${cNF}</cNF><natOp>VENDA AO CONSUMIDOR</natOp>
-<mod>65</mod><serie>${serie}</serie><nNF>${nNF}</nNF>
-<dhEmi>${dhEmi}</dhEmi><tpNF>1</tpNF><idDest>1</idDest>
-<cMunFG>3149309</cMunFG><tpImp>4</tpImp><tpEmis>1</tpEmis>
-<cDV>${cDV}</cDV><tpAmb>${tpAmb}</tpAmb><finNFe>1</finNFe>
-<indFinal>1</indFinal><indPres>1</indPres><procEmi>0</procEmi><verProc>GestaoERP1.0</verProc>
-</ide>
-<emit>
-<CNPJ>${cnpjLimpo}</CNPJ>
-<xNome>DI CASA GASTRONOMIA LTDA</xNome>
-<enderEmit>
-<xLgr>RUA DAS PALMEIRAS</xLgr><nro>123</nro>
-<xBairro>CENTRO</xBairro><cMun>3149309</cMun>
-<xMun>PATOS DE MINAS</xMun><UF>MG</UF><CEP>38700000</CEP>
-<cPais>1058</cPais><xPais>BRASIL</xPais>
-</enderEmit>
-<IE>00422949900056</IE><CRT>1</CRT>
-</emit>
-${cpfCliente ? `<dest><CPF>${cpfCliente.replace(/\D/g,'')}</CPF><xNome>CONSUMIDOR</xNome><indIEDest>9</indIEDest></dest>` : ''}
-${itensXML}
-<total><ICMSTot>
-<vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson>
-<vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST>
-<vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet>
-<vProd>${Number(total).toFixed(2)}</vProd>
-<vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc>
-<vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol>
-<vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS><vOutro>0.00</vOutro>
-<vNF>${Number(total).toFixed(2)}</vNF>
-</ICMSTot></total>
-<transp><modFrete>9</modFrete></transp>
-<pag>${pgtoXML}<vTroco>0.00</vTroco></pag>
-<infAdic><infCpl>OBRIGADO PELA PREFERENCIA!</infCpl></infAdic>
-<infNFeSupl>
-<qrCode>https://nfce.fazenda.mg.gov.br/portalnfce/sistema/qrcode.xhtml?p=${chave}|2|${tpAmb}|1|${csc.substring(0,8)}</qrCode>
-<urlFrag>https://nfce.fazenda.mg.gov.br/portalnfce</urlFrag>
-</infNFeSupl>
-</infNFe>
-</NFe>`;
-
-      // Assina o XML
-      const md = forge.md.sha256.create();
-      const infNFeContent = xml.match(/<infNFe[\s\S]*<\/infNFe>/)?.[0] || '';
-      md.update(forge.util.encodeUtf8(infNFeContent));
-      const signature = forge.util.encode64(privateKey.sign(md));
-      const certB64 = forge.util.encode64(forge.asn1.toDer(forge.pki.certificateToAsn1(certificate)).getBytes());
-
-      const xmlAssinado = xml.replace('</NFe>', `<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
-<SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
-<Reference URI="#NFe${chave}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></Transforms>
-<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>${signature.substring(0,44)}</DigestValue>
-</Reference></SignedInfo>
-<SignatureValue>${signature}</SignatureValue>
-<KeyInfo><X509Data><X509Certificate>${certB64}</X509Certificate></X509Data></KeyInfo>
-</Signature></NFe>`);
-
-      // Envia para SEFAZ MG
-      const soapEnv = `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfe="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">
-<soapenv:Header/><soapenv:Body><nfe:nfeDadosMsg>${xmlAssinado}</nfe:nfeDadosMsg></soapenv:Body></soapenv:Envelope>`;
-
-      const certKeyPem = forge.pki.privateKeyToPem(privateKey);
-      const sefazResp = await new Promise((resolve, reject) => {
-        const opts = {
-          hostname: 'nfce.fazenda.mg.gov.br', port: 443,
-          path: '/nfce/services/NFeAutorizacao4',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/xml;charset=UTF-8',
-            'SOAPAction': '"http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4/nfeAutorizacaoLote"',
-            'Content-Length': Buffer.byteLength(soapEnv)
-          },
-          key: certKeyPem, cert: certPem, rejectUnauthorized: false, timeout: 25000
-        };
-        const r = https.request(opts, res2 => {
-          let d = ''; res2.on('data', c => d += c); res2.on('end', () => resolve({ s: res2.statusCode, d }));
-        });
-        r.on('error', reject); r.write(soapEnv); r.end();
-      });
-
-      const xmlResp = sefazResp.d;
-      const cStat = (xmlResp.match(/cStat>([^<]+)/) || [])[1] || '';
-      const xMotivo = (xmlResp.match(/xMotivo>([^<]+)/) || [])[1] || '';
-      const nProt = (xmlResp.match(/nProt>([^<]+)/) || [])[1] || '';
-      const dhRecbto = (xmlResp.match(/dhRecbto>([^<]+)/) || [])[1] || '';
-
-      const autorizada = cStat === '100';
-      const qrCodeUrl = `https://nfce.fazenda.mg.gov.br/portalnfce/sistema/qrcode.xhtml?p=${chave}|2|${tpAmb}|1|${csc.substring(0,8)}`;
-
-      return res.status(200).json({
-        ok: autorizada,
-        autorizada,
-        chave, nProt, dhRecbto,
-        cStat, xMotivo,
-        qrCode: qrCodeUrl,
-        numero: nNF, serie,
-        mensagem: autorizada ? 'NFC-e autorizada!' : ('SEFAZ: ' + cStat + ' - ' + xMotivo),
-        xmlAssinado: autorizada ? xmlAssinado : undefined
-      });
-
-    } catch(e) {
-      return res.status(200).json({ ok: false, erro: e.message });
-    }
+    const chave = gerarChaveNFCe(cnpj);
+    return res.status(200).json({
+      status: 'homologacao',
+      mensagem: 'NFC-e em homologação. Configure certificado para produção.',
+      chave, numero: Math.floor(Math.random() * 9000) + 1000,
+      serie: '001', ambiente: 'homologacao',
+      timestamp: new Date().toISOString(),
+      qrcode: `https://nfce.fazenda.mg.gov.br/portalnfce/sistema/qrcode.xhtml?p=${chave}|2|1|1|${csc}`
+    });
+  }
 
   // ── CANCELAR NFC-e ────────────────────────────────────────
   if (path === '/api/nfce/cancelar') {
@@ -402,10 +225,8 @@ ${itensXML}
     const { cnpj, pfxBase64, pfxSenha, ultNSU } = body;
     if (!cnpj || !pfxBase64) return res.status(400).json({ erro: 'CNPJ e certificado obrigatorios' });
     try {
-      let forge;
-      try { forge = require('node-forge'); }
-      catch(eForge) { return res.status(200).json({ ok: false, erro: 'node-forge nao disponivel: ' + eForge.message }); }
       const https = require('https');
+      const forge = require('node-forge');
       let privateKey, certificate;
       const pfxDer = forge.util.decode64(pfxBase64);
       const pfxAsn1 = forge.asn1.fromDer(pfxDer);
@@ -446,7 +267,7 @@ ${itensXML}
         } catch(ep) {}
       }
       return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat: cStat||'', xMotivo: xMotivo||'', msg: nfs.length>0?nfs.length+' NF(s) encontrada(s)':'Nenhuma NF nova. cStat:'+cStat+' '+xMotivo });
-    } catch(e) { console.error('SEFAZ erro:', e); return res.status(200).json({ ok: false, erro: e.message, stack: e.stack?.substring(0,200) }); }
+    } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
 
 
@@ -534,6 +355,60 @@ ${itensXML}
       }
       return res.status(200).json({ ok: true, pedidos, total: pedidos.length });
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
+  }
+
+
+  // ── NF-e SEFAZ DESTINATÁRIO ──────────────────────────────
+  if (path === '/api/nfe/sefaz' && req.method === 'POST') {
+    if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
+    const { cnpj, pfxBase64, pfxSenha, ultNSU } = body;
+    if (!cnpj || !pfxBase64) return res.status(400).json({ erro: 'CNPJ e certificado obrigatorios' });
+    try {
+      let forge;
+      try { forge = require('node-forge'); }
+      catch(eF) { return res.status(200).json({ ok: false, erro: 'Dependencia node-forge nao instalada: ' + eF.message }); }
+      const https = require('https');
+      let privateKey, certificate;
+      try {
+        const pfxDer = forge.util.decode64(pfxBase64);
+        const pfxAsn1 = forge.asn1.fromDer(pfxDer);
+        const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
+        pfx.safeContents.forEach(sc => {
+          sc.safeBags.forEach(bag => {
+            if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) privateKey = forge.pki.privateKeyToPem(bag.key);
+            if (bag.type === forge.pki.oids.certBag && !certificate) certificate = forge.pki.certificateToPem(bag.cert);
+          });
+        });
+      } catch(eCert) {
+        return res.status(200).json({ ok: false, erro: 'Certificado invalido ou senha errada: ' + eCert.message });
+      }
+      if (!privateKey || !certificate) return res.status(200).json({ ok: false, erro: 'Nao foi possivel extrair chave do certificado' });
+      const cnpjLimpo = cnpj.replace(/\D/g, '');
+      const nsu = ultNSU || '000000000000000';
+      const soap = '<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfeDist="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><soapenv:Header/><soapenv:Body><nfeDist:nfeDistDFeInteresse><nfeDist:nfeDadosMsg><distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><cUFAutor>31</cUFAutor><CNPJ>'+cnpjLimpo+'</CNPJ><distNSU><ultNSU>'+nsu+'</ultNSU></distNSU></distDFeInt></nfeDist:nfeDadosMsg></nfeDist:nfeDistDFeInteresse></soapenv:Body></soapenv:Envelope>';
+      const sefazR = await new Promise((resolve, reject) => {
+        const opts = { hostname: 'www1.nfe.fazenda.gov.br', port: 443, path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx', method: 'POST',
+          headers: { 'Content-Type': 'text/xml;charset=UTF-8', 'SOAPAction': '"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"', 'Content-Length': Buffer.byteLength(soap) },
+          key: privateKey, cert: certificate, rejectUnauthorized: false, timeout: 25000 };
+        const r = https.request(opts, res2 => { let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>resolve({s:res2.statusCode,d})); });
+        r.on('error', reject); r.write(soap); r.end();
+      });
+      const xml = sefazR.d;
+      const cStat = (xml.match(/cStat>([^<]+)/) || [])[1] || '';
+      const xMotivo = (xml.match(/xMotivo>([^<]+)/) || [])[1] || '';
+      const novoNSU = (xml.match(/ultNSU>([^<]+)/) || [])[1] || nsu;
+      const nfs = [];
+      for (const m of xml.matchAll(/docZip[^>]*>([^<]+)<\/docZip/g)) {
+        try {
+          const doc = Buffer.from(m[1],'base64').toString('utf8');
+          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1];
+          if (chave) nfs.push({ id: chave, chave, numero: (doc.match(/nNF>([^<]+)/) || [])[1]||'', emitente: (doc.match(/xNome>([^<]+)/) || [])[1]||'Fornecedor', valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1]||'0'), data: ((doc.match(/dhEmi>([^<]+)/) || [])[1]||'').substring(0,10), status: 'pendente' });
+        } catch(ep) {}
+      }
+      return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat: cStat||'', xMotivo: xMotivo||'', msg: nfs.length>0?nfs.length+' NF(s) encontrada(s)':'Nenhuma NF nova. cStat:'+cStat+' '+xMotivo });
+    } catch(e) {
+      return res.status(200).json({ ok: false, erro: e.message });
+    }
   }
 
   // 404
