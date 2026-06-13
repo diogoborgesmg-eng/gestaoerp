@@ -11397,9 +11397,24 @@ function filtrarEst(tipo,valor){
  if(tipo==="busca")d._estBusca=valor;
  sdb(d);render();
 }
-async function comprimirImagem(b64, mime, maxW){
+async function comprimirImagem(fileOrB64, mimeOrW, maxW2, qual){
  return new Promise((res,rej)=>{
   try{
+   // Aceita File object OU string base64
+   if(fileOrB64 instanceof File||fileOrB64 instanceof Blob){
+    const reader=new FileReader();
+    reader.onload=async e=>{
+     const b64str=e.target.result.split(',')[1];
+     const result=await comprimirImagem(b64str,'image/jpeg',mimeOrW||2000);
+     res(result);
+    };
+    reader.onerror=()=>res(null);
+    reader.readAsDataURL(fileOrB64);
+    return;
+   }
+   const b64=fileOrB64;
+   const mime=typeof mimeOrW==='string'?mimeOrW:'image/jpeg';
+   const maxW=typeof mimeOrW==='number'?mimeOrW:(maxW2||2000);
    const img=new Image();
    img.onerror=()=>res(b64); // se falhar, retorna original
    img.onload=()=>{
