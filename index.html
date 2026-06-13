@@ -19693,13 +19693,19 @@ async function buscarNFsSEFAZ(){
   
   // Pega todos os certificados configurados
   const certs=[];
+  const df0=gDadosFiscais();
   for(let n=1;n<=2;n++){
-   const pfx=localStorage.getItem('erp_cert_pfx_'+n);
-   const info=JSON.parse(localStorage.getItem('erp_cert_info_'+n)||'{}');
-   if(pfx&&info.cnpj)certs.push({pfxBase64:pfx,info,n});
+   const pfx=localStorage.getItem('erp_cert_pfx_'+n)||localStorage.getItem('erp_cert_pfx');
+   const info=JSON.parse(localStorage.getItem('erp_cert_info_'+n)||localStorage.getItem('erp_cert_info')||'{}');
+   const senha=localStorage.getItem('erp_cert_senha_'+n)||localStorage.getItem('erp_cert_senha')||'';
+   // Aceita mesmo sem CNPJ — usa o CNPJ dos dados fiscais
+   if(pfx&&pfx.length>100){
+    const cnpj=info.cnpj||df0.cnpj||'44.686.412/0001-00';
+    certs.push({pfxBase64:pfx,info:{...info,cnpj},senha,n});
+   }
   }
   if(!certs.length){
-   alert('⚠️ Configure o Certificado Digital A1 em ⚙️ Config → Certificados Digitais');
+   alert('⚠️ Certificado Digital não encontrado.\nVá em ⚙️ Config → Certificados Digitais e arraste o arquivo .pfx');
    return;
   }
   
