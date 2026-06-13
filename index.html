@@ -216,7 +216,8 @@ function rFila(){
 ${pendentes.length>0?`<span style="background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.3);color:var(--ye);font-size:10px;padding:2px 7px;border-radius:5px;">${pendentes.length} pendente${pendentes.length>1?"s":""}</span>`:""}
 ${prontos.length>0?`<span style="background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--gr);font-size:10px;padding:2px 7px;border-radius:5px;">${prontos.length} pronto${prontos.length>1?"s":""}</span>`:""}
 </div>
-<div style="padding:8px 12px;"><button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button></div>
+<div style="padding:8px 12px;"><button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
+<button onclick="abrirConferenciaRecebimento(null)" style="width:100%;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.12);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📦 Conferir Recebimento</button></div>
 </div><!-- STATUS MONITOR SEFAZ -->
 ${(()=>{
  const db2=ldb();
@@ -21677,6 +21678,201 @@ function gerarQRMesa(mesaId, mesaNome){
 <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#ff4400;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">🖨️ Imprimir</button>
 </body></html>`);
  w.document.close();
+}
+
+// ═══ CONFERÊNCIA ETIQUETA vs NF ══════════════════════════════
+function abrirConferenciaRecebimento(nfId){
+ const db=ldb();
+ const fila=gFila();
+ const nf=nfId?fila.find(f=>f.id===nfId):null;
+ const itensNF=nf?_extrairItensNFTexto(nf):[];
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0a0a0f;z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <div>
+    <p style="font-size:16px;font-weight:900;">📦 Conferência de Recebimento</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${nf?'NF '+nf.numero+' — '+nf.emitente:'Sem NF vinculada'}</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Scanner de código de barras -->
+  <div style="background:rgba(255,255,255,0.04);border:2px dashed rgba(255,255,255,0.15);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;">
+   <p style="font-size:24px;margin-bottom:8px;">📷</p>
+   <p style="font-size:13px;font-weight:700;margin-bottom:6px;">Bipe ou fotografe a etiqueta</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px;">O sistema compara peso e produto com a NF</p>
+   <div style="display:flex;gap:8px;">
+    <input id="conf-barcode" class="inpm" placeholder="Código de barras ou descrição..." style="flex:1;" oninput="conferirItemEtiqueta(this.value)" onkeydown="if(event.key==='Enter')conferirItemEtiqueta(this.value)"/>
+    <button onclick="fotografarEtiqueta()" style="padding:10px;border-radius:8px;border:none;background:rgba(170,68,255,0.2);color:#aa44ff;font-size:16px;cursor:pointer;">📷</button>
+   </div>
+   <!-- Campos manuais -->
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+    <input id="conf-produto" class="inpm" placeholder="Nome do produto"/>
+    <div style="display:flex;gap:4px;">
+     <input id="conf-peso" class="inpm" type="number" placeholder="Peso" step="0.001" style="flex:1;"/>
+     <select id="conf-un" class="inpm" style="width:60px;"><option>kg</option><option>un</option><option>L</option><option>g</option></select>
+    </div>
+   </div>
+   <button onclick="conferirItemManual()" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;margin-top:8px;">🔍 Conferir</button>
+  </div>
+
+  <!-- Itens da NF para conferência -->
+  ${itensNF.length?`<p style="font-size:12px;font-weight:700;margin-bottom:8px;">Itens da NF para conferir:</p>
+  <div id="lista-conferencia">
+  ${itensNF.map(it=>`<div id="conf-item-${it.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.04);border-radius:9px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);">
+   <div>
+    <p style="font-size:12px;font-weight:700;">${it.nome}</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.5);">NF: ${it.qtd} ${it.un}</p>
+   </div>
+   <div style="text-align:right;">
+    <p id="conf-status-${it.id}" style="font-size:20px;">⏳</p>
+    <p id="conf-diff-${it.id}" style="font-size:10px;color:rgba(255,255,255,0.4);"></p>
+   </div>
+  </div>`).join('')}
+  </div>`:'<p style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center;padding:10px;">Nenhuma NF vinculada. Confira manualmente digitando produto e peso.</p>'}
+
+  <!-- Divergências encontradas -->
+  <div id="divergencias-lista" style="display:none;margin-top:12px;">
+   <p style="font-size:12px;font-weight:800;color:var(--re);margin-bottom:8px;">❌ Divergências encontradas:</p>
+   <div id="diverg-itens"></div>
+   <button onclick="salvarDivergencias('${nfId||''}')" style="width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📋 Registrar divergências</button>
+  </div>
+
+  <button onclick="finalizarConferencia('${nfId||''}')" style="position:fixed;bottom:14px;left:14px;right:14px;padding:14px;border-radius:12px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:900;cursor:pointer;">✅ Finalizar conferência</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ window._confNFItens=itensNF;
+ window._confDivergencias=[];
+ document.body.appendChild(div);
+}
+
+function _extrairItensNFTexto(nf){
+ // Tenta extrair itens do XML ou usa dados básicos
+ const itens=[];
+ if(nf.xml){
+  const matches=[...nf.xml.matchAll(/<xProd>([^<]+)<\/xProd>[\s\S]*?<qCom>([^<]+)<\/qCom>[\s\S]*?<uCom>([^<]+)<\/uCom>/g)];
+  matches.forEach((m,i)=>itens.push({id:'it'+i,nome:m[1],qtd:parseFloat(m[2]),un:m[3]}));
+ }
+ if(!itens.length&&nf.itens){
+  nf.itens.forEach((it,i)=>itens.push({id:'it'+i,...it}));
+ }
+ return itens;
+}
+
+function conferirItemManual(){
+ const nome=(document.getElementById('conf-produto')?.value||'').trim();
+ const peso=parseFloat(document.getElementById('conf-peso')?.value||0);
+ const un=document.getElementById('conf-un')?.value||'kg';
+ if(!nome&&!peso){alert('Informe o produto e/ou peso');return;}
+ 
+ // Busca na lista da NF
+ const itens=window._confNFItens||[];
+ const match=itens.find(it=>it.nome.toLowerCase().includes(nome.toLowerCase())||
+  nome.toLowerCase().includes(it.nome.toLowerCase().split(' ')[0]));
+ 
+ if(match&&peso>0){
+  const diff=Math.abs(peso-match.qtd);
+  const pct=match.qtd>0?(diff/match.qtd*100):0;
+  const ok=pct<=5; // Tolerância de 5%
+  
+  // Atualiza o status na lista
+  const statusEl=document.getElementById('conf-status-'+match.id);
+  const diffEl=document.getElementById('conf-diff-'+match.id);
+  if(statusEl)statusEl.textContent=ok?'✅':'❌';
+  if(diffEl)diffEl.textContent=ok?'Conferido':diff.toFixed(3)+un+' de diferença';
+
+  if(!ok){
+   window._confDivergencias=window._confDivergencias||[];
+   window._confDivergencias.push({
+    produto:match.nome,qtdNF:match.qtd,qtdRecebida:peso,un,
+    diferenca:peso-match.qtd,pct:((peso-match.qtd)/match.qtd*100).toFixed(1)
+   });
+   // Mostra bloco de divergências
+   const divEl=document.getElementById('divergencias-lista');
+   const divItens=document.getElementById('diverg-itens');
+   if(divEl)divEl.style.display='block';
+   if(divItens)divItens.innerHTML+=`<div style="padding:8px;background:rgba(255,51,102,0.08);border-radius:7px;margin-bottom:4px;">
+    <p style="font-size:12px;font-weight:700;">${match.nome}</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.6);">NF: ${match.qtd}${un} → Recebido: ${peso}${un} (${window._confDivergencias[window._confDivergencias.length-1].pct}%)</p>
+   </div>`;
+   
+   // Alerta visual
+   const alertDiv=document.createElement('div');
+   alertDiv.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#ff3366;color:#fff;padding:12px 20px;border-radius:10px;z-index:999;font-size:14px;font-weight:800;';
+   alertDiv.textContent='❌ DIVERGÊNCIA: NF='+match.qtd+un+' / Etiqueta='+peso+un;
+   document.body.appendChild(alertDiv);
+   setTimeout(()=>alertDiv.remove(),4000);
+  }else{
+   const okDiv=document.createElement('div');
+   okDiv.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#00cc66;color:#fff;padding:12px 20px;border-radius:10px;z-index:999;font-size:14px;font-weight:800;';
+   okDiv.textContent='✅ OK: '+nome+' — '+peso+un+' conferido!';
+   document.body.appendChild(okDiv);
+   setTimeout(()=>okDiv.remove(),3000);
+  }
+ }else if(peso>0&&!match){
+  // Produto não encontrado na NF
+  const okDiv=document.createElement('div');
+  okDiv.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#ff8800;color:#fff;padding:12px 20px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+  okDiv.textContent='⚠️ Produto não encontrado na NF — registre manualmente';
+  document.body.appendChild(okDiv);
+  setTimeout(()=>okDiv.remove(),4000);
+ }
+ 
+ // Limpa campos
+ if(document.getElementById('conf-produto'))document.getElementById('conf-produto').value='';
+ if(document.getElementById('conf-peso'))document.getElementById('conf-peso').value='';
+}
+
+async function fotografarEtiqueta(){
+ const input=document.createElement('input');
+ input.type='file';input.accept='image/*';input.capture='environment';
+ input.onchange=async function(){
+  const file=input.files[0];if(!file)return;
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:900;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML='<p style="color:#fff;font-size:14px;">🔍 Lendo etiqueta...</p>';
+  document.body.appendChild(overlay);
+  try{
+   const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+   const result=await claudeAPI({model:MODEL,max_tokens:200,messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+    {type:'text',text:'Leia esta etiqueta de produto alimentício. Extraia APENAS JSON: {"produto":"nome","peso":0.000,"unidade":"kg","lote":"","validade":"DD/MM/AAAA"}'}
+   ]}]});
+   overlay.remove();
+   const raw=(result.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+   const dados=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');
+   if(dados.produto)document.getElementById('conf-produto').value=dados.produto;
+   if(dados.peso)document.getElementById('conf-peso').value=dados.peso;
+   if(dados.unidade)document.getElementById('conf-un').value=dados.unidade;
+   conferirItemManual();
+  }catch(e){overlay.remove();alert('Erro: '+e.message);}
+ };
+ input.click();
+}
+
+function salvarDivergencias(nfId){
+ const db=ldb();
+ if(!db.divergenciasRecebimento)db.divergenciasRecebimento=[];
+ const divs=window._confDivergencias||[];
+ db.divergenciasRecebimento.push({
+  id:uid(),nfId,data:hj(),
+  itens:divs,total:divs.length,
+  criadoEm:new Date().toISOString()
+ });
+ sdb(db);
+ alert('✅ Divergências registradas! Use para contestar com o fornecedor.');
+}
+
+function finalizarConferencia(nfId){
+ const divs=window._confDivergencias||[];
+ if(divs.length>0){
+  if(!confirm('Há '+divs.length+' divergência(s). Deseja finalizar mesmo assim?'))return;
+  salvarDivergencias(nfId);
+ }
+ document.querySelector('[style*="inset:0"]')?.remove();
+ alert('✅ Conferência finalizada!');
 }
 
 render();
