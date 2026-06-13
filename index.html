@@ -263,7 +263,7 @@ oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{4})(?=\d)/g,'$1 ')
 <div style="display:flex;gap:6px;">
 <button onclick="adicionarPorChave()" style="flex:2;padding:10px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🔍 Consultar SEFAZ</button>
 <label style="flex:1;cursor:pointer;">
-<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="lerCodigoBarras(this)"/>
+<button onclick="escanearChaveNF()" style="padding:9px 16px;border-radius:8px;border:none;background:rgba(0,255,136,0.15);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;">📷 Escanear</button>
 <div style="padding:10px;border-radius:8px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;text-align:center;">📷 Barras</div>
 </label>
 </div>
@@ -21753,7 +21753,7 @@ function abrirConferenciaRecebimento(nfId){
    <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px;">O sistema compara peso e produto com a NF</p>
    <div style="display:flex;gap:8px;">
     <input id="conf-barcode" class="inpm" placeholder="Código de barras ou descrição..." style="flex:1;" oninput="conferirItemEtiqueta(this.value)" onkeydown="if(event.key==='Enter')conferirItemEtiqueta(this.value)"/>
-    <button onclick="fotografarEtiqueta()" style="padding:10px;border-radius:8px;border:none;background:rgba(170,68,255,0.2);color:#aa44ff;font-size:16px;cursor:pointer;">📷</button>
+    <button onclick="escanearEtiquetaFornecedor()" style="padding:10px;border-radius:8px;border:none;background:rgba(170,68,255,0.2);color:#aa44ff;font-size:16px;cursor:pointer;">📷</button>
    </div>
    <!-- Campos manuais -->
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
@@ -21921,6 +21921,123 @@ function finalizarConferencia(nfId){
  }
  document.querySelector('[style*="inset:0"]')?.remove();
  alert('✅ Conferência finalizada!');
+}
+
+// ═══ SCANNER DE CÓDIGO DE BARRAS ═════════════════════════════
+function abrirScanner(callback, titulo){
+ titulo=titulo||'Escanear Código';
+ const div=document.createElement('div');
+ div.id='scanner-overlay';
+ div.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column;';
+ div.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(0,0,0,0.8);">
+   <p style="font-size:15px;font-weight:800;color:#fff;">${titulo}</p>
+   <button onclick="fecharScanner()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-size:12px;cursor:pointer;">✕ Fechar</button>
+  </div>
+  <div style="position:relative;flex:1;overflow:hidden;">
+   <video id="scanner-video" style="width:100%;height:100%;object-fit:cover;" autoplay playsinline muted></video>
+   <!-- Mira de leitura -->
+   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+    <div style="width:80%;max-width:320px;height:120px;border:3px solid #00ff88;border-radius:12px;position:relative;">
+     <div style="position:absolute;top:-2px;left:-2px;width:24px;height:24px;border-top:4px solid #00ff88;border-left:4px solid #00ff88;border-radius:3px 0 0 0;"></div>
+     <div style="position:absolute;top:-2px;right:-2px;width:24px;height:24px;border-top:4px solid #00ff88;border-right:4px solid #00ff88;border-radius:0 3px 0 0;"></div>
+     <div style="position:absolute;bottom:-2px;left:-2px;width:24px;height:24px;border-bottom:4px solid #00ff88;border-left:4px solid #00ff88;border-radius:0 0 0 3px;"></div>
+     <div style="position:absolute;bottom:-2px;right:-2px;width:24px;height:24px;border-bottom:4px solid #00ff88;border-right:4px solid #00ff88;border-radius:0 0 3px 0;"></div>
+     <!-- Linha de scan animada -->
+     <div id="scan-line" style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00ff88,transparent);animation:scanline 2s linear infinite;"></div>
+    </div>
+   </div>
+   <p style="position:absolute;bottom:20px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.7);font-size:12px;">Aponte para o código de barras ou QR Code</p>
+  </div>
+  <!-- Input manual como fallback -->
+  <div style="padding:10px 14px 20px;background:rgba(0,0,0,0.8);">
+   <div style="display:flex;gap:8px;">
+    <input id="scanner-manual" class="inpm" placeholder="Ou digite o código manualmente..." style="flex:1;" inputmode="numeric"/>
+    <button onclick="confirmarScannerManual()" style="padding:10px 14px;border-radius:8px;border:none;background:#00ff88;color:#000;font-weight:800;cursor:pointer;">OK</button>
+   </div>
+  </div>
+  <style>@keyframes scanline{0%{top:10%;}50%{top:80%;}100%{top:10%;}}</style>
+ `;
+ document.body.appendChild(div);
+ window._scannerCallback=callback;
+ 
+ // Inicia câmera
+ navigator.mediaDevices.getUserMedia({
+  video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+ }).then(stream=>{
+  const video=document.getElementById('scanner-video');
+  if(video){video.srcObject=stream;window._scannerStream=stream;}
+  // Inicia detecção se BarcodeDetector disponível
+  if(window.BarcodeDetector){
+   iniciarDeteccaoBarcode(video,callback);
+  }
+ }).catch(e=>{
+  console.log('Câmera indisponível:',e.message);
+  // Fallback: mostra só o campo manual
+  const v=document.getElementById('scanner-video');
+  if(v)v.style.display='none';
+ });
+}
+
+function fecharScanner(){
+ if(window._scannerStream){
+  window._scannerStream.getTracks().forEach(t=>t.stop());
+  window._scannerStream=null;
+ }
+ if(window._scannerInterval)clearInterval(window._scannerInterval);
+ document.getElementById('scanner-overlay')?.remove();
+}
+
+function confirmarScannerManual(){
+ const val=document.getElementById('scanner-manual')?.value?.trim();
+ if(!val)return;
+ fecharScanner();
+ if(window._scannerCallback)window._scannerCallback(val);
+}
+
+function iniciarDeteccaoBarcode(video, callback){
+ const detector=new BarcodeDetector({formats:['code_128','ean_13','ean_8','qr_code','code_39','itf','data_matrix']});
+ window._scannerInterval=setInterval(async()=>{
+  if(!video||video.readyState<2)return;
+  try{
+   const barcodes=await detector.detect(video);
+   if(barcodes.length>0){
+    const code=barcodes[0].rawValue;
+    fecharScanner();
+    if(callback)callback(code);
+   }
+  }catch(e){}
+ },300);
+}
+
+// Scanner de chave NF — substitui a foto
+function escanearChaveNF(){
+ abrirScanner(function(codigo){
+  const numeros=codigo.replace(/\D/g,'');
+  const inp=document.getElementById('chave-nf');
+  if(!inp)return;
+  if(numeros.length>=44){
+   inp.value=numeros.slice(0,44);
+   // Processa automaticamente
+   if(typeof processarChaveNF==='function')processarChaveNF(numeros.slice(0,44));
+  }else if(numeros.length>0){
+   inp.value=numeros;
+  }else{
+   inp.value=codigo; // QR code pode ter texto
+  }
+ },'📄 Escanear Chave da NF');
+}
+
+// Scanner de etiqueta de fornecedor — para conferência
+function escanearEtiquetaFornecedor(){
+ abrirScanner(function(codigo){
+  const prodEl=document.getElementById('conf-barcode');
+  if(prodEl){
+   prodEl.value=codigo;
+   // Dispara a conferência
+   if(typeof conferirItemEtiqueta==='function')conferirItemEtiqueta(codigo);
+  }
+ },'🏷️ Escanear Etiqueta do Fornecedor');
 }
 
 render();
