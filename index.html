@@ -416,11 +416,18 @@ async function lerCodigoBarras(inp){
  if(!inp2)return;
  inp2.value="Lendo código...";
  try{
- const b64=await comprimirImagem(f,1600,1600,0.90);
+ // Converte a imagem para base64
+ const b64=await new Promise((res,rej)=>{
+  const reader=new FileReader();
+  reader.onload=()=>res(reader.result.split(',')[1]);
+  reader.onerror=rej;
+  reader.readAsDataURL(f);
+ });
+ if(!b64||b64.length<100){inp2.value="";alert("Imagem inválida");return;}
  const data=await claudeAPI({
  model:MODEL,max_tokens:200,
  messages:[{role:"user",content:[
- {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},
+ {type:"image",source:{type:"base64",media_type:f.type||"image/jpeg",data:b64}},
  {type:"text",text:"Leia o código de barras ou QR code desta nota fiscal e retorne APENAS os 44 dígitos numéricos da chave de acesso, sem espaços ou caracteres extras."}
  ]}]
  });
