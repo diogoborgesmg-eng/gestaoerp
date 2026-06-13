@@ -8647,6 +8647,19 @@ ${pfx?`<button onclick="if(confirm('Remover certificado ${n}?')){localStorage.re
  <p style="font-size:10px;color:var(--mu);">Arquivo com extensão .pfx ou .p12</p>
  <input type="file" id="cert-file-${n}" accept=".pfx,.p12,.cer,.crt" style="display:none;" onchange="certProcessarArquivo(this.files[0],${n})"/>
 </div>
+<div style="background:rgba(68,136,255,0.08);border:1px solid rgba(68,136,255,0.2);border-radius:9px;padding:10px;margin-top:8px;">
+ <p style="font-size:11px;font-weight:700;color:var(--bl);margin-bottom:6px;">💡 Como converter .pfx → Base64 (alternativo):</p>
+ <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:rgba(255,255,255,0.7);margin-bottom:4px;">
+  <p style="color:rgba(255,255,255,0.4);margin-bottom:2px;">Windows:</p>
+  <p>certutil -encode cert.pfx cert.txt</p>
+ </div>
+ <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:rgba(255,255,255,0.7);">
+  <p style="color:rgba(255,255,255,0.4);margin-bottom:2px;">Mac/Linux:</p>
+  <p>base64 -i cert.pfx | tr -d '\n'</p>
+ </div>
+ <p style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:6px;">Ou simplesmente arraste o arquivo .pfx acima — o sistema converte automaticamente.</p>
+</div>
+
 <div id="cert-info-${n}" style="${pfx?'':'display:none;'}background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
  <p style="font-size:10px;color:#818cf8;font-weight:700;" id="cert-info-txt-${n}">${pfx?'📄 '+info.nome+' · '+info.cnpj:''}</p>
 </div>
@@ -8831,7 +8844,7 @@ async function certProcessarArquivo(file, n){
   if(pfxField)pfxField.value=b64;
   
  }catch(e){
-  if(label)label.textContent='❌ Erro: '+e.message;
+  if(label)label.textContent='❌ Erro: '+e.message;console.error('Cert erro:',e);
  }
 }
 
