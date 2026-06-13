@@ -17182,7 +17182,7 @@ async function consultarNFesSEFAZ(){
    body:JSON.stringify({cnpj,cert,certSenha,uf:'MG'})
   });
 
-  const data=await resp.json();
+  const _rt=await resp.text();let data;try{data=JSON.parse(_rt);}catch(ep){data={ok:false,erro:'Servidor retornou: '+_rt.substring(0,100)};}
   div.remove();
 
   if(data.notas&&data.notas.length>0){
