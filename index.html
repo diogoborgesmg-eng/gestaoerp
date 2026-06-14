@@ -10647,7 +10647,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(255,51,102,0.3);border
 onkeydown="if(event.key==='Enter'){lancInline('cus');}"/>
 <button onclick="lancInline('cus')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${isDiario?`<select onchange="editarCat('c','${x.id}',this.value)" style="background:transparent;border:none;border-bottom:1px dashed rgba(255,51,102,0.35);color:rgba(255,255,255,0.45);font-size:10px;cursor:pointer;max-width:130px;">${CATS.map(c=>`<option value="${c}" ${c===x.cat?"selected":""}>${c.slice(0,20)}</option>`).join("")}</select>`:x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
+${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
 ${cus.length>0?`<div class="item" style="background:rgba(255,51,102,0.05);border-color:rgba(255,51,102,0.15);"><div class="dot" style="background:#ff3366;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#ff3366;font-size:14px;">${brl(c)}</span></div>`:""}
 </div>
 
@@ -22613,6 +22613,23 @@ function apagarSelecionados(dia){
  document.querySelector('[style*="inset:0"]')?.remove();
  render();
  alert('✅ '+idxsApagar.length+' lançamento(s) removido(s)!');
+}
+
+function editarCat(tipo,id,novaCat){
+ if(!novaCat)return;
+ const db=ldb();
+ const dias=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
+ for(const d of [getDia(),...dias]){
+  const arr=db[d]?.[tipo==='c'?'c':'r']||[];
+  const ix=arr.findIndex(l=>l.id===id);
+  if(ix>=0){
+   db[d][tipo==='c'?'c':'r'][ix].cat=novaCat;
+   const nome=db[d][tipo==='c'?'c':'r'][ix].d;
+   if(nome)aprenderDestinatario(nome,novaCat);
+   sdb(db);
+   return;
+  }
+ }
 }
 
 render();
