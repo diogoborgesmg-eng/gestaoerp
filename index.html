@@ -22615,15 +22615,41 @@ function apagarSelecionados(dia){
  alert('✅ '+idxsApagar.length+' lançamento(s) removido(s)!');
 }
 
-function editarSeg(tipo,id,novoSeg){
+
+
+function editarCat(tipo,id,novaCat){
+ if(!novaCat)return;
  const db=ldb();
- const dias=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
- for(const d of [getDia(),...dias]){
-  const arr=db[d]?.[tipo==='c'?'c':'r']||[];
-  const ix=arr.findIndex(l=>l.id===id);
+ const dia=getDia();
+ const chaves=[dia,...Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k!==dia)];
+ for(const d of chaves){
+  if(!db[d])continue;
+  const lista=tipo==='c'?db[d].c:db[d].r;
+  if(!lista)continue;
+  const ix=lista.findIndex(l=>l.id===id);
   if(ix>=0){
-   db[d][tipo==='c'?'c':'r'][ix].s=novoSeg;
-   db[d][tipo==='c'?'c':'r'][ix].seg=novoSeg;
+   lista[ix].cat=novaCat;
+   sdb(db);
+   render();
+   return;
+  }
+ }
+ console.log('editarCat: id nao encontrado',id);
+}
+
+function editarSeg(tipo,id,novoSeg){
+ if(novoSeg===undefined)return;
+ const db=ldb();
+ const dia=getDia();
+ const chaves=[dia,...Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k!==dia)];
+ for(const d of chaves){
+  if(!db[d])continue;
+  const lista=tipo==='c'?db[d].c:db[d].r;
+  if(!lista)continue;
+  const ix=lista.findIndex(l=>l.id===id);
+  if(ix>=0){
+   lista[ix].s=novoSeg;
+   lista[ix].seg=novoSeg;
    sdb(db);
    render();
    return;
