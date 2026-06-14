@@ -1,1 +1,10 @@
-{"name":"gestaoerp","version":"1.0.0","engines":{"node":"24.x"},"dependencies":{"node-forge":"^1.3.1"}}
+{
+  "name": "gestaoerp",
+  "version": "1.0.0",
+  "engines": {
+    "node": "20.x"
+  },
+  "dependencies": {
+    "node-forge": "^1.3.1"
+  }
+}
