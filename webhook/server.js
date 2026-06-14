@@ -100,6 +100,50 @@ const server = http.createServer((req, res) => {
       const num = msg.key.remoteJid;
       const tipo = msg.messageType || Object.keys(msg.message||{})[0] || '';
       console.log('MSG:', tipo);
+      if (['textMessage','extendedTextMessage','conversation'].includes(tipo)) {
+        // Comprovante enviado como TEXTO (ex: Stone, copia do recibo)
+        const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.textMessage?.text || '';
+        const palavrasChave = ['comprovante','transferência','transferencia','valor','pix','cnpj','dados de destino','dados de origem','stone','c6','itaú','itau','pagamento','recibo'];
+        const ehComprovante = palavrasChave.some(p => texto.toLowerCase().includes(p));
+        if (!ehComprovante) return;
+        await wpp(num, 'Lendo comprovante de texto...');
+        const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR, (2) NOME DE QUEM RECEBEU (em DADOS DE DESTINO > Nome, ou Favorecido, ou Beneficiario - nunca Di Casa), (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
+        const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
+        console.log('Analise texto:', analise.substring(0,100));
+        await wpp(num, 'Analise:\n' + analise.substring(0,300));
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. Se nao tiver valor retorne {"valor":0}';
+        const r2 = await claude([{ role:'user', content: prompt2 }], 300);
+        const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
+        const match = texto2.match(/\{[\s\S]*\}/);
+        let lanc = null;
+        if (match) {
+          try {
+            const d = JSON.parse(match[0]);
+            if (!d.valor || d.valor <= 0) { await wpp(num, 'Valor nao identificado.'); return; }
+            lanc = (()=>{
+              const _raw = d.destinatario||d.descricao||'';
+              const _prefixos = ['Pagamento para ','Para ','Favorecido: ','Beneficiário: ','Beneficiario: ','Recebedor: ','Destino: ','Pago para ','Pago a ','Transferência para ','Transferencia para '];
+              let _dest = _raw;
+              for(const p of _prefixos){ if(_dest.toLowerCase().startsWith(p.toLowerCase())){ _dest=_dest.slice(p.length).trim(); break; } }
+              const _desc = d.descricao&&d.descricao!==d.destinatario&&d.descricao!=='SEM_DESCRICAO' ? d.descricao : '';
+              return { valor: d.valor, categoria: d.categoria||'Outros', descricao: _desc, destinatario: _dest, tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: 'alta', setor: 'Geral', origem: 'whatsapp_texto' };
+            })();
+          } catch(e) { lanc = null; }
+        }
+        if (!lanc || !lanc.valor) { await wpp(num, 'Nao identifiquei os dados. Tente enviar como foto.'); return; }
+        // Salva no GitHub (mesmo fluxo das imagens)
+        try {
+          const fi = await req2('GET','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',null,{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+          if (!fi || !fi.content) { await wpp(num, 'Erro GitHub.'); return; }
+          const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
+          if (!fd.lancamentos) fd.lancamentos = [];
+          fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', criadoEm: new Date().toISOString(), sincronizado: false });
+          if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
+          await req2('PUT','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',{ message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+          await wpp(num, 'Lancado! R$ '+lanc.valor.toFixed(2)+' - '+lanc.categoria);
+        } catch(e) { await wpp(num, 'Erro ao salvar: '+e.message); }
+        return;
+      }
       if (['imageMessage','documentMessage'].includes(tipo)) {
         await wpp(num, 'Recebi! Buscando imagem...');
         const b64 = await getMidia(msg);
