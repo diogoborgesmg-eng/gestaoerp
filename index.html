@@ -22321,6 +22321,205 @@ function _salvarNFManual(){
  abrirConferenciaRecebimento(nf.id);
 }
 
+// ═══ FLUXO COMPLETO NF ═══════════════════════════════════════
+async function processarNFCompleta(nfId){
+ const fila=gFila();
+ const nf=fila.find(f=>f.id===nfId);
+ if(!nf)return;
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0a0a0f;z-index:800;overflow-y:auto;';
+ div.id='fluxo-nf-'+nfId;
+
+ const db=ldb();
+
+ // Busca pedido de compra vinculado
+ const pedidos=db.pedidosCompra||[];
+ const pedidoVinculado=pedidos.find(p=>
+  (p.status==='aprovado'||p.status==='aguardando_nf')&&
+  p.fornecedor?.toLowerCase().includes((nf.emitente||'').toLowerCase().substring(0,6))
+ );
+
+ // Calcula divergências de quantidade NF vs Pedido
+ const divergPedido=[];
+ if(pedidoVinculado){
+  (nf.itens||[]).forEach(it=>{
+   const itemPed=pedidoVinculado.itens?.find(p=>p.nome.toLowerCase().includes(it.nome.toLowerCase().substring(0,5)));
+   if(itemPed){
+    const diff=Math.abs(Number(it.qtd||0)-Number(itemPed.qtd||0));
+    const pct=Number(itemPed.qtd||0)>0?(diff/Number(itemPed.qtd))*100:0;
+    if(pct>5)divergPedido.push({produto:it.nome,pedido:itemPed.qtd,nf:it.qtd,un:it.un,pct:pct.toFixed(1)});
+   }
+  });
+ }
+
+ div.innerHTML=`<div style="padding:14px 14px 100px;">
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+   <div>
+    <p style="font-size:16px;font-weight:900;">📦 NF ${nf.numero||'s/n'}</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${nf.emitente} · ${nf.data||''} · ${brl(nf.valor||0)}</p>
+   </div>
+   <button onclick="document.getElementById('fluxo-nf-${nfId}').remove()" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- ETAPA 1: Pedido de Compra -->
+  <div class="card" style="margin-bottom:12px;${pedidoVinculado?'border-color:rgba(0,255,136,0.3);':''}">
+   <p style="font-size:12px;font-weight:800;margin-bottom:8px;">1️⃣ Conferência com Pedido de Compra</p>
+   ${pedidoVinculado?`
+    <div style="background:rgba(0,255,136,0.08);border-radius:8px;padding:8px;margin-bottom:8px;">
+     <p style="font-size:11px;font-weight:700;color:#00ff88;">✅ Pedido vinculado: ${pedidoVinculado.fornecedor}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.5);">${(pedidoVinculado.itens||[]).length} itens no pedido</p>
+    </div>
+    ${divergPedido.length>0?`
+    <div style="background:rgba(255,51,102,0.08);border-radius:8px;padding:8px;margin-bottom:6px;">
+     <p style="font-size:11px;font-weight:800;color:var(--re);margin-bottom:4px;">⚠️ ${divergPedido.length} divergência(s) vs pedido:</p>
+     ${divergPedido.map(d=>`<p style="font-size:10px;color:rgba(255,255,255,0.6);">• ${d.produto}: pedido ${d.pedido}${d.un} / NF ${d.nf}${d.un} (${d.pct}% diff)</p>`).join('')}
+    </div>`:'<p style="font-size:11px;color:rgba(255,255,255,0.5);">✅ Quantidades OK vs pedido</p>'}
+   `:
+   '<p style="font-size:11px;color:rgba(255,255,255,0.4);">Nenhum pedido de compra vinculado para este fornecedor.</p>'}
+  </div>
+
+  <!-- ETAPA 2: Conferência Física -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:800;margin-bottom:8px;">2️⃣ Conferência Física com Scanner</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:10px;">Bipe a etiqueta de cada item recebido para confirmar peso/quantidade.</p>
+   <div id="conf-itens-${nfId}">
+    ${(nf.itens||[]).map(it=>`
+    <div id="conf-${nfId}-${it.nome.replace(/\s/g,'')}" style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:5px;">
+     <div>
+      <p style="font-size:12px;font-weight:700;">${it.nome}</p>
+      <p style="font-size:10px;color:rgba(255,255,255,0.4);">NF: ${it.qtd} ${it.un||'un'} · R$ ${Number(it.vUnit||0).toFixed(2)}/un</p>
+     </div>
+     <div style="display:flex;align-items:center;gap:6px;">
+      <span id="status-${nfId}-${it.nome.replace(/\s/g,'')}" style="font-size:20px;">⏳</span>
+      <button onclick="conferirItemFluxo('${nfId}','${it.nome}',${it.qtd},'${it.un||'un'}')" 
+       style="padding:5px 10px;border-radius:6px;border:none;background:rgba(0,255,136,0.15);color:#00ff88;font-size:11px;cursor:pointer;">📷 Bipe</button>
+     </div>
+    </div>`).join('')}
+    ${!(nf.itens||[]).length?'<p style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center;padding:10px;">Sem itens cadastrados</p>':''}
+   </div>
+   <button onclick="confirmarTodosOK('${nfId}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(0,255,136,0.3);background:transparent;color:#00ff88;font-size:11px;font-weight:700;cursor:pointer;margin-top:8px;">✅ Confirmar todos OK</button>
+  </div>
+
+  <!-- ETAPA 3: Lançamento -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:800;margin-bottom:8px;">3️⃣ Lançar NF</p>
+   <div style="display:flex;flex-direction:column;gap:6px;">
+    <label class="lbl">Categoria de custo</label>
+    <select id="nf-cat-${nfId}" class="inpm">
+     <option value="🥩 Matéria Prima">🥩 Matéria Prima</option>
+     <option value="🍺 Bebidas / Bar">🍺 Bebidas / Bar</option>
+     <option value="📦 Embalagem">📦 Embalagem</option>
+     <option value="🧹 Limpeza / Higiene">🧹 Limpeza / Higiene</option>
+     <option value="🔄 Outros">🔄 Outros</option>
+    </select>
+    <label class="lbl">Vencimento (se a prazo)</label>
+    <input type="date" id="nf-venc-${nfId}" class="inpm"/>
+   </div>
+  </div>
+
+  <!-- Botão final -->
+  <div style="position:fixed;bottom:0;left:0;right:0;padding:12px 14px 24px;background:rgba(10,10,15,0.95);border-top:1px solid rgba(255,255,255,0.08);">
+   <button onclick="lancarNFCompleta('${nfId}')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#00cc66,#00ff88);color:#000;font-size:15px;font-weight:900;cursor:pointer;">
+    🚀 Lançar no Estoque e Financeiro
+   </button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function conferirItemFluxo(nfId, nomeItem, qtdNF, unidade){
+ abrirScanner(function(codigo){
+  // Pede o peso/qtd confirmado
+  const qtdReal=parseFloat(prompt('📦 '+nomeItem+'\nQtd na NF: '+qtdNF+' '+unidade+'\n\nQtd recebida (bipe confirmou):', qtdNF)||qtdNF);
+  const diff=Math.abs(qtdReal-qtdNF);
+  const pct=qtdNF>0?(diff/qtdNF)*100:0;
+  const ok=pct<=5;
+  const key=nfId+'-'+nomeItem.replace(/\s/g,'');
+  const statusEl=document.getElementById('status-'+key);
+  if(statusEl)statusEl.textContent=ok?'✅':'❌';
+  if(!ok){
+   const msg=document.createElement('p');
+   msg.style.cssText='font-size:10px;color:var(--re);margin-top:2px;';
+   msg.textContent='⚠️ NF:'+qtdNF+unidade+' / Recebido:'+qtdReal+unidade+' ('+pct.toFixed(1)+'%)';
+   document.getElementById('conf-'+key)?.appendChild(msg);
+   // Salva divergência
+   if(!window._diverg)window._diverg={};
+   if(!window._diverg[nfId])window._diverg[nfId]=[];
+   window._diverg[nfId].push({produto:nomeItem,qtdNF,qtdReal,unidade,pct:pct.toFixed(1)});
+  }
+ },'📷 Escanear: '+nomeItem);
+}
+
+function confirmarTodosOK(nfId){
+ document.querySelectorAll('[id^="status-'+nfId+'"]').forEach(el=>el.textContent='✅');
+}
+
+async function lancarNFCompleta(nfId){
+ const fila=gFila();
+ const nf=fila.find(f=>f.id===nfId);
+ if(!nf)return;
+
+ const db=ldb();
+ const cat=document.getElementById('nf-cat-'+nfId)?.value||'🥩 Matéria Prima';
+ const venc=document.getElementById('nf-venc-'+nfId)?.value||'';
+ const hoje=hj();
+ const diverg=(window._diverg||{})[nfId]||[];
+
+ // 1. Lança no DRE como custo
+ if(!db[hoje])db[hoje]={r:[],c:[]};
+ if(!db[hoje].c)db[hoje].c=[];
+ db[hoje].c.push({
+  id:uid(),
+  d:'NF '+( nf.numero||'s/n')+' — '+(nf.emitente||'Fornecedor'),
+  v:Number(nf.valor||0),
+  cat,seg:'nf',
+  _nfId:nfId,
+  dt:hoje
+ });
+
+ // 2. Lança no estoque
+ if(!db.cozinhaItens)db.cozinhaItens=[];
+ (nf.itens||[]).forEach(it=>{
+  const existe=db.cozinhaItens.find(e=>e.nome.toLowerCase()===it.nome.toLowerCase());
+  if(existe){
+   existe.qtd=Number(existe.qtd||0)+Number(it.qtd||0);
+   existe.dtRecebimento=hoje;
+  }else{
+   db.cozinhaItens.push({id:uid(),nome:it.nome,qtd:it.qtd,un:it.un||'kg',
+    dtRecebimento:hoje,local:'Estoque',_nfId:nfId});
+  }
+ });
+
+ // 3. Cria conta a pagar se tiver vencimento
+ if(venc){
+  if(!db.contasPagar)db.contasPagar=[];
+  db.contasPagar.push({
+   id:uid(),desc:'NF '+(nf.numero||'s/n')+' — '+(nf.emitente||''),
+   valor:Number(nf.valor||0),vencimento:venc,
+   cat,fornecedor:nf.emitente||'',pago:false,
+   _nfId:nfId,criadoEm:new Date().toISOString()
+  });
+ }
+
+ // 4. Marca NF como lançada
+ const idx=fila.findIndex(f=>f.id===nfId);
+ if(idx>=0)fila[idx].status='lançado';
+ sFila(fila);
+ sdb(db);
+
+ // 5. Alerta se teve divergências
+ let msg='✅ NF lançada!\n\n• Custo no DRE: '+brl(nf.valor||0)+'\n• Estoque: '+(nf.itens||[]).length+' item(ns)';
+ if(venc)msg+='\n• Conta a pagar: '+new Date(venc+'T00:00:00').toLocaleDateString('pt-BR');
+ if(diverg.length>0)msg+='\n\n⚠️ '+diverg.length+' divergência(s) de quantidade registrada(s)';
+
+ document.getElementById('fluxo-nf-'+nfId)?.remove();
+ render();
+ alert(msg);
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
