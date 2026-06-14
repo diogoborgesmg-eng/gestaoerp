@@ -108,9 +108,19 @@ const server = http.createServer((req, res) => {
         if (!ehComprovante) return;
         await wpp(num, 'Lendo comprovante de texto...');
         const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR, (2) NOME DE QUEM RECEBEU (em DADOS DE DESTINO > Nome, ou Favorecido, ou Beneficiario - nunca Di Casa), (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
-        const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
+        // Log completo da resposta para debug
+        console.log('r1 response:', JSON.stringify(r1).substring(0,200));
+        let analise = 'Nao consegui extrair.';
+        if (r1 && r1.content && r1.content[0]) {
+          analise = r1.content[0].text || r1.content[0].type || 'Sem texto';
+        } else if (r1 && r1.error) {
+          analise = 'Erro API: ' + JSON.stringify(r1.error);
+        }
         console.log('Analise texto:', analise.substring(0,100));
-        await wpp(num, 'Analise:\n' + analise.substring(0,300));
+        const msgAnalise = analise==='Nao consegui extrair.' ? 
+          'Nao consegui extrair. Tente: 1) salvar a imagem e reenviar, 2) tirar foto da tela do comprovante.' : 
+          'Analise:\n' + analise.substring(0,300);
+        await wpp(num, msgAnalise);
         const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. Se nao tiver valor retorne {"valor":0}';
         const r2 = await claude([{ role:'user', content: prompt2 }], 300);
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
@@ -150,7 +160,7 @@ const server = http.createServer((req, res) => {
         if (!b64) { await wpp(num, 'Nao consegui baixar.'); return; }
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
-          { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
+          { type:'image', source:{ type:'base64', media_type: b64.startsWith('/9j/')?'image/jpeg':b64.startsWith('iVBORw')?'image/png':'image/jpeg', data:b64 } },
           { type:'text', text:'Leia este comprovante de pagamento. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR: campo "Valor" ou "Total"; (2) NOME DE QUEM RECEBEU: Stone/C6/Itau: procure em "DADOS DE DESTINO > Nome" ou "Destino > Nome"; PIX comum: procure em "Favorecido", "Beneficiario", "Para", "Recebedor"; Cartao/maquininha: nome do estabelecimento cobrado; NUNCA use "Di Casa Gastronomia" como nome - esse e o pagador, nao o recebedor; (3) DATA: campo "Data", "Realizada em", "Data/Hora"; (4) TIPO: pix, credito, debito, boleto ou dinheiro; (5) OBSERVACAO: campo descricao, motivo, historico do pagamento. Se nao tiver informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
