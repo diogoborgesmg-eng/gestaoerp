@@ -216,7 +216,10 @@ function rFila(){
 ${pendentes.length>0?`<span style="background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.3);color:var(--ye);font-size:10px;padding:2px 7px;border-radius:5px;">${pendentes.length} pendente${pendentes.length>1?"s":""}</span>`:""}
 ${prontos.length>0?`<span style="background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--gr);font-size:10px;padding:2px 7px;border-radius:5px;">${prontos.length} pronto${prontos.length>1?"s":""}</span>`:""}
 </div>
-<div style="padding:8px 12px;"><button onclick="importarXMLNF()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:900;cursor:pointer;margin-bottom:8px;">📄 Importar XML da NF</button>
+<div style="padding:8px 12px;"><button onclick="abrirFluxoNF()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff8800,#ff4400);color:#fff;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px;box-shadow:0 4px 15px rgba(255,68,0,0.3);">
+ 📦 Receber Mercadoria
+</button>
+<button onclick="importarXMLNF()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:900;cursor:pointer;margin-bottom:8px;">📄 Importar XML da NF</button>
 <button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
 <button onclick="limparFilaErros()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">🗑️ Limpar itens com erro</button>
 <button onclick="abrirConferenciaRecebimento(null)" style="width:100%;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.12);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📦 Conferir Recebimento</button></div>
@@ -20556,7 +20559,7 @@ function abrirModoCozinha(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
 
-   <button onclick="window._estSub='recebimento';ir('est');document.querySelector('[style*=inset]')?.remove()" style="background:rgba(0,255,136,0.12);border:2px solid rgba(0,255,136,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
+   <button onclick="abrirFluxoNF();document.querySelector('[style*=inset]')?.remove()" style="background:rgba(0,255,136,0.12);border:2px solid rgba(0,255,136,0.4);border-radius:14px;padding:16px 10px;cursor:pointer;text-align:center;">
     <p style="font-size:28px;margin-bottom:6px;">📥</p>
     <p style="font-size:13px;font-weight:900;color:#00ff88;">Chegou mercadoria</p>
     <p style="font-size:10px;color:rgba(255,255,255,0.5);">Registrar recebimento</p>
@@ -22175,6 +22178,147 @@ function importarXMLNF(){
   alert(msg);
  };
  input.click();
+}
+
+// ═══ FLUXO NF: RECEBER → CONFERIR → LANÇAR ══════════════════
+function abrirFluxoNF(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:#0a0a0f;z-index:800;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+   <p style="font-size:17px;font-weight:900;">📦 Receber Mercadoria</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- PASSO 1 -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:13px;font-weight:800;margin-bottom:10px;">1️⃣ Identificar a NF</p>
+   <button onclick="importarXMLNF();this.closest('[style*=inset]').remove();" 
+    style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;">
+    📄 Tenho o XML da NF
+   </button>
+   <button onclick="_digitarNFManual()" 
+    style="width:100%;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
+    ✏️ Digitar dados manualmente
+   </button>
+  </div>
+
+  <!-- PASSO 2 -->
+  <div class="card" style="margin-bottom:12px;opacity:0.5;" id="passo2-card">
+   <p style="font-size:13px;font-weight:800;margin-bottom:6px;">2️⃣ Conferir itens com scanner</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.4);">Disponível após carregar a NF</p>
+  </div>
+
+  <!-- PASSO 3 -->
+  <div class="card" style="opacity:0.5;" id="passo3-card">
+   <p style="font-size:13px;font-weight:800;margin-bottom:6px;">3️⃣ Lançar no estoque e financeiro</p>
+   <p style="font-size:11px;color:rgba(255,255,255,0.4);">Disponível após conferência</p>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function _digitarNFManual(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:850;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 60px;">
+  <p style="font-size:15px;font-weight:900;margin-bottom:14px;">✏️ Dados da NF</p>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+   <div><label class="lbl">Fornecedor *</label><input id="nf-forn" class="inpm" placeholder="Nome do fornecedor"/></div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div><label class="lbl">Número NF</label><input id="nf-num" class="inpm" placeholder="123456" inputmode="numeric"/></div>
+    <div><label class="lbl">Data</label><input id="nf-data" class="inpm" type="date" value="${new Date().toISOString().slice(0,10)}"/></div>
+   </div>
+   <div><label class="lbl">Valor total R$</label><input id="nf-valor" class="inpm" type="number" placeholder="0,00" step="0.01" inputmode="decimal"/></div>
+   <div><label class="lbl">CNPJ Fornecedor</label><input id="nf-cnpj" class="inpm" placeholder="00.000.000/0000-00" inputmode="numeric"/></div>
+  </div>
+  <p style="font-size:12px;font-weight:700;margin:14px 0 8px;">Itens da NF</p>
+  <div id="nf-itens-list"></div>
+  <button onclick="_addItemNFManual()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;margin-bottom:12px;">+ Adicionar item</button>
+  <button onclick="_salvarNFManual()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:900;cursor:pointer;">✅ Salvar e conferir</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ // Adiciona 1 item inicial
+ document.body.appendChild(div);
+ setTimeout(_addItemNFManual,100);
+}
+
+function _addItemNFManual(){
+ const lista=document.getElementById('nf-itens-list');
+ if(!lista)return;
+ const id='item_'+Date.now();
+ const row=document.createElement('div');
+ row.id=id;
+ row.style.cssText='background:rgba(255,255,255,0.04);border-radius:9px;padding:10px;margin-bottom:8px;';
+ row.innerHTML=`
+  <div style="display:flex;gap:6px;margin-bottom:6px;">
+   <input class="inpm" placeholder="Nome do produto" style="flex:2;" id="${id}-nome"/>
+   <button onclick="escanearItemNF('${id}')" style="padding:8px;border-radius:7px;border:none;background:rgba(0,255,136,0.15);color:#00ff88;font-size:14px;cursor:pointer;">📷</button>
+  </div>
+  <div style="display:flex;gap:6px;">
+   <input class="inpm" type="number" placeholder="Qtd" style="flex:1;" id="${id}-qtd" step="0.001" inputmode="decimal"/>
+   <select class="inpm" style="width:70px;" id="${id}-un"><option>kg</option><option>un</option><option>cx</option><option>L</option><option>g</option><option>sc</option></select>
+   <input class="inpm" type="number" placeholder="R$/un" style="flex:1;" id="${id}-vunit" step="0.01" inputmode="decimal"/>
+   <button onclick="document.getElementById('${id}').remove()" style="padding:6px 10px;border-radius:6px;border:none;background:rgba(255,51,102,0.15);color:var(--re);cursor:pointer;">✕</button>
+  </div>`;
+ lista.appendChild(row);
+}
+
+function escanearItemNF(rowId){
+ abrirScanner(function(codigo){
+  // Tenta identificar produto pelo código
+  const est=gest();
+  const prod=est.find(e=>e.cod===codigo||e.n.toLowerCase().includes(codigo.toLowerCase().substring(0,6)));
+  const nomeEl=document.getElementById(rowId+'-nome');
+  if(nomeEl){
+   if(prod)nomeEl.value=prod.n;
+   else nomeEl.value=codigo;
+  }
+ },'Escanear produto');
+}
+
+function _salvarNFManual(){
+ const forn=(document.getElementById('nf-forn')?.value||'').trim();
+ if(!forn){alert('Informe o fornecedor');return;}
+ const valor=parseFloat(document.getElementById('nf-valor')?.value||0);
+ const num=document.getElementById('nf-num')?.value||'';
+ const data=document.getElementById('nf-data')?.value||new Date().toISOString().slice(0,10);
+ const cnpj=document.getElementById('nf-cnpj')?.value||'';
+
+ // Coleta itens
+ const itens=[];
+ document.querySelectorAll('[id^="item_"]').forEach(row=>{
+  const id=row.id;
+  const nome=(document.getElementById(id+'-nome')?.value||'').trim();
+  const qtd=parseFloat(document.getElementById(id+'-qtd')?.value||0);
+  const un=document.getElementById(id+'-un')?.value||'kg';
+  const vunit=parseFloat(document.getElementById(id+'-vunit')?.value||0);
+  if(nome)itens.push({nome,qtd,un,vUnit:vunit});
+ });
+
+ const nf={
+  id:uid(),
+  numero:num,
+  emitente:forn,
+  emitCNPJ:cnpj,
+  valor,
+  data:data.split('-').reverse().join('/'),
+  status:'pendente',
+  itens,
+  fonte:'manual',
+  recebidoEm:new Date().toISOString()
+ };
+
+ const db=ldb();
+ const fila=gFila();
+ fila.push(nf);
+ sFila(fila);
+ sdb(db);
+
+ document.querySelector('[style*="inset:0"]')?.remove();
+ // Abre conferência direto
+ abrirConferenciaRecebimento(nf.id);
 }
 
 render();
