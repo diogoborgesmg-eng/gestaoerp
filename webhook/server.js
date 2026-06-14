@@ -119,7 +119,16 @@ const server = http.createServer((req, res) => {
           try {
             const d = JSON.parse(match[0]);
             if (d.valor > 0) {
-              lanc = { valor: d.valor, categoria: d.categoria||'Outros', descricao: d.descricao||d.destinatario||'WhatsApp', destinatario: d.destinatario||d.descricao||'', tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: d.confianca||'alta', setor: d.setor||'Geral', origem: 'whatsapp' };
+              lanc = (()=>{
+              // Limpa prefixos do destinatario
+              const _raw = d.destinatario||d.descricao||'';
+              const _prefixos = ['Pagamento para ','Para ','Favorecido: ','Beneficiário: ','Beneficiario: ','Recebedor: ','Destino: ','Pago para ','Pago a ','Transferência para ','Transferencia para '];
+              let _dest = _raw;
+              for(const p of _prefixos){ if(_dest.toLowerCase().startsWith(p.toLowerCase())){ _dest=_dest.slice(p.length).trim(); break; } }
+              // Descricao separada do destinatario
+              const _desc = d.descricao&&d.descricao!==d.destinatario&&d.descricao!=='SEM_DESCRICAO' ? d.descricao : '';
+              return { valor: d.valor, categoria: d.categoria||'Outros', descricao: _desc, destinatario: _dest, tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: d.confianca||'alta', setor: d.setor||'Geral', origem: 'whatsapp' };
+            })();
               await salvarGitHub(lanc);
             }
           } catch(ep) { console.error('parse err:', ep.message); }
