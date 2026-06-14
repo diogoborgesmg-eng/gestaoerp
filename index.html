@@ -147,8 +147,6 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 </div>
 <div class="bnav"><div class="nis"><button class="ni a" id="n-dre" onclick="ir('dre')"><span class="nico">📊</span><span class="nila">DRE</span></button><button class="ni" id="n-est" onclick="ir('est')"><span class="nico">📦</span><span class="nila">Estoque</span></button><button class="ni" id="n-fila" onclick="ir('fila')"><span class="nico">📥</span><span class="nila">Fila NF</span></button><button class="ni" id="n-vendas" onclick="ir('vendas')"><span class="nico">💰</span><span class="nila">Vendas</span></button><button class="ni" id="n-voz" onclick="ir('voz')"><span class="nico">🎙️</span><span class="nila">Voz</span></button><button class="ni" id="n-forn" onclick="ir('forn')"><span class="nico">🏭</span><span class="nila">Fornec.</span></button><button class="ni" id="n-ficha" onclick="ir('ficha')"><span class="nico">📋</span><span class="nila">Fichas</span></button><button class="ni" id="n-compras" onclick="ir('compras')"><span class="nico">🛒</span><span class="nila">Compras</span></button><button class="ni" id="n-fixos" onclick="ir('fixos')"><span class="nico">📌</span><span class="nila">Fixos</span></button><button class="ni" id="n-conf" onclick="irConferencia()"><span class="nico">🔍</span><span class="nila">Conferência</span></button><button class="ni" id="n-ia" onclick="ir('ia')"><span class="nico">🤖</span><span class="nila">IA</span></button><button class="ni" id="n-bi" onclick="ir('bi')"><span class="nico">📊</span><span class="nila">BI</span></button><button class="ni" id="n-mkt" onclick="ir('mkt')"><span class="nico">📣</span><span class="nila">Marketing</span></button><button class="ni" id="n-fin" onclick="ir('fin')"><span class="nico">💳</span><span class="nila">Financeiro</span></button><button class="ni" id="n-cfo" onclick="ir('cfo')"><span class="nico">🧠</span><span class="nila">Consultor</span></button><button class="ni" id="n-comp" onclick="ir('comp')"><span class="nico">✅</span><span class="nila">Compliance</span></button>
 </div></div><script>
-function normCat(c){if(!c)return "🔄 Outros";var i=c.indexOf(" (");return i>0?c.substring(0,i).trim():c.trim();}
-
 
 const MODEL ="claude-sonnet-4-6";
 const esc=s=>String(s||'').replace(/['"]/g,c=>c==='\''?'\\\'':'&quot;');
@@ -6163,7 +6161,7 @@ function gerarContextoCFO(){
  const rMes=rec.reduce((a,x)=>a+Number(x.v),0);
  const cMes=cus.reduce((a,x)=>a+Number(x.v),0);
  const mMes=rMes>0?((rMes-cMes)/rMes)*100:0;
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const db=ldb();const hoje=new Date();
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const cp=db.contasPagar||[];
@@ -10030,7 +10028,7 @@ function exportarRelatorioPDF(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const hoje=new Date();
  const mesNome=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -10215,7 +10213,7 @@ async function gerarRelatorioMensalIA(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const mesNome=new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'});
@@ -10360,7 +10358,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const cor=res>0?"#00ff88":res<0?"#ff3366":"#ffcc00";
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const cmvGeral=cc["Insumos/Matéria-prima"]||0;
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
@@ -13024,7 +13022,7 @@ function editarQtdCompra(id,novaQtd){
  if(item){item.min=parseFloat(novaQtd)||item.min;sdb(db);}
 }
 
-function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
 const temChave=getApiKey().length>10;
 const db=ldb();
 const estPreparo=db.estPreparo||[];
@@ -13189,7 +13187,7 @@ async function analisarMes(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const melhor=dias.reduce((a,d)=>d.res>a.res?d:a,{res:-Infinity,dia:""});
  const pior=dias.reduce((a,d)=>d.res<a.res?d:a,{res:Infinity,dia:""});
@@ -13225,7 +13223,7 @@ async function aIA(){
  const el=document.getElementById("iat");
  btn.disabled=true;btn.innerHTML=`<span class="sp">⟳</span> Analisando...`;
  el.innerHTML=`<p style="color:var(--mu);font-size:11px;text-align:center;padding:8px;" class="pu">Consultando...</p>`;
- const cc={};cus.forEach(x=>{const _c=normCat(x.cat);cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
  const est=gest();
  const db=ldb();
  const estPreparo=db.estPreparo||[];
