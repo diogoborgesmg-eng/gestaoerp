@@ -216,7 +216,8 @@ function rFila(){
 ${pendentes.length>0?`<span style="background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.3);color:var(--ye);font-size:10px;padding:2px 7px;border-radius:5px;">${pendentes.length} pendente${pendentes.length>1?"s":""}</span>`:""}
 ${prontos.length>0?`<span style="background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--gr);font-size:10px;padding:2px 7px;border-radius:5px;">${prontos.length} pronto${prontos.length>1?"s":""}</span>`:""}
 </div>
-<div style="padding:8px 12px;"><button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
+<div style="padding:8px 12px;"><button onclick="importarXMLNF()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:900;cursor:pointer;margin-bottom:8px;">📄 Importar XML da NF</button>
+<button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
 <button onclick="limparFilaErros()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">🗑️ Limpar itens com erro</button>
 <button onclick="abrirConferenciaRecebimento(null)" style="width:100%;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.12);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📦 Conferir Recebimento</button></div>
 </div><!-- STATUS MONITOR SEFAZ -->
@@ -22086,6 +22087,94 @@ function limparFilaErros(){
  sdb(db);
  render();
  alert('✅ '+(antes-nova.length)+' item(ns) removido(s)');
+}
+
+// ═══ IMPORTAR XML DA NF DIRETAMENTE ═════════════════════════
+function importarXMLNF(){
+ const input=document.createElement('input');
+ input.type='file';
+ input.accept='.xml,text/xml,application/xml';
+ input.multiple=true;
+ input.onchange=async function(){
+  const files=Array.from(input.files||[]);
+  if(!files.length)return;
+  
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+  overlay.innerHTML='<p style="font-size:28px;">📄</p><p style="color:#fff;font-size:14px;font-weight:700;">Lendo '+files.length+' XML(s)...</p>';
+  document.body.appendChild(overlay);
+
+  const db=ldb();
+  const fila=gFila();
+  let importadas=0;
+  let erros=0;
+
+  for(const file of files){
+   try{
+    const xml=await new Promise((res,rej)=>{
+     const r=new FileReader();
+     r.onload=()=>res(r.result);
+     r.onerror=rej;
+     r.readAsText(file,'UTF-8');
+    });
+
+    // Extrai dados do XML
+    const chave=(xml.match(/chNFe[^>]*>([^<]+)/) || xml.match(/Id="NFe(\d{44})/) || [])[1]||'';
+    const numero=(xml.match(/nNF>([^<]+)/) || [])[1]||'';
+    const serie=(xml.match(/<serie>([^<]+)/) || [])[1]||'';
+    const emitente=(xml.match(/xNome>([^<]+)/) || [])[1]||file.name;
+    const emitCNPJ=(xml.match(/emit>[\s\S]*?CNPJ>([^<]+)/) || xml.match(/CNPJ>([^<]+)/) || [])[1]||'';
+    const valor=parseFloat((xml.match(/vNF>([^<]+)/) || [])[1]||'0');
+    const dhEmi=((xml.match(/dhEmi>([^<]+)/) || [])[1]||'').substring(0,10);
+
+    // Extrai itens
+    const itens=[];
+    const detMatches=[...xml.matchAll(/<det[^>]*>([\s\S]*?)<\/det>/g)];
+    detMatches.forEach(m=>{
+     const det=m[1];
+     const nome=(det.match(/xProd>([^<]+)/) || [])[1]||'';
+     const qtd=parseFloat((det.match(/qCom>([^<]+)/) || [])[1]||'0');
+     const un=(det.match(/uCom>([^<]+)/) || [])[1]||'UN';
+     const vUnit=parseFloat((det.match(/vUnCom>([^<]+)/) || [])[1]||'0');
+     const ncm=(det.match(/NCM>([^<]+)/) || [])[1]||'';
+     if(nome)itens.push({nome,qtd,un,vUnit,ncm});
+    });
+
+    if(!chave&&!numero){erros++;continue;}
+
+    // Verifica se já existe
+    if(chave&&fila.find(f=>f.chave===chave)){continue;}
+
+    fila.push({
+     id:uid(),
+     chave:chave.replace(/\D/g,'').slice(0,44)||uid(),
+     numero,serie,
+     emitente,emitCNPJ,
+     valor,
+     data:dhEmi||hj(),
+     status:'pendente',
+     itens,
+     xml,
+     fonte:'xml_importado',
+     arquivo:file.name,
+     recebidoEm:new Date().toISOString()
+    });
+    importadas++;
+   }catch(e){
+    console.log('Erro XML '+file.name+':',e.message);
+    erros++;
+   }
+  }
+
+  sFila(fila);
+  overlay.remove();
+  render();
+
+  let msg='✅ '+importadas+' NF(s) importada(s) com sucesso!';
+  if(erros>0)msg+='\n⚠️ '+erros+' arquivo(s) com erro';
+  alert(msg);
+ };
+ input.click();
 }
 
 render();
