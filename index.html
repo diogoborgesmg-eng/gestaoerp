@@ -217,6 +217,7 @@ ${pendentes.length>0?`<span style="background:rgba(255,204,0,0.15);border:1px so
 ${prontos.length>0?`<span style="background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.3);color:var(--gr);font-size:10px;padding:2px 7px;border-radius:5px;">${prontos.length} pronto${prontos.length>1?"s":""}</span>`:""}
 </div>
 <div style="padding:8px 12px;"><button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
+<button onclick="limparFilaErros()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">🗑️ Limpar itens com erro</button>
 <button onclick="abrirConferenciaRecebimento(null)" style="width:100%;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.12);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📦 Conferir Recebimento</button></div>
 </div><!-- STATUS MONITOR SEFAZ -->
 ${(()=>{
@@ -22073,6 +22074,18 @@ function escanearEtiquetaFornecedor(){
    if(typeof conferirItemEtiqueta==='function')conferirItemEtiqueta(codigo);
   }
  },'🏷️ Escanear Etiqueta do Fornecedor');
+}
+
+function limparFilaErros(){
+ if(!confirm('Remover todos os itens com erro da fila?'))return;
+ const db=ldb();
+ const fila=gFila();
+ const antes=fila.length;
+ const nova=fila.filter(f=>f.status!=='erro'&&f.status!=='pendente'||f.chave);
+ sFila(nova);
+ sdb(db);
+ render();
+ alert('✅ '+(antes-nova.length)+' item(ns) removido(s)');
 }
 
 render();
