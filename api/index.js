@@ -226,7 +226,9 @@ module.exports = async function handler(req, res) {
     if (!cnpj || !pfxBase64) return res.status(400).json({ erro: 'CNPJ e certificado obrigatorios' });
     try {
       const https = require('https');
-      const forge = require('node-forge');
+      let forge;
+      try{ forge=require('node-forge'); }
+      catch(eF){ return res.status(200).json({ok:false,erro:'node-forge nao instalado no servidor. Contate o suporte: '+eF.message}); }
       let privateKey, certificate;
       const pfxDer = forge.util.decode64(pfxBase64);
       const pfxAsn1 = forge.asn1.fromDer(pfxDer);
