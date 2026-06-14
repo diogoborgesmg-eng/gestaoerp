@@ -69,14 +69,8 @@ async function salvarGitHub(lanc) {
     if (!fi.content) { console.error('fi.content undefined! Resposta:', JSON.stringify(fi).substring(0,200)); return; }
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
-    // Detecta se é RECEITA (Di Casa recebeu) ou CUSTO (Di Casa pagou)
-    const _isVenda = (lanc.destinatario||'').toUpperCase()==='VENDA' ||
-      (lanc.destinatario||'').toLowerCase().includes('di casa') ||
-      (lanc.destinatario||'').toLowerCase().includes('laranjinha');
-    const _tipoLanc = _isVenda ? 'receita' : 'custo';
-    // Se for venda, limpa a categoria para lançar como receita
-    if(_isVenda) { lanc.categoria = 'Vendas PDV'; lanc.destinatario = 'Venda '+(lanc.tipo||'pix').toUpperCase(); }
-    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: _tipoLanc, setor: lanc.setor||'Geral',
+    // Bot registra SEMPRE custos (pagamentos feitos pela Di Casa)
+    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral',
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
     await req2('PUT',
@@ -113,7 +107,7 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } },
-          { type:'text', text:'Leia este comprovante financeiro. Pode ser PIX, cartao credito/debito, Stone, Cielo, boleto ou recibo. A empresa Di Casa Gastronomia fez um PAGAMENTO ou RECEBEU. Identifique: (1) VALOR total - procure campos Valor, Total, Valor da transacao, Valor pago; (2) TIPO: se for Stone/Cielo/maquininha com Credito/Debito = cartao; se tiver chave PIX = pix; se tiver codigo de barras = boleto; (3) DATA do comprovante - campo Data, Data/Hora; (4) NOME de quem recebeu OU nome do estabelecimento/fornecedor - Stone geralmente mostra o estabelecimento que cobrou; Se for VENDA (Di Casa recebeu) coloque "VENDA" no nome. Se for PAGAMENTO (Di Casa pagou) coloque o nome de quem recebeu. (5) OBSERVACAO/MOTIVO se houver - ex: diaria, entrega, compra, produto. Se nao tiver informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
+          { type:'text', text:'Leia este comprovante financeiro. Pode ser PIX, cartao credito/debito, Stone, Cielo, boleto ou recibo. A empresa Di Casa Gastronomia fez um PAGAMENTO ou RECEBEU. Identifique: (1) VALOR total - procure campos Valor, Total, Valor da transacao, Valor pago; (2) TIPO: se for Stone/Cielo/maquininha com Credito/Debito = cartao; se tiver chave PIX = pix; se tiver codigo de barras = boleto; (3) DATA do comprovante - campo Data, Data/Hora; (4) NOME de quem recebeu OU nome do estabelecimento/fornecedor - Stone geralmente mostra o estabelecimento que cobrou; Coloque o nome de quem RECEBEU o pagamento da Di Casa (o beneficiário/favorecido). (5) OBSERVACAO/MOTIVO se houver - ex: diaria, entrega, compra, produto. Se nao tiver informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
