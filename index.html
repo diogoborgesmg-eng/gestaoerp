@@ -19683,7 +19683,7 @@ async function confirmarLancamentosBot(){
 
    // Infere categoria pelo destinatário aprendido
    const catAprendida=inferirCategoriaDestinatario(l.destinatario||l.descricao);
-   const cat=catAprendida||l.categoria||'Outros';
+   const cat=normCat(catAprendida||l.categoria||'🔄 Outros');
 
    // Aprende a associação
    if(l.destinatario&&cat!=='Outros')aprenderDestinatario(l.destinatario,cat);
@@ -22632,7 +22632,7 @@ function editarCat(tipo,id,novaCat){
   if(!lista)continue;
   const ix=lista.findIndex(l=>l.id===id);
   if(ix>=0){
-   lista[ix].cat=novaCat;
+   lista[ix].cat=normCat(novaCat);
    sdb(db);
    render();
    return;
@@ -22659,6 +22659,13 @@ function editarSeg(tipo,id,novoSeg){
    return;
   }
  }
+}
+
+function normCat(cat){
+ // Remove descrição entre parênteses: "🥩 Matéria Prima (alimentos...)" → "🥩 Matéria Prima"
+ if(!cat)return '🔄 Outros';
+ const idx=cat.indexOf(' (');
+ return idx>0?cat.substring(0,idx).trim():cat.trim();
 }
 
 render();
