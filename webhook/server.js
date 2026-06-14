@@ -31,6 +31,38 @@ async function wpp(numero, texto) {
   catch(e) { console.error('wpp err:', e.message); }
 }
 
+
+async function salvarReciboGitHub(b64, tipo, data) {
+  try {
+    const ext = tipo === 'documentMessage' ? 'pdf' : 'jpg';
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').substring(0,19);
+    const nome = `recibos/${ts}.${ext}`;
+    const mediaType = ext === 'pdf' ? 'application/pdf' : 'image/jpeg';
+    
+    // Verifica se arquivo já existe
+    let sha = null;
+    try {
+      const check = await req2('GET',
+        'https://api.github.com/repos/'+REPO+'/contents/'+nome,
+        null, {'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+      if(check && check.sha) sha = check.sha;
+    } catch(e) {}
+
+    const body = { message: 'recibo: '+ts, content: b64 };
+    if(sha) body.sha = sha;
+
+    await req2('PUT',
+      'https://api.github.com/repos/'+REPO+'/contents/'+nome,
+      body,
+      {'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+
+    return 'https://raw.githubusercontent.com/'+REPO+'/main/'+nome;
+  } catch(e) {
+    console.error('Erro ao salvar recibo:', e.message);
+    return null;
+  }
+}
+
 async function getMidia(msg) {
   try {
     const r = await req2('POST', EVO+'/chat/getBase64FromMediaMessage/'+INST,
@@ -70,7 +102,7 @@ async function salvarGitHub(lanc) {
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
     // Bot registra SEMPRE custos (pagamentos feitos pela Di Casa)
-    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral',
+    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
     await req2('PUT',
@@ -118,6 +150,9 @@ const server = http.createServer((req, res) => {
           analise = 'Erro API: ' + JSON.stringify(r1.error);
         }
         console.log('Analise texto:', analise.substring(0,100));
+        // Salva recibo original no GitHub
+        const reciboUrl = await salvarReciboGitHub(b64, tipo, new Date());
+        if(reciboUrl) console.log('Recibo salvo:', reciboUrl);
         const msgAnalise = analise==='Nao consegui extrair.' ? 
           'Nao consegui extrair. Tente: 1) salvar a imagem e reenviar, 2) tirar foto da tela do comprovante.' : 
           'Analise:\n' + analise.substring(0,300);
