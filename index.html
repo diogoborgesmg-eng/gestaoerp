@@ -13777,6 +13777,8 @@ function del(t,id){
   if(lanc&&lanc._botId){
    if(!db.botRejeitados)db.botRejeitados=[];
    if(!db.botRejeitados.includes(lanc._botId))db.botRejeitados.push(lanc._botId);
+   // Marca como sincronizado no GitHub para não voltar mais
+   marcarBotSincronizado(lanc._botId);
   }
  }
  if(db[dia]){
@@ -22518,6 +22520,92 @@ async function lancarNFCompleta(nfId){
  document.getElementById('fluxo-nf-'+nfId)?.remove();
  render();
  alert(msg);
+}
+
+async function marcarBotSincronizado(botId){
+ try{
+  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const data=await r.json();
+  const db2=ldb();
+  const ghToken=db2.githubToken||'';
+  if(!ghToken)return;
+  let changed=false;
+  data.lancamentos.forEach(l=>{
+   if(l.id===botId&&!l.sincronizado){l.sincronizado=true;changed=true;}
+  });
+  if(!changed)return;
+  const infoR=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',
+   {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
+  const info=await infoR.json();
+  await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',{
+   method:'PUT',
+   headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+   body:JSON.stringify({message:'sync: marca lancamento como sincronizado',
+    content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),'sha':info.sha})
+  });
+ }catch(e){console.log('marcarBotSincronizado erro:',e.message);}
+}
+
+// ═══ SELECIONAR E APAGAR LANÇAMENTOS ════════════════════════
+function selecionarTodosCustos(){
+ const dia=getDia();
+ const db=ldb();
+ const custos=db[dia]?.c||[];
+ if(!custos.length){alert('Nenhum custo neste dia');return;}
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">☑️ Selecionar Lançamentos</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+   <button onclick="document.querySelectorAll('.sel-lanc-check').forEach(c=>c.checked=true)" style="flex:1;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#fff;font-size:11px;cursor:pointer;">✅ Todos</button>
+   <button onclick="document.querySelectorAll('.sel-lanc-check').forEach(c=>c.checked=false)" style="flex:1;padding:8px;border-radius:7px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#fff;font-size:11px;cursor:pointer;">☐ Nenhum</button>
+   <button onclick="document.querySelectorAll('.sel-lanc-check[data-origem=whatsapp]').forEach(c=>c.checked=true)" style="flex:1;padding:8px;border-radius:7px;border:1px solid rgba(255,136,0,0.3);background:rgba(255,136,0,0.1);color:#ff8800;font-size:11px;cursor:pointer;">📱 Bot</button>
+  </div>
+  <div id="sel-lista-custos">
+   ${custos.map((c,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:5px;">
+    <input type="checkbox" class="sel-lanc-check" data-idx="${i}" data-origem="${c._origem||''}" style="width:18px;height:18px;cursor:pointer;" ${c._origem==='whatsapp'||c._origem==='whatsapp_bot'?'checked':''}>
+    <div style="flex:1;">
+     <p style="font-size:12px;font-weight:700;">${c.d}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.4);">${c.cat||''} ${c._origem?'· '+c._origem:''}</p>
+    </div>
+    <p style="font-size:13px;font-weight:800;color:var(--re);">${brl(Number(c.v||0))}</p>
+   </div>`).join('')}
+  </div>
+  <div style="position:fixed;bottom:0;left:0;right:0;padding:12px 14px 24px;background:rgba(10,10,15,0.95);border-top:1px solid rgba(255,255,255,0.08);">
+   <button onclick="apagarSelecionados('${dia}')" style="width:100%;padding:13px;border-radius:11px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:14px;font-weight:900;cursor:pointer;border:1px solid rgba(255,51,102,0.4);">🗑️ Apagar Selecionados</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function apagarSelecionados(dia){
+ const checks=document.querySelectorAll('.sel-lanc-check:checked');
+ if(!checks.length){alert('Selecione pelo menos 1 item');return;}
+ if(!confirm('Apagar '+checks.length+' lançamento(s)?'))return;
+ 
+ const idxsApagar=Array.from(checks).map(c=>parseInt(c.dataset.idx));
+ const db=ldb();
+ if(!db[dia]?.c)return;
+
+ // Marca bots como sincronizados antes de apagar
+ idxsApagar.forEach(i=>{
+  const lanc=db[dia].c[i];
+  if(lanc?._botId)marcarBotSincronizado(lanc._botId);
+ });
+
+ // Remove pelo índice (de trás pra frente para não deslocar)
+ idxsApagar.sort((a,b)=>b-a).forEach(i=>{
+  db[dia].c.splice(i,1);
+ });
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ render();
+ alert('✅ '+idxsApagar.length+' lançamento(s) removido(s)!');
 }
 
 render();
