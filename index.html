@@ -10365,7 +10365,11 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
 const _rhTotal=(cc["Funcionários/RH"]||0)+(cc["👥 Folha / Funcionário"]||0)+
  (cc["Folha / Funcionário"]||0)+(cc["folha"]||0)+(cc["💰 Folha CLT"]||0)+
  (cc["🗓️ Diária / Diarista"]||0)+(cc["💼 Freelancer / Autônomo"]||0)+
- (cc["Diária"]||0)+(cc["Freelancer"]||0)+(cc["Autônomo"]||0)+
+ (cc["Diária"]||0)+(cc["Freelancer"]||0)+
+ // Categorias atuais do sistema
+ (cc["👥 RH / Mão de Obra"]||0)+(cc["👥 RH / Mão de Obra (salario/diaria/freelancer/diarista)"]||0)+
+ // Soma qualquer categoria que contenha "RH" ou "Mão de Obra"
+ Object.entries(cc).filter(([k])=>k.includes("RH")||k.includes("Mão de Obra")||k.includes("Folha")||k.includes("Diária")||k.includes("Diari")).reduce((a,[k,v])=>{const already=["Funcionários/RH","👥 Folha / Funcionário","Folha / Funcionário","folha","💰 Folha CLT","🗓️ Diária / Diarista","💼 Freelancer / Autônomo","Diária","Freelancer","👥 RH / Mão de Obra","👥 RH / Mão de Obra (salario/diaria/freelancer/diarista)"].includes(k);return already?a:a+(v||0);},0)+(cc["Autônomo"]||0)+
  (cc["Entregador"]||0)+(cc["🛵 Entregador / Motoboy"]||0);
 const rhPct=r>0?(_rhTotal/r*100):0;
  // Alerta de anomalia — compara com média histórica do mesmo dia da semana
