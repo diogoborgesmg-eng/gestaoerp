@@ -19687,7 +19687,7 @@ async function confirmarLancamentosBot(){
    // Se setor não identificado, usa 'Geral' e marca para revisão
    const setor=l.setor&&l.setor!=='Geral'?l.setor:null;
    db[dataLanc].c.push({id:uid(),
-    d:l.destinatario||l.descricao||'WhatsApp',
+    d:(()=>{const _n=l.destinatario||l.favorecido||l.nome||'';const _d=l.descricao&&l.descricao!=='SEM_DESCRICAO'?l.descricao:'';const _cats=['🥩','👥','🔧','💡','🚚','🏢','📦','🍺','🧹','💳','📱','🎤','📣','⚠️','🔄'];const nomeOk=_n&&!_cats.some(e=>_n.startsWith(e));if(nomeOk&&_d)return _n+' — '+_d;if(nomeOk)return _n;if(_d)return _d;return 'Pagamento WhatsApp';})(),
     v:Number(l.valor||0),
     cat,seg:l.tipo||'pix',
     setor,
