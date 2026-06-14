@@ -104,7 +104,6 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 .f11{font-size:11px;}.f10{font-size:10px;}.f12{font-size:12px;}
 .mono12{font-family:'Space Mono',monospace;font-size:12px}.mono13{font-family:'Space Mono',monospace;font-size:13px}.mono14{font-family:'Space Mono',monospace;font-size:14px;font-weight:700}
 </style>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 <div class="hdr"><div class="ht"><span class="logo" style="cursor:pointer;" onclick="ir('dre')">GestaoERP</span><div style="display:flex;gap:6px;align-items:center;"><div style="position:relative;"><input type="text" id="busca-global" placeholder="🔍 Buscar..." 
@@ -21928,64 +21927,77 @@ function finalizarConferencia(nfId){
 function abrirScanner(callback, titulo){
  titulo=titulo||'Escanear Código';
  document.getElementById('scanner-overlay')?.remove();
+ window._scannerCallback=callback;
 
  const div=document.createElement('div');
  div.id='scanner-overlay';
- div.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column;';
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
  div.innerHTML=`
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(0,0,0,0.95);">
-   <p style="font-size:15px;font-weight:800;color:#fff;">${titulo}</p>
-   <button onclick="fecharScanner()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-size:12px;cursor:pointer;">✕</button>
-  </div>
-  <div id="qr-reader" style="flex:1;width:100%;"></div>
-  <div style="padding:10px 14px 24px;background:rgba(0,0,0,0.95);">
-   <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-align:center;">Ou digite manualmente:</p>
-   <div style="display:flex;gap:8px;">
-    <input id="scanner-manual" class="inpm" placeholder="Digite o código..." style="flex:1;" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmarScannerManual()"/>
-    <button onclick="confirmarScannerManual()" style="padding:10px 16px;border-radius:8px;border:none;background:#00ff88;color:#000;font-weight:900;cursor:pointer;">OK</button>
+  <div style="width:100%;max-width:420px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <p style="font-size:16px;font-weight:900;color:#fff;">${titulo}</p>
+    <button onclick="fecharScanner()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-size:13px;cursor:pointer;">✕</button>
+   </div>
+
+   <!-- Opção 1: Câmera nativa via input -->
+   <div style="background:rgba(255,255,255,0.06);border:2px dashed rgba(0,255,136,0.4);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;">
+    <p style="font-size:28px;margin-bottom:8px;">📷</p>
+    <p style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">Fotografar código</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:12px;">Aponte para o código de barras</p>
+    <label style="display:inline-block;padding:10px 20px;border-radius:9px;border:none;background:#00ff88;color:#000;font-size:13px;font-weight:800;cursor:pointer;">
+     📸 Abrir Câmera
+     <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoScanner(this)"/>
+    </label>
+   </div>
+
+   <!-- Opção 2: Digitar manualmente -->
+   <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
+    <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Ou digite o código:</p>
+    <div style="display:flex;gap:8px;">
+     <input id="scanner-manual-input" type="text" inputmode="numeric" placeholder="44 dígitos da chave ou código..." 
+      style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;padding:10px;font-size:14px;outline:none;"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();_confirmarManual();}"/>
+     <button onclick="_confirmarManual()" style="padding:10px 18px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;">OK</button>
+    </div>
    </div>
   </div>
  `;
  document.body.appendChild(div);
- window._scannerCallback=callback;
+ // Foco no input
+ setTimeout(()=>document.getElementById('scanner-manual-input')?.focus(),300);
+}
 
- // Inicia html5-qrcode
+function _confirmarManual(){
+ const val=(document.getElementById('scanner-manual-input')?.value||'').trim();
+ if(!val){alert('Digite o código');return;}
+ fecharScanner();
+ if(window._scannerCallback)window._scannerCallback(val);
+}
+
+// Mantém compatibilidade
+function confirmarScannerManual(){_confirmarManual();}
+
+async function processarFotoScanner(input){
+ const file=input?.files?.[0];if(!file)return;
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:950;display:flex;align-items:center;justify-content:center;';
+ div.innerHTML='<div style="text-align:center;color:#fff;"><p style="font-size:32px;">🔍</p><p style="margin-top:8px;font-size:14px;">Lendo código...</p></div>';
+ document.body.appendChild(div);
  try{
-  const html5QrCode=new Html5Qrcode('qr-reader');
-  window._html5QrCode=html5QrCode;
-
-  html5QrCode.start(
-   {facingMode:'environment'},
-   {
-    fps:15,
-    qrbox:{width:280,height:140},
-    aspectRatio:1.5,
-    showTorchButtonIfSupported:true,
-    formatsToSupport:[
-     Html5QrcodeSupportedFormats.CODE_128,
-     Html5QrcodeSupportedFormats.EAN_13,
-     Html5QrcodeSupportedFormats.EAN_8,
-     Html5QrcodeSupportedFormats.QR_CODE,
-     Html5QrcodeSupportedFormats.CODE_39,
-     Html5QrcodeSupportedFormats.ITF,
-     Html5QrcodeSupportedFormats.UPC_A,
-     Html5QrcodeSupportedFormats.UPC_E,
-     Html5QrcodeSupportedFormats.CODE_93,
-    ]
-   },
-   (decodedText)=>{
-    fecharScanner();
-    if(callback)callback(decodedText);
-   },
-   ()=>{} // erro silencioso durante scan
-  ).catch(e=>{
-   console.log('Scanner erro:',e);
-   document.getElementById('qr-reader').innerHTML=
-    '<p style="color:#fff;text-align:center;padding:20px;font-size:13px;">⚠️ Câmera indisponível<br>Use o campo manual abaixo</p>';
-  });
- }catch(e){
-  console.log('Html5Qrcode erro:',e);
- }
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+  const result=await claudeAPI({model:MODEL,max_tokens:150,messages:[{role:'user',content:[
+   {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+   {type:'text',text:'Leia o código de barras ou QR code desta imagem. Retorne APENAS os números ou texto do código, sem nenhuma explicação. Se não conseguir ler retorne: NENHUM'}
+  ]}]});
+  const resp=(result.content||[]).map(b=>b.text||'').join('').trim().replace(/\s/g,'');
+  div.remove();
+  if(!resp||resp==='NENHUM'){
+   alert('Não consegui ler. Tente digitar manualmente.');
+   return;
+  }
+  fecharScanner();
+  if(window._scannerCallback)window._scannerCallback(resp);
+ }catch(e){div.remove();alert('Erro: '+e.message);}
 }
 
 function fecharScanner(){
