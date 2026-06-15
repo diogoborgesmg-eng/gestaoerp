@@ -19618,7 +19618,7 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 }
 
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
-async async function sincronizarBotLancamentos(){
+async function sincronizarBotLancamentos(){
  try{
   const rejeitados=ldb().botRejeitados||[];
   const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
