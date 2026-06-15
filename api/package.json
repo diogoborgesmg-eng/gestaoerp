@@ -1,0 +1,7 @@
+{
+  "name": "gestaoerp-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-forge": "^1.3.1"
+  }
+}
