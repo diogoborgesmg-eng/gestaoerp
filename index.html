@@ -19653,6 +19653,33 @@ async function sincronizarBotLancamentos(){
   });
 
   sdb(db);
+
+  // Marca como sincronizado no GitHub
+  try{
+   const db2=ldb();
+   const ghToken=localStorage.getItem('erp_gh_token')||gDadosFiscais().ghToken||'';
+   if(ghToken){
+    const ri=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',
+     {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
+    const rd=await ri.json();
+    const fd2=JSON.parse(atob(rd.content.replace(/\n/g,'')));
+    const idsLancados=pendentes.map(l=>l.id);
+    fd2.lancamentos.forEach(l=>{if(idsLancados.includes(l.id))l.sincronizado=true;});
+    await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',{
+     method:'PUT',
+     headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+     body:JSON.stringify({message:'sync: marca '+count+' lancamentos',
+      content:btoa(unescape(encodeURIComponent(JSON.stringify(fd2)))),'sha':rd.sha})
+    });
+   }else{
+    // Fallback: salva IDs rejeitados localmente
+    const db3=ldb();
+    if(!db3.botRejeitados)db3.botRejeitados=[];
+    pendentes.forEach(l=>{if(!db3.botRejeitados.includes(l.id))db3.botRejeitados.push(l.id);});
+    sdb(db3);
+   }
+  }catch(eSync){console.log('Erro sync GitHub:',eSync.message);}
+
   const n=document.createElement('div');
   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
   n.textContent='📱 '+count+' lançamento(s) importado(s)!';
