@@ -2687,17 +2687,6 @@ function resetar(){
  </button>
 </div>
 <div id="bot-float" style="display:none;position:fixed;bottom:70px;right:12px;z-index:500;"><button onclick="confirmarLancamentosBot()" style="background:#00ff88;color:#000;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,136,0.5);">📱 <span id="bot-float-count">0</span> do WhatsApp</button></div>
-
-<button onclick="sugerirCardapioAmanha()" 
- style="position:fixed;bottom:70px;right:14px;z-index:200;
-  background:linear-gradient(135deg,#ff6a00,#ffcc00);
-  color:#000;border:none;border-radius:50px;
-  padding:10px 16px;font-size:12px;font-weight:900;
-  box-shadow:0 4px 15px rgba(255,106,0,0.4);cursor:pointer;
-  display:flex;align-items:center;gap:6px;"
- title="Sugerir cardápio para amanhã">
- 🍽️ Cardápio Amanhã
-</button>
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
  window.open(URL.createObjectURL(blob),"_blank");
@@ -6172,7 +6161,7 @@ function gerarContextoCFO(){
  const rMes=rec.reduce((a,x)=>a+Number(x.v),0);
  const cMes=cus.reduce((a,x)=>a+Number(x.v),0);
  const mMes=rMes>0?((rMes-cMes)/rMes)*100:0;
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const db=ldb();const hoje=new Date();
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const cp=db.contasPagar||[];
@@ -10039,7 +10028,7 @@ function exportarRelatorioPDF(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const hoje=new Date();
  const mesNome=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -10224,7 +10213,7 @@ async function gerarRelatorioMensalIA(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const mesNome=new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'});
@@ -10369,18 +10358,14 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const cor=res>0?"#00ff88":res<0?"#ff3366":"#ffcc00";
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const cmvGeral=cc["Insumos/Matéria-prima"]||0;
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
 const _rhTotal=(cc["Funcionários/RH"]||0)+(cc["👥 Folha / Funcionário"]||0)+
  (cc["Folha / Funcionário"]||0)+(cc["folha"]||0)+(cc["💰 Folha CLT"]||0)+
  (cc["🗓️ Diária / Diarista"]||0)+(cc["💼 Freelancer / Autônomo"]||0)+
- (cc["Diária"]||0)+(cc["Freelancer"]||0)+
- // Categorias atuais do sistema
- (cc["👥 RH / Mão de Obra"]||0)+(cc["👥 RH / Mão de Obra (salario/diaria/freelancer/diarista)"]||0)+
- // Soma qualquer categoria que contenha "RH" ou "Mão de Obra"
- Object.entries(cc).filter(([k])=>k.includes("RH")||k.includes("Mão de Obra")||k.includes("Folha")||k.includes("Diária")||k.includes("Diari")).reduce((a,[k,v])=>{const already=["Funcionários/RH","👥 Folha / Funcionário","Folha / Funcionário","folha","💰 Folha CLT","🗓️ Diária / Diarista","💼 Freelancer / Autônomo","Diária","Freelancer","👥 RH / Mão de Obra","👥 RH / Mão de Obra (salario/diaria/freelancer/diarista)"].includes(k);return already?a:a+(v||0);},0)+(cc["Autônomo"]||0)+
+ (cc["Diária"]||0)+(cc["Freelancer"]||0)+(cc["Autônomo"]||0)+
  (cc["Entregador"]||0)+(cc["🛵 Entregador / Motoboy"]||0);
 const rhPct=r>0?(_rhTotal/r*100):0;
  // Alerta de anomalia — compara com média histórica do mesmo dia da semana
@@ -10649,7 +10634,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(0,255,136,0.3);border-
 onkeydown="if(event.key==='Enter'){lancInline('rec');}"/>
 <button onclick="lancInline('rec')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(0,255,136,0.2);color:var(--gr);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${rec.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhuma receita</p>`:rec.map(x=>{const sg=SEGS.find(s=>s.id===x.s);return`<div class="item"><div class="dot" style="background:${sg?.c||'#888'};"></div><div style="flex:1;"><div class="in" style="display:flex;align-items:center;gap:6px;">${x._origem==="whatsapp"?`${x.reciboUrl?`<a href="${x.reciboUrl}" target="_blank" style="font-size:16px;text-decoration:none;" title="Ver recibo original">📎</a>`:"📱"}`:`<span style="font-size:11px;color:rgba(255,255,255,0.6);">${(()=>{const _cats=["🥩","👥","🔧","💡","🚚","🏢","📦","🍺","🧹","💳","📱","🎤","📣","⚠️","🔄"];return _cats.some(e=>String(x.d||"").startsWith(e))?"Sem nome":x.d||"Sem nome";})()}</span>`}</div><div class="is">${x._dia?x._dia+' · ':''}${isDiario?`<select onchange="editarSeg('r','${x.id}',this.value)" style="background:transparent;border:none;border-bottom:1px dashed rgba(0,255,136,0.35);color:rgba(255,255,255,0.45);font-size:10px;cursor:pointer;max-width:120px;"><option value="">Sem setor</option>${SEGS.map(s=>`<option value="${s.id}" ${s.id===x.s?"selected":""}>${s.i} ${s.n}</option>`).join("")}</select>`:(`${sg?.i||""} ${sg?.n||x.s}`)}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('r','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(0,255,136,0.4);color:#00ff88;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#00ff88;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('r','${x.id}')">×</button>`:""}</div>`;}).join("")}
+${rec.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhuma receita</p>`:rec.map(x=>{const sg=SEGS.find(s=>s.id===x.s);return`<div class="item"><div class="dot" style="background:${sg?.c||'#888'};"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${sg?.i||""} ${sg?.n||x.s}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('r','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(0,255,136,0.4);color:#00ff88;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#00ff88;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('r','${x.id}')">×</button>`:""}</div>`;}).join("")}
 ${rec.length>0?`<div class="item" style="background:rgba(0,255,136,0.05);border-color:rgba(0,255,136,0.15);"><div class="dot" style="background:#00ff88;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#00ff88;font-size:14px;">${brl(r)}</span></div>`:""}
 </div><div class="sec"><div class="sh"><span class="st">🔴 Custos</span>${isDiario?`<div style="display:flex;gap:4px;"><button class="badd" onclick="abrir('cus')">+ Add</button><button class="badd" style="background:rgba(255,51,102,0.1);border-color:rgba(255,51,102,0.3);color:var(--re);" onclick="lancRapido('cus')">⚡ Rápido</button></div>`:""}</div>
 ${isDiario?`<div style="display:flex;gap:5px;margin-bottom:8px;">
@@ -10662,7 +10647,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(255,51,102,0.3);border
 onkeydown="if(event.key==='Enter'){lancInline('cus');}"/>
 <button onclick="lancInline('cus')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${(()=>{const _cats=["🥩","👥","🔧","💡","🚚","🏢","📦","🍺","🧹","💳","📱","🎤","📣","⚠️","🔄"];return _cats.some(e=>String(x.d||"").startsWith(e))?"Sem nome":x.d||"Sem nome";})()}</div><div class="is">${x._dia?x._dia+' · ':''}${isDiario?`<select onchange="editarCat('c','${x.id}',this.value)" style="background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:10px;cursor:pointer;">${CATS.map(c=>`<option value="${c}" ${c===x.cat?"selected":""}>${c.slice(0,25)}</option>`).join("")}</select>`:x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
+${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
 ${cus.length>0?`<div class="item" style="background:rgba(255,51,102,0.05);border-color:rgba(255,51,102,0.15);"><div class="dot" style="background:#ff3366;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#ff3366;font-size:14px;">${brl(c)}</span></div>`:""}
 </div>
 
@@ -13033,7 +13018,7 @@ function editarQtdCompra(id,novaQtd){
  if(item){item.min=parseFloat(novaQtd)||item.min;sdb(db);}
 }
 
-function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
 const temChave=getApiKey().length>10;
 const db=ldb();
 const estPreparo=db.estPreparo||[];
@@ -13121,7 +13106,7 @@ ${precisam.slice(0,4).map(e=>{
 ${!temChave?`<div class="ial ar"><span>🔑</span><span>Configure a chave API em <strong>⚙️ Config</strong></span></div>`:""}
 <div id="cardapio-res"></div>
 <div style="display:flex;gap:6px;margin-bottom:6px;">
-<button onclick="sugerirCardapioAmanha()" style="flex:2;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:700;cursor:pointer;" ${!temChave?"disabled":""}>🍽️ Sugerir Cardápio</button>
+<button onclick="sugerirCardapio()" style="flex:2;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:700;cursor:pointer;" ${!temChave?"disabled":""}>🍽️ Sugerir Cardápio</button>
 <button onclick="abrirBuffet()" style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4488ff,#aa44ff);color:#fff;font-size:11px;font-weight:800;cursor:pointer;">📋 Gerir Buffet</button>
 <label style="flex:1;cursor:pointer;" title="Manda foto do cardápio atual para a IA aprender">
 <input type="file" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;" onchange="aprenderCardapio(this)"/>
@@ -13198,7 +13183,7 @@ async function analisarMes(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const melhor=dias.reduce((a,d)=>d.res>a.res?d:a,{res:-Infinity,dia:""});
  const pior=dias.reduce((a,d)=>d.res<a.res?d:a,{res:Infinity,dia:""});
@@ -13234,7 +13219,7 @@ async function aIA(){
  const el=document.getElementById("iat");
  btn.disabled=true;btn.innerHTML=`<span class="sp">⟳</span> Analisando...`;
  el.innerHTML=`<p style="color:var(--mu);font-size:11px;text-align:center;padding:8px;" class="pu">Consultando...</p>`;
- const cc={};cus.forEach(x=>{const _c=(x.cat||'🔄 Outros').replace(/ \(.*\)/,'').trim();cc[_c]=(cc[_c]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
  const est=gest();
  const db=ldb();
  const estPreparo=db.estPreparo||[];
@@ -19620,75 +19605,49 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
 async function sincronizarBotLancamentos(){
  try{
-  const rejeitados=ldb().botRejeitados||[];
+  const df=gDadosFiscais();
+  const backendUrl='https://gestaoerp-api.vercel.app';
+  const token=df.backendToken||'gestaoerp_diCasa_44686412';
+
   const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
   const data=await resp.json();
   
-  const pendentes=(data.lancamentos||[]).filter(l=>!l.sincronizado&&!rejeitados.includes(l.id));
-  if(!pendentes.length){
-   alert('Nenhum lançamento pendente do WhatsApp.');
-   return;
-  }
-
-  if(!confirm('Confirmar '+pendentes.length+' lançamento(s) do WhatsApp no DRE?'))return;
+  if(!data.lancamentos?.length)return;
 
   const db=ldb();
+  const dia=hj();
+  if(!db[dia])db[dia]={r:[],c:[]};
+
   let count=0;
-  pendentes.forEach(l=>{
-   // Lança na data do recibo
-   const dataLanc=l.data||hj();
-   if(!db[dataLanc])db[dataLanc]={r:[],c:[]};
-   if(!db[dataLanc].c)db[dataLanc].c=[];
-   // Não duplica
-   if(db[dataLanc].c.some(x=>x._botId===l.id))return;
-   const nome=l.destinatario&&!['Di Casa Gastronomia','Di Casa','Geral'].includes(l.destinatario)?l.destinatario:(l.descricao||'WhatsApp');
-   const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
-   db[dataLanc].c.push({
-    id:uid(),d:nome,v:Number(l.valor||0),
-    cat,seg:'',
-    _botId:l.id,_origem:'whatsapp',
-    reciboUrl:l.reciboUrl||null,dt:dataLanc
+  data.lancamentos.forEach(l=>{
+   // Verifica se já foi lançado
+   if(db[dia].c.some(x=>x._botId===l.id))return;
+   
+   db[dia].c.push({
+    id:uid(),
+    d:l.descricao||'WhatsApp Bot',
+    v:Number(l.valor||0),
+    cat:l.categoria||'Outros',
+    seg:l.tipo||'pix',
+    _botId:l.id,
+    _origem:'whatsapp',
+    dt:l.data||dia
    });
    count++;
   });
 
-  sdb(db);
-
-  // Marca como sincronizado no GitHub
-  try{
-   const db2=ldb();
-   const ghToken=localStorage.getItem('erp_gh_token')||gDadosFiscais().ghToken||'';
-   if(ghToken){
-    const ri=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',
-     {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
-    const rd=await ri.json();
-    const fd2=JSON.parse(atob(rd.content.replace(/\n/g,'')));
-    const idsLancados=pendentes.map(l=>l.id);
-    fd2.lancamentos.forEach(l=>{if(idsLancados.includes(l.id))l.sincronizado=true;});
-    await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',{
-     method:'PUT',
-     headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-     body:JSON.stringify({message:'sync: marca '+count+' lancamentos',
-      content:btoa(unescape(encodeURIComponent(JSON.stringify(fd2)))),'sha':rd.sha})
-    });
-   }else{
-    // Fallback: salva IDs rejeitados localmente
-    const db3=ldb();
-    if(!db3.botRejeitados)db3.botRejeitados=[];
-    pendentes.forEach(l=>{if(!db3.botRejeitados.includes(l.id))db3.botRejeitados.push(l.id);});
-    sdb(db3);
-   }
-  }catch(eSync){console.log('Erro sync GitHub:',eSync.message);}
-
-  const n=document.createElement('div');
-  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
-  n.textContent='📱 '+count+' lançamento(s) importado(s)!';
-  document.body.appendChild(n);
-  setTimeout(()=>n.remove(),4000);
-  render();
+  if(count>0){
+   sdb(db);
+   // Notificação visual
+   const n=document.createElement('div');
+   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
+   n.textContent='📱 '+count+' lançamento(s) do WhatsApp sincronizado(s)!';
+   document.body.appendChild(n);
+   setTimeout(()=>n.remove(),4000);
+   render();
+  }
  }catch(e){
-  alert('Erro: '+e.message);
-  console.log('Sync bot erro:',e);
+  console.log('Sync bot erro:',e.message);
  }
 }
 
@@ -19728,7 +19687,7 @@ async function confirmarLancamentosBot(){
    // Se setor não identificado, usa 'Geral' e marca para revisão
    const setor=l.setor&&l.setor!=='Geral'?l.setor:null;
    db[dataLanc].c.push({id:uid(),
-    d:(()=>{const _n=l.destinatario||l.favorecido||l.nome||'';const _d=l.descricao&&l.descricao!=='SEM_DESCRICAO'?l.descricao:'';const _cats=['🥩','👥','🔧','💡','🚚','🏢','📦','🍺','🧹','💳','📱','🎤','📣','⚠️','🔄'];const nomeOk=_n&&!_cats.some(e=>_n.startsWith(e));if(nomeOk&&_d)return _n+' — '+_d;if(nomeOk)return _n;if(_d)return _d;return 'Pagamento WhatsApp';})(),
+    d:l.destinatario||l.descricao||'WhatsApp',
     v:Number(l.valor||0),
     cat,seg:l.tipo||'pix',
     setor,
@@ -22656,108 +22615,12 @@ function apagarSelecionados(dia){
  alert('✅ '+idxsApagar.length+' lançamento(s) removido(s)!');
 }
 
-
-
-function editarCat(tipo,id,novaCat){
- if(!novaCat)return;
- const db=ldb();
- const dia=getDia();
- const chaves=[dia,...Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k!==dia)];
- for(const d of chaves){
-  if(!db[d])continue;
-  const lista=tipo==='c'?db[d].c:db[d].r;
-  if(!lista)continue;
-  const ix=lista.findIndex(l=>l.id===id);
-  if(ix>=0){
-   lista[ix].cat=novaCat;
-   sdb(db);
-   render();
-   return;
-  }
- }
- console.log('editarCat: id nao encontrado',id);
-}
-
-function editarSeg(tipo,id,novoSeg){
- if(novoSeg===undefined)return;
- const db=ldb();
- const dia=getDia();
- const chaves=[dia,...Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k!==dia)];
- for(const d of chaves){
-  if(!db[d])continue;
-  const lista=tipo==='c'?db[d].c:db[d].r;
-  if(!lista)continue;
-  const ix=lista.findIndex(l=>l.id===id);
-  if(ix>=0){
-   lista[ix].s=novoSeg;
-   lista[ix].seg=novoSeg;
-   sdb(db);
-   render();
-   return;
-  }
- }
-}
-
-// ═══ SUGESTÃO DE CARDÁPIO COM IA ══════════════════════════
-async function sugerirCardapioAmanha(){
- const overlay=document.createElement('div');
- overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
- overlay.innerHTML='<p style="font-size:28px;">🍽️</p><p style="color:#fff;font-size:14px;font-weight:700;">Criando sugestão de cardápio...</p>';
- document.body.appendChild(overlay);
- try{
-  const db=ldb();
-  const est=gest().filter(e=>e.q>0);
-  const fichas=gfichas();
-  // Usa fuso horário de Brasília (UTC-3)
-  const agoraBrasil=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-  const amanha=new Date(agoraBrasil);amanha.setDate(amanha.getDate()+1);
-  const diaSemana=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'][amanha.getDay()];
-  const dataAmanha=amanha.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
-
-  const insumos=est.slice(0,20).map(e=>`${e.n}: ${e.q}${e.u}`).join(', ');
-  const pratos=fichas.slice(0,15).map(f=>f.nome).join(', ');
-
-  const result=await claudeAPI({model:MODEL,max_tokens:800,messages:[{role:'user',content:
-   `Você é chef consultor do restaurante Di Casa Laranjinha em Patos de Minas - MG.
-   Dia: ${diaSemana} ${dataAmanha}
-   Estoque disponível: ${insumos||'não informado'}
-   Pratos no cardápio: ${pratos||'não informado'}
-   
-   Sugira um cardápio completo para amanhã com:
-   - 1 prato principal do dia (destaque)
-   - 2 opções de acompanhamento
-   - 1 sobremesa do dia
-   - 1 promoção especial sugerida
-   
-   Considere os insumos disponíveis. Seja objetivo e prático para um restaurante brasileiro.`
-  }]});
-
-  overlay.remove();
-  const sugestao=(result.content||[]).map(b=>b.text||'').join('');
-
-  const div=document.createElement('div');
-  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
-  div.innerHTML=`<div style="padding:16px 14px 60px;">
-   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <div>
-     <p style="font-size:16px;font-weight:900;">🍽️ Cardápio Sugerido</p>
-     <p style="font-size:11px;color:rgba(255,255,255,0.4);">${diaSemana} ${amanha.toLocaleDateString('pt-BR')}</p>
-    </div>
-    <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
-   </div>
-   <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap;">${sugestao}</div>
-   <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:12px;">✅ Entendido</button>
-  </div>`;
-  div.onclick=e=>{if(e.target===div)div.remove();};
-  document.body.appendChild(div);
- }catch(e){overlay.remove();alert('Erro: '+e.message);}
-}
-
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
-// sincronizarBotLancamentos só é chamada manualmente pelo botão 📱 Bot
+setTimeout(sincronizarBotLancamentos, 2000);
+setInterval(sincronizarBotLancamentos, 30000);
 
 </script>
 </body>
