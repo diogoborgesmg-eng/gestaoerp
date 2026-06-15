@@ -19618,51 +19618,50 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 }
 
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
-async function sincronizarBotLancamentos(){
+async async function sincronizarBotLancamentos(){
  try{
-  const df=gDadosFiscais();
-  const backendUrl='https://gestaoerp-api.vercel.app';
-  const token=df.backendToken||'gestaoerp_diCasa_44686412';
-
+  const rejeitados=ldb().botRejeitados||[];
   const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
   const data=await resp.json();
   
-  if(!data.lancamentos?.length)return;
+  const pendentes=(data.lancamentos||[]).filter(l=>!l.sincronizado&&!rejeitados.includes(l.id));
+  if(!pendentes.length){
+   alert('Nenhum lançamento pendente do WhatsApp.');
+   return;
+  }
+
+  if(!confirm('Confirmar '+pendentes.length+' lançamento(s) do WhatsApp no DRE?'))return;
 
   const db=ldb();
-  const dia=hj();
-  if(!db[dia])db[dia]={r:[],c:[]};
-
   let count=0;
-  data.lancamentos.forEach(l=>{
-   // Verifica se já foi lançado
-   if(db[dia].c.some(x=>x._botId===l.id))return;
-   
-   db[dia].c.push({
-    id:uid(),
-    d:l.descricao||'WhatsApp Bot',
-    v:Number(l.valor||0),
-    cat:l.categoria||'Outros',
-    seg:l.tipo||'pix',
-    _botId:l.id,
-    _origem:'whatsapp',
-    dt:l.data||dia
+  pendentes.forEach(l=>{
+   // Lança na data do recibo
+   const dataLanc=l.data||hj();
+   if(!db[dataLanc])db[dataLanc]={r:[],c:[]};
+   if(!db[dataLanc].c)db[dataLanc].c=[];
+   // Não duplica
+   if(db[dataLanc].c.some(x=>x._botId===l.id))return;
+   const nome=l.destinatario&&!['Di Casa Gastronomia','Di Casa','Geral'].includes(l.destinatario)?l.destinatario:(l.descricao||'WhatsApp');
+   const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
+   db[dataLanc].c.push({
+    id:uid(),d:nome,v:Number(l.valor||0),
+    cat,seg:'',
+    _botId:l.id,_origem:'whatsapp',
+    reciboUrl:l.reciboUrl||null,dt:dataLanc
    });
    count++;
   });
 
-  if(count>0){
-   sdb(db);
-   // Notificação visual
-   const n=document.createElement('div');
-   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
-   n.textContent='📱 '+count+' lançamento(s) do WhatsApp sincronizado(s)!';
-   document.body.appendChild(n);
-   setTimeout(()=>n.remove(),4000);
-   render();
-  }
+  sdb(db);
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+  n.textContent='📱 '+count+' lançamento(s) importado(s)!';
+  document.body.appendChild(n);
+  setTimeout(()=>n.remove(),4000);
+  render();
  }catch(e){
-  console.log('Sync bot erro:',e.message);
+  alert('Erro: '+e.message);
+  console.log('Sync bot erro:',e);
  }
 }
 
