@@ -10634,7 +10634,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(0,255,136,0.3);border-
 onkeydown="if(event.key==='Enter'){lancInline('rec');}"/>
 <button onclick="lancInline('rec')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(0,255,136,0.2);color:var(--gr);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${rec.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhuma receita</p>`:rec.map(x=>{const sg=SEGS.find(s=>s.id===x.s);return`<div class="item"><div class="dot" style="background:${sg?.c||'#888'};"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${sg?.i||""} ${sg?.n||x.s}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('r','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(0,255,136,0.4);color:#00ff88;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#00ff88;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('r','${x.id}')">×</button>`:""}</div>`;}).join("")}
+${rec.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhuma receita</p>`:rec.map(x=>{const sg=SEGS.find(s=>s.id===x.s);return`<div class="item"><div class="dot" style="background:${sg?.c||'#888'};"></div><div style="flex:1;"><div class="in">${x.reciboUrl?`<a href="${x.reciboUrl}" target="_blank" style="font-size:14px;text-decoration:none;margin-right:4px;" title="Ver recibo original do banco">📎</a>`:""}${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${sg?.i||""} ${sg?.n||x.s}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('r','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(0,255,136,0.4);color:#00ff88;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#00ff88;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('r','${x.id}')">×</button>`:""}</div>`;}).join("")}
 ${rec.length>0?`<div class="item" style="background:rgba(0,255,136,0.05);border-color:rgba(0,255,136,0.15);"><div class="dot" style="background:#00ff88;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#00ff88;font-size:14px;">${brl(r)}</span></div>`:""}
 </div><div class="sec"><div class="sh"><span class="st">🔴 Custos</span>${isDiario?`<div style="display:flex;gap:4px;"><button class="badd" onclick="abrir('cus')">+ Add</button><button class="badd" style="background:rgba(255,51,102,0.1);border-color:rgba(255,51,102,0.3);color:var(--re);" onclick="lancRapido('cus')">⚡ Rápido</button></div>`:""}</div>
 ${isDiario?`<div style="display:flex;gap:5px;margin-bottom:8px;">
@@ -10647,7 +10647,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(255,51,102,0.3);border
 onkeydown="if(event.key==='Enter'){lancInline('cus');}"/>
 <button onclick="lancInline('cus')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
+${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.reciboUrl?`<a href="${x.reciboUrl}" target="_blank" style="font-size:14px;text-decoration:none;margin-right:4px;" title="Ver recibo original do banco">📎</a>`:""}${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
 ${cus.length>0?`<div class="item" style="background:rgba(255,51,102,0.05);border-color:rgba(255,51,102,0.15);"><div class="dot" style="background:#ff3366;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#ff3366;font-size:14px;">${brl(c)}</span></div>`:""}
 </div>
 
@@ -19605,61 +19605,50 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
 async function sincronizarBotLancamentos(){
  try{
+  const df=gDadosFiscais();
+  const backendUrl='https://gestaoerp-api.vercel.app';
+  const token=df.backendToken||'gestaoerp_diCasa_44686412';
+
   const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
   const data=await resp.json();
-  const rejeitados=ldb().botRejeitados||[];
-  const pendentes=(data.lancamentos||[]).filter(l=>!l.sincronizado&&!rejeitados.includes(l.id));
+  
+  if(!data.lancamentos?.length)return;
 
-  if(!pendentes.length){
-   alert('Nenhum lançamento pendente do WhatsApp.');return;
-  }
-  if(!confirm('Confirmar '+pendentes.length+' lançamento(s) do WhatsApp no DRE?'))return;
+  const db=ldb();
+  const dia=hj();
+  if(!db[dia])db[dia]={r:[],c:[]};
 
-  const db=ldb();let count=0;
-  pendentes.forEach(l=>{
-   const dataLanc=l.data||hj();
-   if(!db[dataLanc])db[dataLanc]={r:[],c:[]};
-   if(!db[dataLanc].c)db[dataLanc].c=[];
-   if(db[dataLanc].c.some(x=>x._botId===l.id))return;
-   const dest=(l.destinatario||'').trim();
-   const nome=dest&&dest!=='Di Casa Gastronomia'&&dest!=='DI CASA GASTRONOMIA'?dest:(l.descricao||'WhatsApp');
-   const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
-   db[dataLanc].c.push({id:uid(),d:nome,v:Number(l.valor||0),cat,seg:'',
-    _botId:l.id,_origem:'whatsapp',reciboUrl:l.reciboUrl||null,dt:dataLanc});
+  let count=0;
+  data.lancamentos.forEach(l=>{
+   // Verifica se já foi lançado
+   if(db[dia].c.some(x=>x._botId===l.id))return;
+   
+   db[dia].c.push({
+    id:uid(),
+    d:l.descricao||'WhatsApp Bot',
+    v:Number(l.valor||0),
+    cat:l.categoria||'Outros',
+    seg:l.tipo||'pix',
+    _botId:l.id,
+    _origem:'whatsapp',
+    dt:l.data||dia
+   });
    count++;
   });
-  sdb(db);
-
-  // Marca como sincronizado no GitHub
-  try{
-   const ghToken=localStorage.getItem('erp_gh_token')||'';
-   if(ghToken){
-    const ri=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',
-     {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
-    const rd=await ri.json();
-    const fd=JSON.parse(atob(rd.content.replace(/\n/g,'')));
-    const ids=pendentes.map(l=>l.id);
-    fd.lancamentos.forEach(l=>{if(ids.includes(l.id))l.sincronizado=true;});
-    await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',{
-     method:'PUT',headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-     body:JSON.stringify({message:'sync:'+count,content:btoa(unescape(encodeURIComponent(JSON.stringify(fd)))),sha:rd.sha})
-    });
-   } else {
-    // fallback: salva IDs localmente para não reimportar
-    const db2=ldb();
-    if(!db2.botRejeitados)db2.botRejeitados=[];
-    pendentes.forEach(l=>{if(!db2.botRejeitados.includes(l.id))db2.botRejeitados.push(l.id);});
-    sdb(db2);
-   }
-  }catch(es){console.log('Sync GitHub erro:',es.message);}
 
   if(count>0){
+   sdb(db);
+   // Notificação visual
    const n=document.createElement('div');
-   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
-   n.textContent='📱 '+count+' lançamento(s) importado(s)!';
-   document.body.appendChild(n);setTimeout(()=>n.remove(),4000);render();
+   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
+   n.textContent='📱 '+count+' lançamento(s) do WhatsApp sincronizado(s)!';
+   document.body.appendChild(n);
+   setTimeout(()=>n.remove(),4000);
+   render();
   }
- }catch(e){alert('Erro: '+e.message);console.log('Sync bot erro:',e);}
+ }catch(e){
+  console.log('Sync bot erro:',e.message);
+ }
 }
 
 // Sincroniza a cada 30 segundos automaticamente
@@ -22631,7 +22620,7 @@ setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
 setTimeout(sincronizarBotLancamentos, 2000);
-// sincronizarBotLancamentos só roda pelo botão 📱 Bot
+setInterval(sincronizarBotLancamentos, 30000);
 
 </script>
 </body>
