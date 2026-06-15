@@ -230,9 +230,14 @@ module.exports = async function handler(req, res) {
       try{ forge=require('node-forge'); }
       catch(eF){ return res.status(200).json({ok:false,erro:'node-forge nao instalado no servidor. Contate o suporte: '+eF.message}); }
       let privateKey, certificate;
-      const pfxDer = forge.util.decode64(pfxBase64);
-      const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-      const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
+      let pfxDer, pfxAsn1, pfx;
+      try {
+        pfxDer = forge.util.decode64(pfxBase64);
+        pfxAsn1 = forge.asn1.fromDer(pfxDer);
+        pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
+      } catch(ePfx) {
+        return res.status(200).json({ok:false,erro:'Erro ao ler certificado: '+ePfx.message+'. Verifique se a senha está correta.'});
+      }
       pfx.safeContents.forEach(sc => {
         sc.safeBags.forEach(bag => {
           if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) privateKey = forge.pki.privateKeyToPem(bag.key);
@@ -361,57 +366,6 @@ module.exports = async function handler(req, res) {
 
 
   // ── NF-e SEFAZ DESTINATÁRIO ──────────────────────────────
-  if (path === '/api/nfe/sefaz' && req.method === 'POST') {
-    if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
-    const { cnpj, pfxBase64, pfxSenha, ultNSU } = body;
-    if (!cnpj || !pfxBase64) return res.status(400).json({ erro: 'CNPJ e certificado obrigatorios' });
-    try {
-      let forge;
-      try { forge = require('node-forge'); }
-      catch(eF) { return res.status(200).json({ ok: false, erro: 'Dependencia node-forge nao instalada: ' + eF.message }); }
-      const https = require('https');
-      let privateKey, certificate;
-      try {
-        const pfxDer = forge.util.decode64(pfxBase64);
-        const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-        const pfx = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, pfxSenha || '');
-        pfx.safeContents.forEach(sc => {
-          sc.safeBags.forEach(bag => {
-            if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) privateKey = forge.pki.privateKeyToPem(bag.key);
-            if (bag.type === forge.pki.oids.certBag && !certificate) certificate = forge.pki.certificateToPem(bag.cert);
-          });
-        });
-      } catch(eCert) {
-        return res.status(200).json({ ok: false, erro: 'Certificado invalido ou senha errada: ' + eCert.message });
-      }
-      if (!privateKey || !certificate) return res.status(200).json({ ok: false, erro: 'Nao foi possivel extrair chave do certificado' });
-      const cnpjLimpo = cnpj.replace(/\D/g, '');
-      const nsu = ultNSU || '000000000000000';
-      const soap = '<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfeDist="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><soapenv:Header/><soapenv:Body><nfeDist:nfeDistDFeInteresse><nfeDist:nfeDadosMsg><distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><cUFAutor>31</cUFAutor><CNPJ>'+cnpjLimpo+'</CNPJ><distNSU><ultNSU>'+nsu+'</ultNSU></distNSU></distDFeInt></nfeDist:nfeDadosMsg></nfeDist:nfeDistDFeInteresse></soapenv:Body></soapenv:Envelope>';
-      const sefazR = await new Promise((resolve, reject) => {
-        const opts = { hostname: 'www1.nfe.fazenda.gov.br', port: 443, path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx', method: 'POST',
-          headers: { 'Content-Type': 'text/xml;charset=UTF-8', 'SOAPAction': '"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"', 'Content-Length': Buffer.byteLength(soap) },
-          key: privateKey, cert: certificate, rejectUnauthorized: false, timeout: 25000 };
-        const r = https.request(opts, res2 => { let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>resolve({s:res2.statusCode,d})); });
-        r.on('error', reject); r.write(soap); r.end();
-      });
-      const xml = sefazR.d;
-      const cStat = (xml.match(/cStat>([^<]+)/) || [])[1] || '';
-      const xMotivo = (xml.match(/xMotivo>([^<]+)/) || [])[1] || '';
-      const novoNSU = (xml.match(/ultNSU>([^<]+)/) || [])[1] || nsu;
-      const nfs = [];
-      for (const m of xml.matchAll(/docZip[^>]*>([^<]+)<\/docZip/g)) {
-        try {
-          const doc = Buffer.from(m[1],'base64').toString('utf8');
-          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1];
-          if (chave) nfs.push({ id: chave, chave, numero: (doc.match(/nNF>([^<]+)/) || [])[1]||'', emitente: (doc.match(/xNome>([^<]+)/) || [])[1]||'Fornecedor', valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1]||'0'), data: ((doc.match(/dhEmi>([^<]+)/) || [])[1]||'').substring(0,10), status: 'pendente' });
-        } catch(ep) {}
-      }
-      return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat: cStat||'', xMotivo: xMotivo||'', msg: nfs.length>0?nfs.length+' NF(s) encontrada(s)':'Nenhuma NF nova. cStat:'+cStat+' '+xMotivo });
-    } catch(e) {
-      return res.status(200).json({ ok: false, erro: e.message });
-    }
-  }
 
   // 404
   return res.status(404).json({ erro: 'Rota não encontrada', rota: path });
