@@ -19664,7 +19664,10 @@ async function confirmarLancamentosBot(){
   if(!pend.length){
    await checkBotPending();
    const pend2=window._botPendentes||[];
-   if(!pend2.length){alert('Nenhum lançamento pendente do WhatsApp.');return;}
+   if(!pend2.length){const nb=document.createElement('div');
+   nb.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;';
+   nb.textContent='📱 Nenhum recibo pendente. Mande um recibo no WhatsApp!';
+   document.body.appendChild(nb);setTimeout(()=>nb.remove(),3000);return;}
    return confirmarLancamentosBot();
   }
   const db=ldb();
@@ -22619,8 +22622,8 @@ render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
-setTimeout(sincronizarBotLancamentos, 2000);
-setInterval(sincronizarBotLancamentos, 30000);
+
+
 
 </script>
 </body>
