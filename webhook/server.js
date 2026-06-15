@@ -104,7 +104,7 @@ async function salvarGitHub(lanc) {
     // Bot registra SEMPRE custos (pagamentos feitos pela Di Casa)
     fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
       criadoEm: new Date().toISOString(), sincronizado: false });
-    if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
+    if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
     await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
       { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },
