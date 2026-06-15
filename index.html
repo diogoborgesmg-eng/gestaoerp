@@ -13110,7 +13110,7 @@ ${precisam.slice(0,4).map(e=>{
 ${!temChave?`<div class="ial ar"><span>🔑</span><span>Configure a chave API em <strong>⚙️ Config</strong></span></div>`:""}
 <div id="cardapio-res"></div>
 <div style="display:flex;gap:6px;margin-bottom:6px;">
-<button onclick="sugerirCardapio()" style="flex:2;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:700;cursor:pointer;" ${!temChave?"disabled":""}>🍽️ Sugerir Cardápio</button>
+<button onclick="sugerirCardapioAmanha()" style="flex:2;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:700;cursor:pointer;" ${!temChave?"disabled":""}>🍽️ Sugerir Cardápio</button>
 <button onclick="abrirBuffet()" style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4488ff,#aa44ff);color:#fff;font-size:11px;font-weight:800;cursor:pointer;">📋 Gerir Buffet</button>
 <label style="flex:1;cursor:pointer;" title="Manda foto do cardápio atual para a IA aprender">
 <input type="file" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;" onchange="aprenderCardapio(this)"/>
@@ -22659,6 +22659,58 @@ function editarSeg(tipo,id,novoSeg){
    return;
   }
  }
+}
+
+// ═══ SUGESTÃO DE CARDÁPIO COM IA ══════════════════════════
+async function sugerirCardapioAmanha(){
+ const overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+ overlay.innerHTML='<p style="font-size:28px;">🍽️</p><p style="color:#fff;font-size:14px;font-weight:700;">Criando sugestão de cardápio...</p>';
+ document.body.appendChild(overlay);
+ try{
+  const db=ldb();
+  const est=gest().filter(e=>e.q>0);
+  const fichas=gfichas();
+  const amanha=new Date();amanha.setDate(amanha.getDate()+1);
+  const diaSemana=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][amanha.getDay()];
+
+  const insumos=est.slice(0,20).map(e=>`${e.n}: ${e.q}${e.u}`).join(', ');
+  const pratos=fichas.slice(0,15).map(f=>f.nome).join(', ');
+
+  const result=await claudeAPI({model:MODEL,max_tokens:800,messages:[{role:'user',content:
+   `Você é chef consultor do restaurante Di Casa Laranjinha em Patos de Minas - MG.
+   Dia: ${diaSemana} ${amanha.toLocaleDateString('pt-BR')}
+   Estoque disponível: ${insumos||'não informado'}
+   Pratos no cardápio: ${pratos||'não informado'}
+   
+   Sugira um cardápio completo para amanhã com:
+   - 1 prato principal do dia (destaque)
+   - 2 opções de acompanhamento
+   - 1 sobremesa do dia
+   - 1 promoção especial sugerida
+   
+   Considere os insumos disponíveis. Seja objetivo e prático para um restaurante brasileiro.`
+  }]});
+
+  overlay.remove();
+  const sugestao=(result.content||[]).map(b=>b.text||'').join('');
+
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+  div.innerHTML=`<div style="padding:16px 14px 60px;">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div>
+     <p style="font-size:16px;font-weight:900;">🍽️ Cardápio Sugerido</p>
+     <p style="font-size:11px;color:rgba(255,255,255,0.4);">${diaSemana} ${amanha.toLocaleDateString('pt-BR')}</p>
+    </div>
+    <button onclick="this.closest('[style*=inset]').remove()" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+   </div>
+   <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap;">${sugestao}</div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:12px;">✅ Entendido</button>
+  </div>`;
+  div.onclick=e=>{if(e.target===div)div.remove();};
+  document.body.appendChild(div);
+ }catch(e){overlay.remove();alert('Erro: '+e.message);}
 }
 
 render();
