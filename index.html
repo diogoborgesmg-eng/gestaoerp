@@ -8272,7 +8272,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -18507,6 +18507,7 @@ function rCozinha(){
  const db=ldb();
  const sub=window._cozinhaSub||'validades';
  const subs=[
+  ['cardapio','🍽️ Cardápio IA'],
   ['validades','⏰ Validades'],
   ['recebimento','📥 Recebimento'],
   ['producao','🍳 Produção'],
@@ -18532,7 +18533,8 @@ ${vencidos.length>0||vencendoHoje.length>0?`
  ${vencendo3.length>0?`<p style="font-size:11px;color:rgba(255,204,0,0.8);">📅 ${vencendo3.length} item(ns) vence(m) em até 3 dias</p>`:''}
 </div>`:''}
 
-${sub==='validades'?_rValidades(itens,hoje):
+${sub==='cardapio'?_rCardapioIA():
+  sub==='validades'?_rValidades(itens,hoje):
   sub==='recebimento'?_rRecebimento():
   sub==='producao'?_rProducao():
   sub==='etiquetas'?_rEtiquetas():
@@ -22631,6 +22633,156 @@ function apagarSelecionados(dia){
  document.querySelector('[style*="inset:0"]')?.remove();
  render();
  alert('✅ '+idxsApagar.length+' lançamento(s) removido(s)!');
+}
+
+function _rCardapioIA(){
+ const db=ldb();
+ const fotos=db.cardapioFotos||[];
+ const est=typeof gest==='function'?gest().filter(e=>e.q>0).slice(0,20).map(e=>e.n).join(', '):'';
+ return`<div style="padding:12px;">
+  <p style="font-weight:800;font-size:14px;margin-bottom:4px;">🍽️ Cardápio IA</p>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Mande fotos do seu cardápio para a IA aprender o estilo do Di Casa</p>
+
+  <!-- Upload de fotos -->
+  <div style="background:rgba(255,106,0,0.06);border:1px dashed rgba(255,106,0,0.4);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">📸 Fotos de referência do cardápio</p>
+   <p style="font-size:10px;color:var(--mu);margin-bottom:10px;">${fotos.length} foto(s) salva(s) — a IA usa como referência de estilo e pratos</p>
+   <input type="file" id="cardapio-foto-input" accept="image/*" capture="environment" multiple style="display:none" onchange="adicionarFotosCardapio(this)"/>
+   <div style="display:flex;gap:8px;justify-content:center;">
+    <button onclick="document.getElementById('cardapio-foto-input').click()" style="padding:9px 16px;border-radius:9px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:800;cursor:pointer;">📷 Adicionar Fotos</button>
+    ${fotos.length>0?`<button onclick="limparFotosCardapio()" style="padding:9px 12px;border-radius:9px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:11px;cursor:pointer;">🗑️ Limpar</button>`:''}
+   </div>
+   ${fotos.length>0?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding:4px 0;">
+    ${fotos.map((f,i)=>`<div style="position:relative;flex-shrink:0;">
+     <img src="${f}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;"/>
+     <button onclick="removerFotoCardapio(${i})" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;border:none;background:#ff3366;color:#fff;font-size:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">×</button>
+    </div>`).join('')}
+   </div>`:''}
+  </div>
+
+  <!-- Geração do cardápio -->
+  <div style="margin-bottom:12px;">
+   <label class="lbl">Dia do cardápio</label>
+   <select id="cardapio-dia" class="inpm">
+    <option value="amanha">Amanhã</option>
+    <option value="hoje">Hoje</option>
+    <option value="semana">Próximos 7 dias</option>
+   </select>
+  </div>
+
+  <div style="margin-bottom:12px;">
+   <label class="lbl">Observações (opcional)</label>
+   <input id="cardapio-obs" class="inpm" placeholder="Ex: sem frango hoje, tem carne de sol sobrando..."/>
+  </div>
+
+  <button onclick="gerarCardapioIA()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px;">
+   🤖 Gerar Sugestão de Cardápio
+  </button>
+
+  <div id="cardapio-resultado" style="margin-top:10px;"></div>
+ </div>`;
+}
+
+function adicionarFotosCardapio(input){
+ const files=Array.from(input.files);
+ const db=ldb();
+ if(!db.cardapioFotos)db.cardapioFotos=[];
+ let count=0;
+ const processar=idx=>{
+  if(idx>=files.length){sdb(db);render();return;}
+  const r=new FileReader();
+  r.onload=e=>{
+   db.cardapioFotos.push(e.target.result);
+   count++;
+   processar(idx+1);
+  };
+  r.readAsDataURL(files[idx]);
+ };
+ processar(0);
+}
+
+function removerFotoCardapio(idx){
+ const db=ldb();
+ (db.cardapioFotos||[]).splice(idx,1);
+ sdb(db);render();
+}
+
+function limparFotosCardapio(){
+ if(!confirm('Limpar todas as fotos de referência?'))return;
+ const db=ldb();
+ db.cardapioFotos=[];
+ sdb(db);render();
+}
+
+async function gerarCardapioIA(){
+ const db=ldb();
+ const fotos=db.cardapioFotos||[];
+ const dia=document.getElementById('cardapio-dia')?.value||'amanha';
+ const obs=document.getElementById('cardapio-obs')?.value||'';
+ const est=typeof gest==='function'?gest().filter(e=>e.q>0).slice(0,20).map(e=>e.n+':'+e.q+(e.u||'')).join(', '):'';
+
+ const diaLabel={'amanha':'amanhã','hoje':'hoje','semana':'nos próximos 7 dias'}[dia]||'amanhã';
+ const amanha=new Date();if(dia==='amanha')amanha.setDate(amanha.getDate()+1);
+ const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+ const diaStr=dias[amanha.getDay()]+' '+amanha.toLocaleDateString('pt-BR');
+
+ const res=document.getElementById('cardapio-resultado');
+ if(res)res.innerHTML='<div style="text-align:center;padding:16px;"><span style="font-size:20px;">🤖</span><p style="font-size:12px;color:var(--mu);margin-top:6px;">Criando cardápio...</p></div>';
+
+ try{
+  // Monta o conteúdo com as fotos de referência
+  const content_parts=[];
+  
+  // Adiciona fotos como referência
+  fotos.slice(0,4).forEach(foto=>{
+   const base64=foto.split(',')[1];
+   const mime=foto.split(';')[0].split(':')[1]||'image/jpeg';
+   content_parts.push({type:'image',source:{type:'base64',media_type:mime,data:base64}});
+  });
+
+  const prompt=`Você é chef consultor do restaurante Di Casa Laranjinha em Patos de Minas MG.
+${fotos.length>0?'Acima estão fotos do cardápio do restaurante — use como referência de estilo, apresentação e pratos habituais.':''}
+Dia: ${diaStr}
+Estoque disponível: ${est||'não informado'}
+${obs?'Observações: '+obs:''}
+
+Crie um cardápio completo para ${diaLabel} com:
+🍽️ PRATO PRINCIPAL DO DIA (1 opção destaque)
+🥗 ACOMPANHAMENTOS (2-3 opções)
+🥩 PROTEÍNAS disponíveis (baseado no estoque)
+🍮 SOBREMESA DO DIA
+💰 PROMOÇÃO ESPECIAL sugerida
+
+Considere o estoque disponível. Seja prático e objetivo. Use o estilo e pratos que já fazem parte do cardápio habitual do restaurante.`;
+
+  content_parts.push({type:'text',text:prompt});
+
+  const r=await claudeAPI({model:MODEL,max_tokens:800,messages:[{role:'user',content:content_parts}]});
+  const txt=(r.content||[]).map(b=>b.text||'').join('');
+
+  if(res)res.innerHTML=`
+   <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+     <p style="font-size:12px;font-weight:800;color:var(--ye);">🍽️ Cardápio — ${diaStr}</p>
+     <button onclick="this.closest('div').nextElementSibling||document.getElementById('cardapio-resultado').querySelector('button')" 
+      onclick2="copiarCardapio(this)" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--mu);font-size:10px;cursor:pointer;">📋 Copiar</button>
+    </div>
+    <div id="cardapio-texto" style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${txt}</div>
+    <button onclick="copiarTexto(document.getElementById('cardapio-texto').textContent)" 
+     style="width:100%;margin-top:10px;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">📋 Copiar cardápio</button>
+   </div>`;
+ }catch(e){
+  if(res)res.innerHTML=`<p style="color:var(--re);font-size:12px;padding:10px;">Erro: ${e.message}</p>`;
+ }
+}
+
+function copiarTexto(txt){
+ navigator.clipboard.writeText(txt).then(()=>{
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:8px 16px;border-radius:8px;z-index:999;font-size:12px;font-weight:700;';
+  n.textContent='✅ Copiado!';
+  document.body.appendChild(n);setTimeout(()=>n.remove(),2000);
+ });
 }
 
 render();
