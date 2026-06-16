@@ -51,11 +51,16 @@ async function salvarReciboGitHub(b64, tipo, data) {
     const body = { message: 'recibo: '+ts, content: b64 };
     if(sha) body.sha = sha;
 
-    await req2('PUT',
+    const putResp = await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/'+nome,
       body,
       {'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
 
+    if(!putResp || !putResp.commit) {
+      console.error('Recibo PUT falhou:', JSON.stringify(putResp).substring(0,200));
+      return null;
+    }
+    console.log('Recibo salvo OK:', nome);
     return 'https://raw.githubusercontent.com/'+REPO+'/main/'+nome;
   } catch(e) {
     console.error('Erro ao salvar recibo:', e.message);
