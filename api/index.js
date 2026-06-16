@@ -264,7 +264,19 @@ module.exports = async function handler(req, res) {
       });
       if (sefazR.s !== 200) return res.status(200).json({ ok: false, erro: 'SEFAZ HTTP '+sefazR.s, raw: sefazR.d.substring(0,500) });
       const xml = sefazR.d;
-      console.log('SEFAZ response:', xml.substring(0,500));
+      console.log('SEFAZ CNPJ enviado:', cnpjLimpo);
+      console.log('SEFAZ ultNSU:', nsu);
+      console.log('SEFAZ cert tamanho:', certificate?certificate.length:0);
+      // Extrai CNPJ do certificado para comparar
+      try{
+        const certObj=forge.pki.certificateFromPem(certificate);
+        const subjCNPJ=certObj.subject.getField('CN')?certObj.subject.getField('CN').value:'';
+        console.log('SEFAZ cert CN:', subjCNPJ);
+        const certSAN=certObj.getExtension('subjectAltName');
+        if(certSAN)console.log('SEFAZ cert SAN:', JSON.stringify(certSAN).substring(0,200));
+      }catch(ec){console.log('Erro lendo cert:',ec.message);}
+      console.log('SEFAZ response status:', sefazR.s);
+      console.log('SEFAZ response:', xml.substring(0,800));
       const cStat = (xml.match(/cStat>([\d]+)/) || [])[1] || '';
       const xMotivo = (xml.match(/xMotivo>([^<]+)/) || [])[1] || '';
       const novoNSU = (xml.match(/ultNSU>([\d]+)/) || [])[1] || nsu;
@@ -305,7 +317,7 @@ module.exports = async function handler(req, res) {
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
       return res.status(200).json({
-        ok: true, nfs, total: nfs.length,
+        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo,
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
         xmlDebug: xml.substring(0,300),
         msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
