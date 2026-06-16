@@ -2687,6 +2687,31 @@ function resetar(){
  </button>
 </div>
 <div id="bot-float" style="display:none;position:fixed;bottom:70px;right:12px;z-index:500;"><button onclick="confirmarLancamentosBot()" style="background:#00ff88;color:#000;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 15px rgba(0,255,136,0.5);">📱 <span id="bot-float-count">0</span> do WhatsApp</button></div>
+
+async function sugerirCardapioAmanha(){
+ const ov=document.createElement('div');
+ ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;align-items:center;justify-content:center;';
+ ov.innerHTML='<p style="color:#fff;font-size:14px;">🍽️ Criando sugestão...</p>';
+ document.body.appendChild(ov);
+ try{
+  const est=gest?gest().filter(e=>e.q>0).slice(0,15).map(e=>e.n).join(', '):'';
+  const amanha=new Date();amanha.setDate(amanha.getDate()+1);
+  const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const dia=dias[amanha.getDay()]+' '+amanha.toLocaleDateString('pt-BR');
+  const r=await claudeAPI({model:MODEL,max_tokens:600,messages:[{role:'user',content:'Restaurante Di Casa Laranjinha, Patos de Minas MG.
+Amanhã: '+dia+'
+Estoque: '+(est||'variado')+'
+Sugira: 1 prato do dia, 2 acompanhamentos, 1 sobremesa, 1 promoção. Seja objetivo.'}]});
+  ov.remove();
+  const txt=(r.content||[]).map(b=>b.text||'').join('');
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;padding:16px 14px 80px;';
+  d.innerHTML='<p style="font-size:15px;font-weight:900;margin-bottom:12px;">🍽️ Cardápio — '+dia+'</p><div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;">'+txt+'</div><button onclick="this.closest('[style*=inset]').remove()" style="width:100%;margin-top:12px;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Fechar</button>';
+  d.onclick=e=>{if(e.target===d)d.remove();};
+  document.body.appendChild(d);
+ }catch(e){ov.remove();alert('Erro: '+e.message);}
+}
+<button onclick="sugerirCardapioAmanha()" style="position:fixed;bottom:70px;right:14px;z-index:200;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;border:none;border-radius:50px;padding:10px 14px;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(255,106,0,0.4);cursor:pointer;">🍽️ Amanhã</button>
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
  window.open(URL.createObjectURL(blob),"_blank");
@@ -19605,50 +19630,41 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
 async function sincronizarBotLancamentos(){
  try{
-  const df=gDadosFiscais();
-  const backendUrl='https://gestaoerp-api.vercel.app';
-  const token=df.backendToken||'gestaoerp_diCasa_44686412';
-
   const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
   const data=await resp.json();
-  
-  if(!data.lancamentos?.length)return;
-
-  const db=ldb();
-  const dia=hj();
-  if(!db[dia])db[dia]={r:[],c:[]};
-
-  let count=0;
-  data.lancamentos.forEach(l=>{
-   // Verifica se já foi lançado
-   if(db[dia].c.some(x=>x._botId===l.id))return;
-   
-   db[dia].c.push({
-    id:uid(),
-    d:l.descricao||'WhatsApp Bot',
-    v:Number(l.valor||0),
-    cat:l.categoria||'Outros',
-    seg:l.tipo||'pix',
-    _botId:l.id,
-    _origem:'whatsapp',
-    dt:l.data||dia
-   });
+  const ja=ldb().botSincIds||[];
+  const pendentes=(data.lancamentos||[]).filter(l=>!l.sincronizado&&!ja.includes(l.id));
+  if(!pendentes.length){
+   const nb=document.createElement('div');
+   nb.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;';
+   nb.textContent='📱 Nenhum recibo pendente!';
+   document.body.appendChild(nb);setTimeout(()=>nb.remove(),3000);return;
+  }
+  if(!confirm('Confirmar '+pendentes.length+' lançamento(s) do WhatsApp no DRE?'))return;
+  const db=ldb();let count=0;
+  pendentes.forEach(l=>{
+   const dl=l.data||hj();
+   if(!db[dl])db[dl]={r:[],c:[]};
+   if(!db[dl].c)db[dl].c=[];
+   if(db[dl].c.some(x=>x._botId===l.id))return;
+   const dest=(l.destinatario||'').trim();
+   const nome=dest&&dest!=='Di Casa Gastronomia'&&dest!=='DI CASA GASTRONOMIA'?dest:(l.descricao||'WhatsApp');
+   const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
+   db[dl].c.push({id:uid(),d:nome,v:Number(l.valor||0),cat,seg:'',_botId:l.id,_origem:'whatsapp',reciboUrl:l.reciboUrl||null,dt:dl});
    count++;
   });
-
+  sdb(db);
+  const db2=ldb();
+  if(!db2.botSincIds)db2.botSincIds=[];
+  pendentes.forEach(l=>{if(!db2.botSincIds.includes(l.id))db2.botSincIds.push(l.id);});
+  sdb(db2);
   if(count>0){
-   sdb(db);
-   // Notificação visual
    const n=document.createElement('div');
-   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,255,136,0.4);';
-   n.textContent='📱 '+count+' lançamento(s) do WhatsApp sincronizado(s)!';
-   document.body.appendChild(n);
-   setTimeout(()=>n.remove(),4000);
-   render();
+   n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+   n.textContent='📱 '+count+' lançamento(s) importado(s)!';
+   document.body.appendChild(n);setTimeout(()=>n.remove(),4000);render();
   }
- }catch(e){
-  console.log('Sync bot erro:',e.message);
- }
+ }catch(e){alert('Erro: '+e.message);}
 }
 
 // Sincroniza a cada 30 segundos automaticamente
