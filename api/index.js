@@ -256,26 +256,60 @@ module.exports = async function handler(req, res) {
           path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx',
           method: 'POST',
           headers: { 'Content-Type': 'text/xml;charset=UTF-8', 'SOAPAction': '"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"', 'Content-Length': Buffer.byteLength(soap) },
-          key: privateKey, cert: certificate, rejectUnauthorized: false, timeout: 25000
+          key: privateKey, cert: certificate, rejectUnauthorized: false, timeout: 30000
         };
         const r = https.request(opts, res2 => { let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>resolve({s:res2.statusCode,d})); });
         r.on('error', reject);
         r.write(soap); r.end();
       });
-      if (sefazR.s !== 200) return res.status(200).json({ ok: false, erro: 'SEFAZ HTTP '+sefazR.s, raw: sefazR.d.substring(0,300) });
+      if (sefazR.s !== 200) return res.status(200).json({ ok: false, erro: 'SEFAZ HTTP '+sefazR.s, raw: sefazR.d.substring(0,500) });
       const xml = sefazR.d;
-      const cStat = (xml.match(/cStat>([^<]+)/) || [])[1] || '';
+      console.log('SEFAZ response:', xml.substring(0,500));
+      const cStat = (xml.match(/cStat>([\d]+)/) || [])[1] || '';
       const xMotivo = (xml.match(/xMotivo>([^<]+)/) || [])[1] || '';
-      const novoNSU = (xml.match(/ultNSU>([^<]+)/) || [])[1] || nsu;
+      const novoNSU = (xml.match(/ultNSU>([\d]+)/) || [])[1] || nsu;
+      const maxNSU = (xml.match(/maxNSU>([\d]+)/) || [])[1] || novoNSU;
       const nfs = [];
-      for (const m of xml.matchAll(/docZip[^>]*>([^<]+)<\/docZip/g)) {
+      // Tenta múltiplos formatos de docZip (com e sem namespace, com espaços)
+      const docZipPattern = /docZip[^>]*schema[^>]*>([\s\S]+?)<\/[\w:]*docZip>/g;
+      const docZipPattern2 = /<[\w:]*docZip[^>]*>([^<]+)<\/[\w:]*docZip>/g;
+      const matches = [...xml.matchAll(docZipPattern2)];
+      console.log('docZip encontrados:', matches.length, 'cStat:', cStat, 'maxNSU:', maxNSU);
+      for (const m of matches) {
         try {
-          const doc = Buffer.from(m[1],'base64').toString('utf8');
-          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1];
-          if (chave) nfs.push({ id: chave, chave, numero: (doc.match(/nNF>([^<]+)/) || [])[1]||'', serie: (doc.match(/serie>([^<]+)/) || [])[1]||'', emitente: (doc.match(/xNome>([^<]+)/) || [])[1]||'Fornecedor', emitCNPJ: (doc.match(/CNPJ>([^<]+)/) || [])[1]||'', valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1]||'0'), data: ((doc.match(/dhEmi>([^<]+)/) || [])[1]||'').substring(0,10), status: 'pendente' });
-        } catch(ep) {}
+          const b64 = m[1].replace(/\s/g,'');
+          let doc;
+          try { doc = Buffer.from(b64,'base64').toString('utf8'); }
+          catch(ez) { continue; }
+          // Descomprime gzip se necessário
+          if(doc.charCodeAt(0)===31 && doc.charCodeAt(1)===139){
+            const zlib=require('zlib');
+            try{ doc=zlib.gunzipSync(Buffer.from(b64,'base64')).toString('utf8'); }catch(eg){}
+          }
+          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1] || (doc.match(/Id="NFe([0-9]{44})/) || [])[1];
+          if (!chave) continue;
+          const emit = (doc.match(/<emit>[\s\S]*?<xNome>([^<]+)/) || [])[1] ||
+                       (doc.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
+          const cnpjEmit = (doc.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] ||
+                           (doc.match(/CNPJ>([^<]+)/) || [])[1] || '';
+          nfs.push({
+            id: chave, chave,
+            numero: (doc.match(/nNF>([^<]+)/) || [])[1] || '',
+            serie: (doc.match(/<serie>([^<]+)/) || [])[1] || '',
+            emitente: emit,
+            emitCNPJ: cnpjEmit,
+            valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1] || '0'),
+            data: ((doc.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
+            status: 'pendente'
+          });
+        } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
-      return res.status(200).json({ ok: true, nfs, total: nfs.length, ultNSU: novoNSU, cStat: cStat||'', xMotivo: xMotivo||'', msg: nfs.length>0?nfs.length+' NF(s) encontrada(s)':'Nenhuma NF nova. cStat:'+cStat+' '+xMotivo });
+      return res.status(200).json({
+        ok: true, nfs, total: nfs.length,
+        ultNSU: novoNSU, maxNSU, cStat, xMotivo,
+        xmlDebug: xml.substring(0,300),
+        msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
+      });
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
 
