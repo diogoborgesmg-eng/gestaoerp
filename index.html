@@ -2711,7 +2711,6 @@ Sugira: 1 prato do dia, 2 acompanhamentos, 1 sobremesa, 1 promoção. Seja objet
   document.body.appendChild(d);
  }catch(e){ov.remove();alert('Erro: '+e.message);}
 }
-<button onclick="sugerirCardapioAmanha()" style="position:fixed;bottom:70px;right:14px;z-index:200;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;border:none;border-radius:50px;padding:10px 14px;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(255,106,0,0.4);cursor:pointer;">🍽️ Amanhã</button>
 </body></html>`;
  const blob=new Blob([html],{type:"text/html"});
  window.open(URL.createObjectURL(blob),"_blank");
@@ -19648,7 +19647,7 @@ async function sincronizarBotLancamentos(){
    if(!db[dl].c)db[dl].c=[];
    if(db[dl].c.some(x=>x._botId===l.id))return;
    const dest=(l.destinatario||'').trim();
-   const nome=dest&&dest!=='Di Casa Gastronomia'&&dest!=='DI CASA GASTRONOMIA'?dest:(l.descricao||'WhatsApp');
+   const nome=dest&&!['Di Casa Gastronomia','DI CASA GASTRONOMIA','Di Casa','DI CASA'].includes(dest)?dest:(l.descricao&&l.descricao!=='SEM_DESCRICAO'?l.descricao:(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim());
    const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
    db[dl].c.push({id:uid(),d:nome,v:Number(l.valor||0),cat,seg:'',_botId:l.id,_origem:'whatsapp',reciboUrl:l.reciboUrl||null,dt:dl});
    count++;
@@ -22642,5 +22641,6 @@ setInterval(checkBotPending,30000);
 
 
 </script>
+<button onclick="sugerirCardapioAmanha()" style="position:fixed;bottom:70px;right:14px;z-index:200;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;border:none;border-radius:50px;padding:10px 14px;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(255,106,0,0.4);cursor:pointer;">🍽️ Amanhã</button>
 </body>
 </html>
