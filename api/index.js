@@ -220,9 +220,11 @@ module.exports = async function handler(req, res) {
 
 
   // ── NF-e SEFAZ DESTINATÁRIO ──────────────────────────────
-  if (path === '/api/nfe/sefaz' && req.method === 'POST') {
+  if ((path === '/api/nfe/sefaz' || path === '/api/sefaz' || path === '/api/sefaz/distribuicao' || path === '/api/sefaz/monitor') && req.method === 'POST') {
     if (!auth(req)) return res.status(401).json({ erro: 'Token invalido' });
-    const { cnpj, pfxBase64, pfxSenha, ultNSU } = body;
+    const { cnpj, ultNSU } = body;
+    const pfxBase64 = body.pfxBase64 || body.certPfx;
+    const pfxSenha = body.pfxSenha || body.certSenha || '';
     if (!cnpj || !pfxBase64) return res.status(400).json({ erro: 'CNPJ e certificado obrigatorios' });
     try {
       const https = require('https');
