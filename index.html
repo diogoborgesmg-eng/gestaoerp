@@ -22723,7 +22723,7 @@ async function gerarCardapioIA(){
  const est=typeof gest==='function'?gest().filter(e=>e.q>0).slice(0,20).map(e=>e.n+':'+e.q+(e.u||'')).join(', '):'';
 
  const diaLabel={'amanha':'amanhã','hoje':'hoje','semana':'nos próximos 7 dias'}[dia]||'amanhã';
- const amanha=new Date();if(dia==='amanha')amanha.setDate(amanha.getDate()+1);
+ const amanha=new Date(new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-'));if(dia==='amanha')amanha.setDate(amanha.getDate()+1);if(dia==='semana')amanha.setDate(amanha.getDate()+1);
  const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
  const diaStr=dias[amanha.getDay()]+' '+amanha.toLocaleDateString('pt-BR');
 
@@ -22794,6 +22794,6 @@ setInterval(checkBotPending,30000);
 
 
 </script>
-<button onclick="sugerirCardapioAmanha()" style="position:fixed;bottom:70px;right:14px;z-index:200;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;border:none;border-radius:50px;padding:10px 14px;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(255,106,0,0.4);cursor:pointer;">🍽️ Amanhã</button>
+
 </body>
 </html>
