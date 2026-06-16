@@ -1927,7 +1927,7 @@ ${historico.length===0?`<p style="font-size:12px;color:var(--mu);">Nenhum lança
 ${historico.sort((a,b)=>b.dia.localeCompare(a.dia)).map(x=>`
 <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--br);">
 <div><p style="font-size:12px;font-weight:700;">${x.d}</p>
-<p style="font-size:10px;color:var(--mu);">${x.dia} · ${x.cat}</p></div>
+<p style="font-size:10px;color:var(--mu);">${x.dia} · ${(x.cat||'').replace(/ \(.*\)/,'').trim()}</p></div>
 <span style="color:var(--re);font-weight:700;">${brl(x.v)}</span>
 </div>`).join("")}
 ${historico.length>0?`<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:6px 0 0;">
@@ -6161,7 +6161,7 @@ function gerarContextoCFO(){
  const rMes=rec.reduce((a,x)=>a+Number(x.v),0);
  const cMes=cus.reduce((a,x)=>a+Number(x.v),0);
  const mMes=rMes>0?((rMes-cMes)/rMes)*100:0;
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const db=ldb();const hoje=new Date();
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const cp=db.contasPagar||[];
@@ -10028,7 +10028,7 @@ function exportarRelatorioPDF(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const hoje=new Date();
  const mesNome=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -10213,7 +10213,7 @@ async function gerarRelatorioMensalIA(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const mesNome=new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'});
@@ -10358,7 +10358,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const cor=res>0?"#00ff88":res<0?"#ff3366":"#ffcc00";
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const cmvGeral=cc["Insumos/Matéria-prima"]||0;
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
@@ -10647,7 +10647,7 @@ style="flex:2;background:var(--sf2);border:1px solid rgba(255,51,102,0.3);border
 onkeydown="if(event.key==='Enter'){lancInline('cus');}"/>
 <button onclick="lancInline('cus')" style="padding:7px 10px;border-radius:7px;border:none;background:rgba(255,51,102,0.2);color:var(--re);font-size:14px;cursor:pointer;">✓</button>
 </div>`:""}
-${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.reciboUrl?`<a href="${x.reciboUrl}" target="_blank" style="font-size:14px;text-decoration:none;margin-right:4px;" title="Ver recibo original do banco">📎</a>`:""}${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${x.cat}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
+${cus.length===0?`<p style="color:var(--mu);font-size:12px;text-align:center;padding:12px 0;">Nenhum custo</p>`:cus.map(x=>`<div class="item"><div class="dot" style="background:#ff3366;"></div><div style="flex:1;"><div class="in">${x.reciboUrl?`<a href="${x.reciboUrl}" target="_blank" style="font-size:14px;text-decoration:none;margin-right:4px;" title="Ver recibo original do banco">📎</a>`:""}${x.d}</div><div class="is">${x._dia?x._dia+' · ':''}${(x.cat||'').replace(/ \(.*\)/,'').trim()}${x.s?" ·"+SEGS.find(s=>s.id===x.s)?.n:""}</div></div>${isDiario?`<input type="number" value="${x.v}" step="0.01" onchange="editarLanc('c','${x.id}',parseFloat(this.value))" style="width:80px;background:transparent;border:none;border-bottom:1px solid rgba(255,51,102,0.4);color:#ff3366;font-size:12px;font-family:'Space Mono',monospace;text-align:right;padding:2px 4px;"/>`:`<span class="iv" style="color:#ff3366;">${brl(x.v)}</span>`}${isDiario?`<button class="bdel" onclick="del('c','${x.id}')">×</button>`:""}</div>`).join("")}
 ${cus.length>0?`<div class="item" style="background:rgba(255,51,102,0.05);border-color:rgba(255,51,102,0.15);"><div class="dot" style="background:#ff3366;"></div><span class="in" style="font-weight:700;">Total</span><span class="iv" style="color:#ff3366;font-size:14px;">${brl(c)}</span></div>`:""}
 </div>
 
@@ -13018,7 +13018,7 @@ function editarQtdCompra(id,novaQtd){
  if(item){item.min=parseFloat(novaQtd)||item.min;sdb(db);}
 }
 
-function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
 const temChave=getApiKey().length>10;
 const db=ldb();
 const estPreparo=db.estPreparo||[];
@@ -13183,7 +13183,7 @@ async function analisarMes(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const melhor=dias.reduce((a,d)=>d.res>a.res?d:a,{res:-Infinity,dia:""});
  const pior=dias.reduce((a,d)=>d.res<a.res?d:a,{res:Infinity,dia:""});
@@ -13219,7 +13219,7 @@ async function aIA(){
  const el=document.getElementById("iat");
  btn.disabled=true;btn.innerHTML=`<span class="sp">⟳</span> Analisando...`;
  el.innerHTML=`<p style="color:var(--mu);font-size:11px;text-align:center;padding:8px;" class="pu">Consultando...</p>`;
- const cc={};cus.forEach(x=>{cc[x.cat]=(cc[x.cat]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const est=gest();
  const db=ldb();
  const estPreparo=db.estPreparo||[];
