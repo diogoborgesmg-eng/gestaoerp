@@ -292,7 +292,21 @@ module.exports = async function handler(req, res) {
       });
       if (sefazR.s !== 200) return res.status(200).json({ ok: false, erro: 'SEFAZ HTTP '+sefazR.s, raw: sefazR.d.substring(0,500) });
       const xml = sefazR.d;
-      console.log('SEFAZ CNPJ enviado:', cnpjLimpo);
+      // Extrai CNPJ do certificado para verificar se bate
+      let cnpjNoCert = '';
+      try {
+        const certParsed = forge.pki.certificateFromPem(certificate);
+        // CNPJ fica no serialNumber ou no SAN do certificado ICP-Brasil
+        const allFields = certParsed.subject.attributes.map(a=>a.value||'').join(' | ');
+        console.log('Cert subject fields:', allFields.substring(0,200));
+        // Procura 14 dígitos consecutivos (CNPJ) nos campos
+        const cnpjInCert = allFields.match(/\d{14}/);
+        if(cnpjInCert) cnpjNoCert = cnpjInCert[0];
+      } catch(ec) {}
+      console.log('SEFAZ CNPJ enviado:', cnpjLimpo, '| CNPJ no cert:', cnpjNoCert);
+      if(cnpjNoCert && cnpjNoCert !== cnpjLimpo) {
+        console.log('AVISO: CNPJ do certificado ('+cnpjNoCert+') difere do CNPJ enviado ('+cnpjLimpo+')!');
+      }
       console.log('SEFAZ ultNSU:', nsu);
       console.log('SEFAZ cert tamanho:', certificate?certificate.length:0);
       // Extrai CNPJ do certificado para comparar
@@ -345,7 +359,7 @@ module.exports = async function handler(req, res) {
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
       return res.status(200).json({
-        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo,
+        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado',
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
         xmlDebug: xml.substring(0,300),
         msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
