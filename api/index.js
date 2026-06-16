@@ -249,7 +249,35 @@ module.exports = async function handler(req, res) {
       if (!privateKey || !certificate) return res.status(200).json({ ok: false, erro: 'Certificado invalido ou senha errada' });
       const cnpjLimpo = cnpj.replace(/\D/g, '');
       const nsu = ultNSU || '000000000000000';
-      const soap = '<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfeDist="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><soapenv:Header/><soapenv:Body><nfeDist:nfeDistDFeInteresse><nfeDist:nfeDadosMsg><distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><cUFAutor>31</cUFAutor><CNPJ>'+cnpjLimpo+'</CNPJ><distNSU><ultNSU>'+nsu+'</ultNSU></distNSU></distDFeInt></nfeDist:nfeDadosMsg></nfeDist:nfeDistDFeInteresse></soapenv:Body></soapenv:Envelope>';
+      // Detecta se certificado é e-CPF ou e-CNPJ lendo o Subject
+      let idTag = 'CNPJ';
+      let idValor = cnpjLimpo;
+      try {
+        const certObj2 = forge.pki.certificateFromPem(certificate);
+        // Procura CPF no Subject (OID 2.5.4.5 ou no CN)
+        const cn = certObj2.subject.getField('CN') ? certObj2.subject.getField('CN').value : '';
+        const cpfMatch = cn.match(/CPF[:\s]*([\d]{11})/i) || cn.match(/([\d]{11})$/);
+        // Procura CNPJ no Subject
+        const cnpjMatch = cn.match(/CNPJ[:\s]*([\d]{14})/i) || cn.match(/([\d]{14})/);
+        if (cnpjMatch && cnpjMatch[1].length === 14) {
+          idTag = 'CNPJ'; idValor = cnpjMatch[1];
+          console.log('Cert tipo: e-CNPJ =', idValor);
+        } else if (cpfMatch && cpfMatch[1].length === 11) {
+          idTag = 'CPF'; idValor = cpfMatch[1];
+          console.log('Cert tipo: e-CPF =', idValor);
+        } else {
+          // Tenta OID do serialNumber (onde fica CPF/CNPJ no e-CPF/e-CNPJ brasileiro)
+          const serial = certObj2.subject.getField('serialName') || certObj2.subject.getField({type:'2.5.4.5'});
+          if (serial) {
+            const sv = serial.value || '';
+            if (sv.replace(/\D/g,'').length === 11) { idTag='CPF'; idValor=sv.replace(/\D/g,''); }
+            else if (sv.replace(/\D/g,'').length === 14) { idTag='CNPJ'; idValor=sv.replace(/\D/g,''); }
+            console.log('Cert serial:', sv, '→', idTag, idValor);
+          }
+        }
+      } catch(eCert) { console.log('Erro detectar tipo cert:', eCert.message); }
+      console.log('SOAP usando:', idTag, '=', idValor, '| CNPJ empresa:', cnpjLimpo);
+      const soap = '<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfeDist="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><soapenv:Header/><soapenv:Body><nfeDist:nfeDistDFeInteresse><nfeDist:nfeDadosMsg><distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><cUFAutor>31</cUFAutor><'+idTag+'>'+idValor+'</'+idTag+'><distNSU><ultNSU>'+nsu+'</ultNSU></distNSU></distDFeInt></nfeDist:nfeDadosMsg></nfeDist:nfeDistDFeInteresse></soapenv:Body></soapenv:Envelope>';
       const sefazR = await new Promise((resolve, reject) => {
         const opts = {
           hostname: 'www1.nfe.fazenda.gov.br', port: 443,
