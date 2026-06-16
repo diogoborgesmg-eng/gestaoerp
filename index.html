@@ -22723,7 +22723,7 @@ async function gerarCardapioIA(){
  const est=typeof gest==='function'?gest().filter(e=>e.q>0).slice(0,20).map(e=>e.n+':'+e.q+(e.u||'')).join(', '):'';
 
  const diaLabel={'amanha':'amanhã','hoje':'hoje','semana':'nos próximos 7 dias'}[dia]||'amanhã';
- const amanha=new Date(new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-'));if(dia==='amanha')amanha.setDate(amanha.getDate()+1);if(dia==='semana')amanha.setDate(amanha.getDate()+1);
+ const amanha=new Date();if(dia==='amanha')amanha.setDate(amanha.getDate()+1);
  const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
  const diaStr=dias[amanha.getDay()]+' '+amanha.toLocaleDateString('pt-BR');
 
@@ -22786,6 +22786,149 @@ function copiarTexto(txt){
  });
 }
 
+// ═══ MÓDULO SEFAZ — Busca NF-e destinadas ════════════════════════
+async function buscarNFesSEFAZ(){
+ const df=gDadosFiscais();
+ const cnpj=df.cnpj||'44.686.412/0001-00';
+ const cert=df.pfxBase64;
+ const senha=df.pfxSenha||'';
+
+ if(!cert){
+  alert('Configure o certificado digital em ⚙️ Config → Dados Fiscais → Certificado A1 (.pfx)');
+  return;
+ }
+
+ const btn=document.getElementById('btn-buscar-nf');
+ if(btn){btn.disabled=true;btn.textContent='🔄 Buscando...';}
+
+ try{
+  const db=ldb();
+  const ultNSU=db.ultNSU||'000000000000000';
+
+  const resp=await fetch('/api/nfe/sefaz',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-token':df.backendToken||'gestaoerp_diCasa_44686412'},
+   body:JSON.stringify({cnpj:cnpj.replace(/\D/g,''),pfxBase64:cert,pfxSenha:senha,ultNSU})
+  });
+  const data=await resp.json();
+
+  if(!data.ok){
+   alert('Erro SEFAZ: '+(data.erro||JSON.stringify(data)));
+   return;
+  }
+
+  // Salva NSU para próxima busca
+  if(data.ultNSU){db.ultNSU=data.ultNSU;sdb(db);}
+
+  const nfs=data.nfs||[];
+  if(!nfs.length){
+   alert('✅ '+data.msg+'
+
+cStat: '+data.cStat+' — '+data.xMotivo);
+   return;
+  }
+
+  // Mostra NFs encontradas
+  mostrarNFsEncontradas(nfs);
+
+ }catch(e){
+  alert('Erro ao conectar com SEFAZ: '+e.message+'
+
+Verifique se o certificado está correto e tente novamente.');
+ }finally{
+  if(btn){btn.disabled=false;btn.textContent='🔍 Buscar NFs no SEFAZ';}
+ }
+}
+
+function mostrarNFsEncontradas(nfs){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:16px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <div>
+    <p style="font-size:15px;font-weight:900;">📥 NF-e Recebidas (${nfs.length})</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">Selecione as NFs para importar</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  ${nfs.map(nf=>`
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;margin-bottom:8px;">
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+    <div>
+     <p style="font-size:13px;font-weight:800;">${nf.emitente||'Fornecedor'}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.4);">NF ${nf.numero||''} | ${nf.data?new Date(nf.data).toLocaleDateString('pt-BR'):''}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.4);">CNPJ: ${nf.emitCNPJ||''}</p>
+    </div>
+    <p style="font-size:14px;font-weight:900;color:var(--gr);">R$ ${(nf.valor||0).toFixed(2)}</p>
+   </div>
+   <div style="display:flex;gap:6px;">
+    <button onclick="importarNFSEFAZ(${JSON.stringify(nf).replace(/"/g,'&quot;')})" 
+     style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">
+     ✅ Importar para Estoque + DRE
+    </button>
+    <button onclick="copiarChaveNF('${nf.chave||''}')" 
+     style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;">
+     📋 Chave
+    </button>
+   </div>
+  </div>`).join('')}
+  <button onclick="importarTodasNFs(${JSON.stringify(nfs).replace(/"/g,'&quot;')})"
+   style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px;">
+   📥 Importar TODAS (${nfs.length})
+  </button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function importarNFSEFAZ(nf){
+ const db=ldb();
+ const dia=nf.data?nf.data.substring(0,10).split('-').reverse().join('/'):hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ if(!db[dia].c)db[dia].c=[];
+
+ // Lança no DRE como custo
+ const jaExiste=db[dia].c.some(x=>x._nfChave===nf.chave);
+ if(!jaExiste){
+  db[dia].c.push({
+   id:uid(),
+   d:nf.emitente||'Fornecedor',
+   v:Number(nf.valor||0),
+   cat:'🥩 Matéria Prima',
+   seg:'',
+   _nfChave:nf.chave,
+   _nfNumero:nf.numero,
+   origem:'sefaz',
+   dt:dia
+  });
+  sdb(db);
+ }
+
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent='✅ NF importada: R$ '+(nf.valor||0).toFixed(2)+' — '+dia;
+ document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
+ render();
+}
+
+function importarTodasNFs(nfs){
+ if(!confirm('Importar '+nfs.length+' NF(s) para o DRE?'))return;
+ nfs.forEach(nf=>importarNFSEFAZ(nf));
+ document.querySelector('[style*="inset:0"]')?.remove();
+}
+
+function copiarChaveNF(chave){
+ navigator.clipboard.writeText(chave).then(()=>{
+  alert('Chave copiada: '+chave);
+ });
+}
+
+function resetarNSU(){
+ if(!confirm('Resetar NSU vai rebuscar TODAS as NFs. Continuar?'))return;
+ const db=ldb();delete db.ultNSU;sdb(db);
+ alert('✅ NSU resetado. Próxima busca trará todas as NFs disponíveis.');
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
@@ -22794,6 +22937,6 @@ setInterval(checkBotPending,30000);
 
 
 </script>
-
+<button onclick="sugerirCardapioAmanha()" style="position:fixed;bottom:70px;right:14px;z-index:200;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;border:none;border-radius:50px;padding:10px 14px;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(255,106,0,0.4);cursor:pointer;">🍽️ Amanhã</button>
 </body>
 </html>
