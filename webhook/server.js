@@ -90,7 +90,7 @@ async function claude(messages, maxTok) {
   });
 }
 
-async function salvarGitHub(lanc) {
+async function salvarGitHub(lanc, reciboUrl) {
   console.log('GHTOKEN presente:', !!GHTOKEN);
   if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
   try {
@@ -184,7 +184,7 @@ const server = http.createServer((req, res) => {
           const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
           if (!fd.lancamentos) fd.lancamentos = [];
           fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', criadoEm: new Date().toISOString(), sincronizado: false });
-          if (fd.lancamentos.length > 50) fd.lancamentos = fd.lancamentos.slice(-50);
+          if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
           await req2('PUT','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',{ message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
           await wpp(num, 'Lancado! R$ '+lanc.valor.toFixed(2)+' - '+lanc.categoria);
         } catch(e) { await wpp(num, 'Erro ao salvar: '+e.message); }
@@ -220,7 +220,8 @@ const server = http.createServer((req, res) => {
               const _desc = d.descricao&&d.descricao!==d.destinatario&&d.descricao!=='SEM_DESCRICAO' ? d.descricao : '';
               return { valor: d.valor, categoria: d.categoria||'Outros', descricao: _desc, destinatario: _dest, tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: d.confianca||'alta', setor: d.setor||'Geral', origem: 'whatsapp' };
             })();
-              await salvarGitHub(lanc);
+              const reciboUrl2 = await salvarReciboGitHub(b64, tipo);
+              await salvarGitHub(lanc, reciboUrl2);
             }
           } catch(ep) { console.error('parse err:', ep.message); }
         }
