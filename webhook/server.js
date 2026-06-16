@@ -54,7 +54,7 @@ async function salvarReciboGitHub(b64, tipo, data) {
     const putResp = await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/'+nome,
       body,
-      {'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+      {'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP-Bot/1.0'});
 
     if(!putResp || !putResp.commit) {
       console.error('Recibo PUT falhou:', JSON.stringify(putResp).substring(0,200));
