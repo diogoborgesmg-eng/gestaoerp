@@ -275,15 +275,37 @@ module.exports = async function handler(req, res) {
       const xml = sefazR.d;
       // Extrai CNPJ do certificado para verificar se bate
       let cnpjNoCert = '';
+      let certSubjectFull = '';
       try {
         const certParsed = forge.pki.certificateFromPem(certificate);
-        // CNPJ fica no serialNumber ou no SAN do certificado ICP-Brasil
-        const allFields = certParsed.subject.attributes.map(a=>a.value||'').join(' | ');
-        console.log('Cert subject fields:', allFields.substring(0,200));
-        // Procura 14 dígitos consecutivos (CNPJ) nos campos
-        const cnpjInCert = allFields.match(/\d{14}/);
-        if(cnpjInCert) cnpjNoCert = cnpjInCert[0];
-      } catch(ec) {}
+        // Padrão ICP-Brasil e-CNPJ: CN = "RAZAO SOCIAL:14CNPJDIGITS" ou "NOME:11CPFDIGITS"
+        certSubjectFull = certParsed.subject.attributes.map(a=>(a.name||a.type||'?')+'='+( a.value||'')).join(' || ');
+        console.log('Cert subject completo:', certSubjectFull);
+
+        const cnAttr = certParsed.subject.getField('CN');
+        const cnValue = cnAttr ? cnAttr.value : '';
+        console.log('Cert CN:', cnValue);
+
+        // Padrão correto: depois dos dois pontos no CN
+        const afterColon = cnValue.split(':').pop() || '';
+        const digitsAfterColon = afterColon.replace(/\D/g,'');
+        if (digitsAfterColon.length === 14 || digitsAfterColon.length === 11) {
+          cnpjNoCert = digitsAfterColon;
+        } else {
+          // Fallback: procura em subjectAltName (otherName) por CNPJ/CPF
+          try {
+            const san = certParsed.getExtension('subjectAltName');
+            if (san && san.altNames) {
+              for (const an of san.altNames) {
+                const raw = (an.value || an.ip || JSON.stringify(an));
+                console.log('SAN entry:', JSON.stringify(an).substring(0,150));
+                const d = String(raw).replace(/\D/g,'');
+                if (d.length === 14) { cnpjNoCert = d; break; }
+              }
+            }
+          } catch(eSan) { console.log('Erro SAN:', eSan.message); }
+        }
+      } catch(ec) { console.log('Erro parse cert:', ec.message); }
       console.log('SEFAZ CNPJ enviado:', cnpjLimpo, '| CNPJ no cert:', cnpjNoCert);
       if(cnpjNoCert && cnpjNoCert !== cnpjLimpo) {
         console.log('AVISO: CNPJ do certificado ('+cnpjNoCert+') difere do CNPJ enviado ('+cnpjLimpo+')!');
@@ -341,7 +363,7 @@ module.exports = async function handler(req, res) {
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
       return res.status(200).json({
-        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado', nsuEnviado: nsu,
+        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado', certSubjectDebug: certSubjectFull||'', nsuEnviado: nsu,
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
         xmlDebug: xml.substring(0,300),
         msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
