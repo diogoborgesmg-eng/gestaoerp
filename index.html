@@ -3056,7 +3056,7 @@ function rRH(){
  return mNum===mHoje&&Math.abs(dNum-dHoje)<=3;
  });
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('rh')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">👥 RH</button><button onclick="ir('comp')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">✅ Compliance</button><button onclick="ir('aval')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">⭐ Avaliações</button><button onclick="ir('mkt')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📣 Marketing</button></div><div class="si">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
 <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);display:flex;aitems:center;justify-content:center;font-size:22px;">👥</div>
 <div><p style="font-weight:800;font-size:15px;">Recursos Humanos</p>
@@ -5961,7 +5961,7 @@ function rFin(){
  // Índice de comprometimento (saídas / receita mês)
  const comprometimento=receitaMes>0?(totalProx15/receitaMes*100):0;
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('fin')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">💳 Financeiro</button><button onclick="ir('fluxo')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">💧 Fluxo</button><button onclick="ir('cpagar')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">💳 C.Pagar</button><button onclick="ir('bancos')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏦 Bancos</button><button onclick="ir('extrav')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔍 Extraviado</button><button onclick="ir('fixos')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📌 Fixos</button></div><div class="si">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
 <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:18px;">💳</div>
 <div><p style="font-weight:800;font-size:15px;">Financeiro</p>
@@ -7468,7 +7468,7 @@ function rDashMensal(){
  const mesAnt=calcDREMesAno(mmAnt,yyAnt);
  const varRec=mesAnt.totalR>0?((mes.totalR-mesAnt.totalR)/mesAnt.totalR*100):0;
 
- return`<div class="si">
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclick="ir('dashm')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📅 Mensal</button><button onclick="ir('dasha')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📈 Anual</button><button onclick="ir('bi')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📊 BI</button><button onclick="ir('cfo')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🧠 CFO</button><button onclick="ir('plano')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📑 Plano</button><button onclick="ir('dashc')" style="padding:5px 12px;b-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🗂️ Contas</button><button onclick="ir('dashcc')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏷️ CC</button></div><div class="si">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
  <div>
   <p style="font-weight:800;font-size:15px;">📅 Análise Mensal</p>
@@ -10348,7 +10348,7 @@ function rDRE(){
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  if(!empresa.nome){
- return`
+ return`<div style="display:flex;gap:5px;overflow-x:auto;padding:8px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;margin-bottom:8px;"><button onclir('dre')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📊 DRE</button><button onclick="ir('resultado')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">📅 Resultado</button><button onclick="ir('vendas')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">💰 Vendas</button><button onclick="ir('buffet')" style="padding:5px 12px;border-radius:15px;border:none;background:rgba(255,255,255,0.06);color:var(--mu);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🍽️ Buffet</button></div>
 ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px 12px 0;background:rgba(0,255,136,0.1);border:2px solid rgba(0,255,136,0.5);border-radius:10px;padding:10px 12px;"><p style="font-size:13px;font-weight:900;color:#00ff88;margin-bottom:6px;">📱 '+window._botPendentes.length+' lançamento(s) do WhatsApp</p>'+window._botPendentes.map(function(l){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.08);"><span style="font-size:12px;">'+l.descricao+'</span><span style="font-size:13px;font-weight:900;color:#00ff88;">R$ '+Number(l.valor).toFixed(2).replace('.',',')+'</span></div>';}).join('')+'<button onclick="confirmarLancamentosBot()" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:none;background:#00ff88;color:#000;font-size:13px;font-weight:900;cursor:pointer;">✅ Lançar no sistema</button></div>'):''}
 
 <div style="text-align:center;padding:20px 10px 10px;">
@@ -19656,10 +19656,25 @@ async function sincronizarBotLancamentos(){
    count++;
   });
   sdb(db);
+  // Tenta baixa automática em Contas a Pagar
+  let baixasFeitas=0;
+  pendentes.forEach(l=>{
+   const dest=(l.destinatario||'').trim();
+   if(dest&&dest!=='Di Casa Gastronomia'){
+    const baixa=tentarBaixaAutomatica(dest,Number(l.valor||0),l.data||hj());
+    if(baixa)baixasFeitas++;
+   }
+  });
   const db2=ldb();
   if(!db2.botSincIds)db2.botSincIds=[];
   pendentes.forEach(l=>{if(!db2.botSincIds.includes(l.id))db2.botSincIds.push(l.id);});
   sdb(db2);
+  if(baixasFeitas>0){
+   const nb2=document.createElement('div');
+   nb2.style.cssText='position:fixed;top:100px;left:50%;transform:translateX(-50%);background:var(--bl);color:#fff;padding:8px 16px;border-radius:10px;z-index:999;font-size:12px;font-weight:800;';
+   nb2.textContent='🏦 '+baixasFeitas+' conta(s) dada(s) baixa automaticamente!';
+   document.body.appendChild(nb2);setTimeout(()=>nb2.remove(),4000);
+  }
   if(count>0){
    const n=document.createElement('div');
    n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
@@ -22909,6 +22924,178 @@ function aplicarReclassificacao(){
   if(changed){sdb(db);console.log('Categorias migradas');}
  }catch(e){}
 })();
+
+// ═══ CHEQUE POR FOTO → CONTAS A PAGAR ═══════════════════════
+function abrirLancarCheque(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">🏦 Lançar Cheque</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Foto do cheque -->
+  <div style="background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.15);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">
+   <p style="font-size:12px;font-weight:700;margin-bottom:8px;">📸 Foto do Cheque</p>
+   <input type="file" id="cheque-foto" accept="image/*" capture="environment" style="display:none" onchange="lerCheque(this)"/>
+   <button onclick="document.getElementById('cheque-foto').click()" style="padding:9px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📷 Tirar Foto / Galeria</button>
+   <div id="cheque-preview" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- Campos editáveis -->
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Fornecedor / Favorecido</label>
+    <input id="cheque-fornecedor" class="inpm" placeholder="Nome do fornecedor..." style="margin-top:3px;"/>
+   </div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;">
+     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Valor (R$)</label>
+     <input id="cheque-valor" type="number" step="0.01" class="inpm" placeholder="0,00" style="margin-top:3px;"/>
+    </div>
+    <div style="flex:1;">
+     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Vencimento</label>
+     <input id="cheque-venc" type="date" class="inpm" style="margin-top:3px;"/>
+    </div>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Número do cheque</label>
+    <input id="cheque-num" class="inpm" placeholder="Ex: 000123" style="margin-top:3px;"/>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Categoria</label>
+    <select id="cheque-cat" class="inpm" style="margin-top:3px;">
+     ${CATS.map(c=>`<option value="${c.n}">${c.n}</option>`).join('')}
+    </select>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Observação</label>
+    <input id="cheque-obs" class="inpm" placeholder="Ex: Semana 09-15/06, produtos entregues..." style="margin-top:3px;"/>
+   </div>
+  </div>
+
+  <button onclick="salvarCheque()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:14px;font-weight:900;cursor:pointer;">
+   💾 Lançar em Contas a Pagar
+  </button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+
+ // Define vencimento padrão para 7 dias
+ const d=new Date();d.setDate(d.getDate()+7);
+ document.getElementById('cheque-venc').value=d.toISOString().split('T')[0];
+}
+
+async function lerCheque(input){
+ if(!input.files[0])return;
+ const preview=document.getElementById('cheque-preview');
+ preview.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,0.5);">🔄 Lendo cheque com IA...</p>';
+
+ const r=new FileReader();
+ r.onload=async e=>{
+  const base64=e.target.result.split(',')[1];
+  const mime=e.target.result.split(';')[0].split(':')[1];
+
+  // Mostra prévia
+  preview.innerHTML=`<img src="${e.target.result}" style="max-width:100%;border-radius:8px;margin-bottom:8px;"/>
+   <p style="font-size:10px;color:rgba(255,255,255,0.4);">📎 Foto armazenada</p>`;
+
+  // Salva base64 para armazenar depois
+  document.getElementById('cheque-foto')._base64=e.target.result;
+
+  try{
+   const resp=await claudeAPI({model:MODEL,max_tokens:400,messages:[{role:'user',content:[
+    {type:'image',source:{type:'base64',media_type:mime,data:base64}},
+    {type:'text',text:'Leia este cheque bancário. Extraia: (1) VALOR em reais, (2) FAVORECIDO/NOME DE QUEM RECEBE, (3) DATA DE VENCIMENTO no formato DD/MM/AAAA, (4) NÚMERO DO CHEQUE. Responda em JSON: {"valor":0.00,"favorecido":"nome","vencimento":"DD/MM/AAAA","numero":"XXXXXX"}'}
+   ]}]});
+   const txt=(resp.content||[]).map(b=>b.text||'').join('');
+   const m=txt.match(/\{[\s\S]*\}/);
+   if(m){
+    const d=JSON.parse(m[0]);
+    if(d.valor)document.getElementById('cheque-valor').value=d.valor;
+    if(d.favorecido)document.getElementById('cheque-fornecedor').value=d.favorecido;
+    if(d.vencimento){
+     const parts=d.vencimento.split('/');
+     if(parts.length===3){
+      document.getElementById('cheque-venc').value=`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+     }
+    }
+    if(d.numero)document.getElementById('cheque-num').value=d.numero;
+    preview.innerHTML+=`<p style="font-size:11px;color:var(--gr);margin-top:4px;">✅ Dados lidos automaticamente!</p>`;
+   }
+  }catch(e){
+   preview.innerHTML+=`<p style="font-size:11px;color:var(--ye);">⚠️ Preencha os dados manualmente</p>`;
+  }
+ };
+ r.readAsDataURL(input.files[0]);
+}
+
+function salvarCheque(){
+ const fornecedor=document.getElementById('cheque-fornecedor')?.value?.trim();
+ const valor=parseFloat(document.getElementById('cheque-valor')?.value||'0');
+ const venc=document.getElementById('cheque-venc')?.value;
+ const num=document.getElementById('cheque-num')?.value?.trim();
+ const cat=(document.getElementById('cheque-cat')?.value||'🔄 Outros').split(' (')[0].trim();
+ const obs=document.getElementById('cheque-obs')?.value?.trim();
+ const fotoBase64=document.getElementById('cheque-foto')?._base64||null;
+
+ if(!fornecedor){alert('Informe o fornecedor!');return;}
+ if(!valor||valor<=0){alert('Informe o valor!');return;}
+ if(!venc){alert('Informe o vencimento!');return;}
+
+ const vencBR=venc.split('-').reverse().join('/');
+ const db=ldb();
+ if(!db.contasPagar)db.contasPagar=[];
+
+ const cp={
+  id:uid(),
+  tipo:'cheque',
+  fornecedor,
+  valor,
+  vencimento:vencBR,
+  numero:num||'',
+  categoria:cat,
+  observacao:obs||'',
+  status:'pendente',
+  foto:fotoBase64,
+  criadoEm:new Date().toISOString()
+ };
+ db.contasPagar.push(cp);
+ sdb(db);
+
+ document.querySelector('[style*="inset:0"]')?.remove();
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--bl);color:#fff;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent='🏦 Cheque lançado! Vence '+vencBR+' — R$ '+valor.toFixed(2);
+ document.body.appendChild(n);setTimeout(()=>n.remove(),4000);
+ render();
+}
+
+// Cruzamento automático: tenta dar baixa em Contas a Pagar quando lança custo
+function tentarBaixaAutomatica(nomeFornecedor, valor, data){
+ try{
+  const db=ldb();
+  if(!db.contasPagar?.length)return false;
+  // Busca conta pendente do mesmo fornecedor com valor similar (+/- 2%)
+  const nome=nomeFornecedor.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const idx=db.contasPagar.findIndex(cp=>{
+   if(cp.status!=='pendente')return false;
+   const cpNome=cp.fornecedor.toLowerCase().replace(/[^a-z0-9]/g,'');
+   const nomeMatch=nome.length>3&&(cpNome.includes(nome)||nome.includes(cpNome));
+   const valorMatch=Math.abs(cp.valor-valor)/cp.valor<0.05; // 5% tolerância
+   return nomeMatch&&valorMatch;
+  });
+  if(idx>=0){
+   db.contasPagar[idx].status='pago';
+   db.contasPagar[idx].pagamento=data||hj();
+   db.contasPagar[idx].lancamentoRef=nomeFornecedor;
+   sdb(db);
+   return db.contasPagar[idx];
+  }
+ }catch(e){}
+ return false;
+}
 
 render();
 setTimeout(checkBotPending,2000);
