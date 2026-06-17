@@ -341,7 +341,7 @@ module.exports = async function handler(req, res) {
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
       return res.status(200).json({
-        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado',
+        ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado', nsuEnviado: nsu,
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
         xmlDebug: xml.substring(0,300),
         msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
