@@ -336,13 +336,13 @@ module.exports = async function handler(req, res) {
       for (const m of matches) {
         try {
           const b64 = m[1].replace(/\s/g,'');
+          const buf = Buffer.from(b64,'base64');
           let doc;
-          try { doc = Buffer.from(b64,'base64').toString('utf8'); }
-          catch(ez) { continue; }
-          // Descomprime gzip se necessário
-          if(doc.charCodeAt(0)===31 && doc.charCodeAt(1)===139){
-            const zlib=require('zlib');
-            try{ doc=zlib.gunzipSync(Buffer.from(b64,'base64')).toString('utf8'); }catch(eg){}
+          try {
+            const zlib = require('zlib');
+            doc = zlib.gunzipSync(buf).toString('utf8');
+          } catch(eg) {
+            try { doc = buf.toString('utf8'); } catch(ez) { continue; }
           }
           const chave = (doc.match(/chNFe>([^<]+)/) || [])[1] || (doc.match(/Id="NFe([0-9]{44})/) || [])[1];
           if (!chave) continue;
