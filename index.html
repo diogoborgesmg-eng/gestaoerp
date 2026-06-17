@@ -22894,6 +22894,22 @@ function aplicarReclassificacao(){
  render();
 }
 
+// Migração de categorias com parênteses nos dados existentes
+(function migrarCats(){
+ try{
+  const db=ldb();let changed=false;
+  Object.keys(db).filter(k=>/\d\d\/\d\d\/\d\d\d\d/.test(k)).forEach(dia=>{
+   (db[dia].c||[]).forEach(l=>{
+    if(l.cat&&l.cat.includes(' (')){
+     l.cat=l.cat.split(' (')[0].trim();
+     changed=true;
+    }
+   });
+  });
+  if(changed){sdb(db);console.log('Categorias migradas');}
+ }catch(e){}
+})();
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
