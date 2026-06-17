@@ -19764,30 +19764,38 @@ async function buscarNFsSEFAZ(){
  try{
   const df=gDadosFiscais();
   
-  // Pega todos os certificados configurados
+  // Pega todos os certificados e SELECIONA o que bate com o CNPJ da empresa
   const certs=[];
   const df0=gDadosFiscais();
+  const cnpjEmpresa=(df0.cnpj||'44.686.412/0001-00').replace(/\D/g,'');
   for(let n=1;n<=2;n++){
    const pfx=localStorage.getItem('erp_cert_pfx_'+n)||localStorage.getItem('erp_cert_pfx');
    const info=JSON.parse(localStorage.getItem('erp_cert_info_'+n)||localStorage.getItem('erp_cert_info')||'{}');
    const senha=localStorage.getItem('erp_cert_senha_'+n)||localStorage.getItem('erp_cert_senha')||'';
-   // Aceita mesmo sem CNPJ — usa o CNPJ dos dados fiscais
    if(pfx&&pfx.length>100){
-    const cnpj=info.cnpj||df0.cnpj||'44.686.412/0001-00';
-    certs.push({pfxBase64:pfx,info:{...info,cnpj},senha,n});
+    const certCnpj=(info.cnpj||'').replace(/\D/g,'');
+    certs.push({pfxBase64:pfx,info,senha,n,cnpj:certCnpj});
    }
   }
   if(!certs.length){
    alert('⚠️ Certificado Digital não encontrado.\nVá em ⚙️ Config → Certificados Digitais e arraste o arquivo .pfx');
    return;
   }
-  
-  // Pede senha (usa a mesma para todos ou pede separado)
-  const senha=prompt('🔐 Senha do(s) certificado(s) digital(is):','');
+
+  // CRÍTICO: seleciona o certificado cujo CNPJ bate com o CNPJ da empresa
+  let cert=certs.find(c=>c.cnpj===cnpjEmpresa);
+  if(!cert){
+   const lista=certs.map(c=>'Cert '+c.n+': CNPJ '+(c.cnpj||'não identificado')).join('\n');
+   alert('⚠️ Nenhum certificado tem o CNPJ da empresa ('+cnpjEmpresa+').\n\nCertificados encontrados:\n'+lista+'\n\nVerifique em ⚙️ Config qual certificado é da Di Casa.');
+   return;
+  }
+  console.log('Certificado selecionado: Cert',cert.n,'CNPJ',cert.cnpj);
+
+  // Pede senha do certificado correto
+  const senha=prompt('🔐 Senha do certificado (Cert '+cert.n+' — CNPJ '+cert.cnpj+'):','');
   if(senha===null)return;
-  
-  const cnpj=df.cnpj||'44.686.412/0001-00';
-  const cert=certs[0]; // usa primeiro como compatibilidade
+
+  const cnpj=cnpjEmpresa;
   
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
@@ -19819,6 +19827,8 @@ async function buscarNFsSEFAZ(){
     const diag={
      timestamp:new Date().toISOString(),
      nsuEnviado:ultNSU,
+     certUsado:'Cert '+cert.n+' CNPJ '+cert.cnpj,
+     cnpjConsultado:cnpj,
      resposta:data,
      ok:data.ok,
      erro:data.erro||null
