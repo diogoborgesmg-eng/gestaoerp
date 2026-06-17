@@ -362,11 +362,42 @@ module.exports = async function handler(req, res) {
           });
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
+
+      // Também processa resNFe (resumo) — comum quando o XML completo não está mais disponível
+      const resNFePattern = /<resNFe[^>]*>([\s\S]*?)<\/resNFe>/g;
+      const resMatches = [...xml.matchAll(resNFePattern)];
+      console.log('resNFe encontrados:', resMatches.length);
+      let resumosAdicionados = 0;
+      for (const m of resMatches) {
+        try {
+          const doc = m[1];
+          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1];
+          if (!chave) continue;
+          if (nfs.find(n => n.chave === chave)) continue; // já tem via docZip
+          const emit = (doc.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
+          const cnpjEmit = (doc.match(/CNPJ>([^<]+)/) || [])[1] || '';
+          nfs.push({
+            id: chave, chave,
+            numero: (doc.match(/nNF>([^<]+)/) || [])[1] || '',
+            serie: (doc.match(/serie>([^<]+)/) || [])[1] || '',
+            emitente: emit,
+            emitCNPJ: cnpjEmit,
+            valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1] || '0'),
+            data: ((doc.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
+            status: 'pendente',
+            resumo: true
+          });
+          resumosAdicionados++;
+        } catch(ep2) { console.log('Erro parse resNFe:', ep2.message); }
+      }
+      console.log('Total NFs (docZip + resumo):', nfs.length, '| resumos:', resumosAdicionados);
+
       return res.status(200).json({
         ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado', certSubjectDebug: certSubjectFull||'', nsuEnviado: nsu,
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
-        xmlDebug: xml.substring(0,300),
-        msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU
+        docZipCount: matches.length, resNFeCount: resMatches.length,
+        xmlDebug: xml.substring(0,1500),
+        msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU+' | docZip:'+matches.length+' resNFe:'+resMatches.length
       });
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
