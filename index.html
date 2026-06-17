@@ -22844,7 +22844,7 @@ function abrirReclassificacaoLote(){
   <div style="display:flex;gap:6px;margin-bottom:10px;">
    <button onclick="selecionarTodosLote(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">☑️ Todos</button>
    <button onclick="selecionarTodosLote(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">☐ Nenhum</button>
-   <button onclick="aplicarReclassificacao()" style="flex:2;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✅ Aplicar</button>
+   <button onclick="abrirReciboInformal()" style="padding:9px 14px;border-radius:9px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:12px;font-weight:800;cursor:pointer;margin-right:6px;">📝 + Entrega</button><button onclick="aplicarReclassificacao()" style="flex:2;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✅ Aplicar</button>
   </div>
 
   <div id="rl-lista" style="display:flex;flex-direction:column;gap:4px;">
@@ -23095,6 +23095,198 @@ function tentarBaixaAutomatica(nomeFornecedor, valor, data){
   }
  }catch(e){}
  return false;
+}
+
+// ═══ RECIBOS INFORMAIS + AGRUPAMENTO + CHEQUE ════════════════
+function abrirReciboInformal(){
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+
+ // Lista fornecedores já cadastrados
+ const db=ldb();
+ const fornecedoresExist=[...new Set((db.recibosInformais||[]).map(r=>r.fornecedor))].filter(Boolean);
+
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">📝 Recibo Informal</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Fornecedor</label>
+    <input id="ri-forn" class="inpm" placeholder="Ex: Nelore, João da Feira..." list="ri-forn-list" style="margin-top:3px;"/>
+    <datalist id="ri-forn-list">
+     ${fornecedoresExist.map(f=>`<option value="${f}">`).join('')}
+    </datalist>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Produto / Descrição</label>
+    <input id="ri-prod" class="inpm" placeholder="Ex: Nelore, Alcatra, Frango..." style="margin-top:3px;"/>
+   </div>
+   <div style="display:flex;gap:8px;">
+    <div style="flex:1;">
+     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Quantidade</label>
+     <div style="display:flex;gap:4px;margin-top:3px;">
+      <input id="ri-qtd" type="number" step="0.01" class="inpm" placeholder="0"/>
+      <select id="ri-un" class="inpm" style="width:60px;">
+       <option>kg</option><option>un</option><option>cx</option><option>lt</option>
+      </select>
+     </div>
+    </div>
+    <div style="flex:1;">
+     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Valor Total (R$)</label>
+     <input id="ri-valor" type="number" step="0.01" class="inpm" placeholder="0,00" style="margin-top:3px;"/>
+    </div>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Data da entrega</label>
+    <input id="ri-data" type="date" class="inpm" style="margin-top:3px;" value="${new Date().toISOString().split('T')[0]}"/>
+   </div>
+   <div>
+    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Categoria</label>
+    <select id="ri-cat" class="inpm" style="margin-top:3px;">
+     ${CATS.map(c=>`<option value="${c.n}"${c.n.includes('Matéria')?' selected':''}>${c.n}</option>`).join('')}
+    </select>
+   </div>
+  </div>
+
+  <button onclick="salvarReciboInformal()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:10px;">
+   ✅ Registrar Entrega
+  </button>
+  <button onclick="this.closest('[style*=inset]').remove();abrirGrupoFornecedor()" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.6);font-size:13px;cursor:pointer;">
+   🏦 Ver agrupados → Emitir Cheque
+  </button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function salvarReciboInformal(){
+ const forn=document.getElementById('ri-forn')?.value?.trim();
+ const prod=document.getElementById('ri-prod')?.value?.trim();
+ const qtd=parseFloat(document.getElementById('ri-qtd')?.value||'0');
+ const un=document.getElementById('ri-un')?.value||'kg';
+ const valor=parseFloat(document.getElementById('ri-valor')?.value||'0');
+ const data=document.getElementById('ri-data')?.value;
+ const cat=(document.getElementById('ri-cat')?.value||'🥩 Matéria Prima').split(' (')[0].trim();
+
+ if(!forn){alert('Informe o fornecedor!');return;}
+ if(!valor||valor<=0){alert('Informe o valor!');return;}
+
+ const dataBR=data?data.split('-').reverse().join('/'):'';
+ const db=ldb();
+ if(!db.recibosInformais)db.recibosInformais=[];
+
+ db.recibosInformais.push({
+  id:uid(),
+  fornecedor:forn,
+  produto:prod||'',
+  quantidade:qtd,
+  unidade:un,
+  valor,
+  data:dataBR,
+  dataISO:data,
+  categoria:cat,
+  status:'pendente',
+  criadoEm:new Date().toISOString()
+ });
+
+ // Lança no DRE do dia
+ if(!db[dataBR])db[dataBR]={r:[],c:[]};
+ if(!db[dataBR].c)db[dataBR].c=[];
+ const lancId=uid();
+ db[dataBR].c.push({
+  id:lancId,d:forn+(prod?' — '+prod:''),
+  v:valor,cat,seg:'',dt:dataBR,
+  _informal:true
+ });
+ db.recibosInformais[db.recibosInformais.length-1].lancId=lancId;
+ sdb(db);
+
+ document.querySelector('[style*="inset:0"]')?.remove();
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent='✅ Entrega registrada! R$ '+valor.toFixed(2)+' — '+forn;
+ document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
+ render();
+}
+
+function abrirGrupoFornecedor(){
+ const db=ldb();
+ const recibos=(db.recibosInformais||[]).filter(r=>r.status==='pendente');
+ if(!recibos.length){alert('Nenhuma entrega pendente de agrupamento.');return;}
+
+ // Agrupa por fornecedor
+ const grupos={};
+ recibos.forEach(r=>{
+  if(!grupos[r.fornecedor])grupos[r.fornecedor]=[];
+  grupos[r.fornecedor].push(r);
+ });
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">🗂️ Entregas por Fornecedor</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  ${Object.entries(grupos).map(([forn,items])=>{
+   const total=items.reduce((s,r)=>s+r.valor,0);
+   return`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+     <p style="font-size:13px;font-weight:800;">${forn}</p>
+     <p style="font-size:15px;font-weight:900;color:var(--gr);">R$ ${total.toFixed(2)}</p>
+    </div>
+    ${items.map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+     <span style="font-size:11px;color:rgba(255,255,255,0.6);">${r.data} — ${r.produto||'Produto'}${r.quantidade?(' '+r.quantidade+r.unidade):''}</span>
+     <span style="font-size:11px;font-weight:700;">R$ ${r.valor.toFixed(2)}</span>
+    </div>`).join('')}
+    <button onclick="emitirChequeFornecedor('${forn}',${total},${JSON.stringify(items.map(r=>r.id))})" style="width:100%;margin-top:10px;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">
+     🏦 Emitir Cheque R$ ${total.toFixed(2)}
+    </button>
+   </div>`;
+  }).join('')}
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function emitirChequeFornecedor(fornecedor, total, ids){
+ const venc=prompt('Vencimento do cheque (DD/MM/AAAA):
+Ex: 18/07/2026');
+ if(!venc)return;
+ const numCheque=prompt('Número do cheque (opcional):','')||'';
+
+ const db=ldb();
+ if(!db.contasPagar)db.contasPagar=[];
+
+ // Marca recibos como agrupados
+ const recibosAgrupados=(db.recibosInformais||[]).filter(r=>ids.includes(r.id));
+ recibosAgrupados.forEach(r=>{r.status='agrupado';r.chequeRef=venc;});
+
+ // Cria conta a pagar
+ db.contasPagar.push({
+  id:uid(),
+  tipo:'cheque',
+  fornecedor,
+  valor:total,
+  vencimento:venc,
+  numero:numCheque,
+  categoria:'🥩 Matéria Prima',
+  observacao:'Cheque — '+recibosAgrupados.length+' entrega(s): '+recibosAgrupados.map(r=>r.data).join(', '),
+  status:'pendente',
+  recibosIds:ids,
+  criadoEm:new Date().toISOString()
+ });
+ sdb(db);
+
+ document.querySelector('[style*="inset:0"]')?.remove();
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--bl);color:#fff;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent='🏦 Cheque emitido! R$ '+total.toFixed(2)+' — Bom '+venc;
+ document.body.appendChild(n);setTimeout(()=>n.remove(),4000);
+ render();
 }
 
 render();
