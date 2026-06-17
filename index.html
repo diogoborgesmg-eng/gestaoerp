@@ -19811,9 +19811,37 @@ async function buscarNFsSEFAZ(){
   
   const data=await resp.json();
   overlay.remove();
-  
+
+  // Salva diagnostico completo no GitHub para o Claude conseguir ler direto
+  try{
+   const ghToken=localStorage.getItem('erp_gh_token')||'';
+   if(ghToken){
+    const diag={
+     timestamp:new Date().toISOString(),
+     nsuEnviado:ultNSU,
+     resposta:data,
+     ok:data.ok,
+     erro:data.erro||null
+    };
+    let shaExist=null;
+    try{
+     const ck=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/sefaz_debug.json',
+      {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
+     if(ck.ok){const ckd=await ck.json();shaExist=ckd.sha;}
+    }catch(e){}
+    const body={message:'sefaz debug '+new Date().toISOString(),
+     content:btoa(unescape(encodeURIComponent(JSON.stringify(diag,null,2))))};
+    if(shaExist)body.sha=shaExist;
+    await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/sefaz_debug.json',{
+     method:'PUT',
+     headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP/1.0'},
+     body:JSON.stringify(body)
+    });
+   }
+  }catch(eDiag){console.log('Erro salvando diagnostico:',eDiag.message);}
+
   if(!data.ok){
-   alert('Erro SEFAZ: '+data.erro);
+   alert('Erro SEFAZ salvo no diagnostico.\nPeça pro Claude verificar!');
    return;
   }
   
@@ -19836,7 +19864,7 @@ async function buscarNFsSEFAZ(){
    render();
    alert('✅ '+novas+' NF(s) nova(s) encontrada(s)!\nVerifique a Fila NF.');
   }else{
-   alert('Nenhuma NF nova.\nNSU enviado: '+ultNSU+'\nmaxNSU SEFAZ: '+(data.maxNSU||'?')+'\ncStat: '+(data.cStat||'?')+'\n'+data.msg);
+   alert('Resultado salvo!\nPeça pro Claude verificar o diagnóstico.\n\ncStat: '+(data.cStat||'?'));
   }
  }catch(e){
   document.querySelector('[style*="inset:0"]')?.remove();
