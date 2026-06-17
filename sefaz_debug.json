@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-17T15:51:00.533Z",
+  "timestamp": "2026-06-17T15:59:55.557Z",
   "nsuEnviado": "000000000000000",
   "certUsado": "Cert 1 CNPJ 44686412000100",
   "cnpjConsultado": "44686412000100",
@@ -8,14 +8,15 @@
     "nfs": [],
     "total": 0,
     "cnpjEnviado": "44686412000100",
-    "cnpjNoCert": "20746095000102",
+    "cnpjNoCert": "44686412000100",
+    "certSubjectDebug": "countryName=BR || organizationName=ICP-Brasil || stateOrProvinceName=MG || localityName=PATOS DE MINAS || organizationalUnitName=20746095000102 || organizationalUnitName=Secretaria da Receita Federal do Brasil - RFB || organizationalUnitName=RFB e-CNPJ A1 || organizationalUnitName=presencial || commonName=DIOGO JOSE DOS SANTOS BORGES LTDA:44686412000100",
     "nsuEnviado": "000000000000000",
     "ultNSU": "000000000004236",
-    "maxNSU": "000000000004660",
-    "cStat": "138",
-    "xMotivo": "Documento(s) localizado(s)",
+    "maxNSU": "000000000000000",
+    "cStat": "656",
+    "xMotivo": "Rejeicao: Consumo Indevido (Deve ser utilizado o ultNSU nas solicitacoes subsequentes. Tente apos 1 hora)",
     "xmlDebug": "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><nfeDistDFeInteresseResponse xmlns=\"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDis",
-    "msg": "cStat:138 Documento(s) localizado(s) | maxNSU:000000000004660"
+    "msg": "cStat:656 Rejeicao: Consumo Indevido (Deve ser utilizado o ultNSU nas solicitacoes subsequentes. Tente apos 1 hora) | maxNSU:000000000000000"
   },
   "ok": true,
   "erro": null
