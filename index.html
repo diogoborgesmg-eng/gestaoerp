@@ -221,6 +221,7 @@ ${prontos.length>0?`<span style="background:rgba(0,255,136,0.15);border:1px soli
  📦 Receber Mercadoria
 </button>
 <button onclick="importarXMLNF()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:900;cursor:pointer;margin-bottom:8px;">📄 Importar XML da NF</button>
+<button onclick="if(confirm('Zerar NSU e buscar do início?')){const db=ldb();db.ultNSU='000000000000000';sdb(db);buscarNFsSEFAZ();}" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;margin-bottom:6px;">🔄 Zerar NSU e Buscar do Início</button>
 <button onclick="buscarNFsSEFAZ()" style="width:100%;padding:11px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📡 Buscar NFs do SEFAZ-MG</button>
 <button onclick="limparFilaErros()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,51,102,0.1);color:var(--re);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">🗑️ Limpar itens com erro</button>
 <button onclick="abrirConferenciaRecebimento(null)" style="width:100%;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.12);color:#00ff88;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;">📦 Conferir Recebimento</button></div>
@@ -19835,7 +19836,7 @@ async function buscarNFsSEFAZ(){
    render();
    alert('✅ '+novas+' NF(s) nova(s) encontrada(s)!\nVerifique a Fila NF.');
   }else{
-   alert('Nenhuma NF nova desde o último acesso.\n'+data.msg);
+   alert('Nenhuma NF nova.\nNSU enviado: '+ultNSU+'\nmaxNSU SEFAZ: '+(data.maxNSU||'?')+'\ncStat: '+(data.cStat||'?')+'\n'+data.msg);
   }
  }catch(e){
   document.querySelector('[style*="inset:0"]')?.remove();
