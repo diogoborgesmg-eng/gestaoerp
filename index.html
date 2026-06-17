@@ -1137,7 +1137,37 @@ function lancarItemNoSistema(item){
  if(!db.est)db.est=[];
  if(!db.contasPagar)db.contasPagar=[];
  const desc=item.fornecedor?`NF ${item.fornecedor}${item.numero?" nº"+item.numero:""}`:"NF Digitalizada";
- db[hj()].c.push({id:uid(),d:desc,cat:"Insumos/Matéria-prima",s:"",v:item.valor});
+ const catLanc=item.categoria||"🥩 Matéria Prima";
+ const lancId=uid();
+ db[hj()].c.push({id:lancId,d:desc,cat:catLanc,s:"",v:item.valor,dt:hj()});
+
+ // ═══ NOTA INFORMAL + CHEQUE: não cria conta a pagar direta — fica pendente p/ agrupar ═══
+ if(item.tipo==='informal'){
+  if(!db.recibosInformais)db.recibosInformais=[];
+  db.recibosInformais.push({
+   id:uid(),lancId,
+   fornecedor:item.fornecedor||'Fornecedor',
+   produto:(item.itens&&item.itens[0]?.nome)||'',
+   quantidade:(item.itens&&item.itens[0]?.qtd)||0,
+   unidade:(item.itens&&item.itens[0]?.un)||'kg',
+   valor:item.valor,data:item.data||hj(),
+   categoria:catLanc,status:'pendente',
+   fotoUrl:item.fotoUrl||null,
+   criadoEm:new Date().toISOString()
+  });
+  // Estoque simplificado (nome/qtd/un)
+  (item.itens||[]).forEach(it=>{
+   if(!it.nome)return;
+   const ex=db.est.find(e=>e.n.toLowerCase()===it.nome.toLowerCase());
+   const q=Number(it.qtd||0);
+   if(ex){ex.q=(ex.q||0)+q;ex.qi=(ex.qi||0)+q;}
+   else{db.est.push({id:uid(),n:it.nome,u:it.un||'kg',q,qi:q,qun:q,upc:1,
+    cu:q>0?item.valor/q:item.valor,grupo:detectarGrupo(it.nome),lotes:[],min:0,s:[],perdas:[]});}
+  });
+  sdb(db);
+  return;
+ }
+
  db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:item.valor,
  venc:converterDataParaInput(item.vencimento||item.data),pag:"boleto",pago:false,
  nf:item.numero||"",semana:semana(),dt:hj()});
@@ -22994,7 +23024,7 @@ async function salvarReciboInformal(){
  if(!forn){alert('Informe o fornecedor!');return;}
  if(!valor||valor<=0){alert('Informe o valor!');return;}
 
- const dataBR=dataISO?dataISO.split('-').reverse().join('/'):'';
+ const dataBR=dataISO?dataISO.split('-').reverse().join('/'):hj();
 
  // Salva foto no GitHub
  let fotoUrl=null;
@@ -23005,35 +23035,31 @@ async function salvarReciboInformal(){
   if(btn){btn.textContent='✅ Registrar Entrega';btn.disabled=false;}
  }
 
- const db=ldb();
- if(!db.recibosInformais)db.recibosInformais=[];
- const lancId=uid();
-
- const recibo={
-  id:uid(),lancId,fornecedor:forn,produto:prod,
-  quantidade:qtd,unidade:un,valor,data:dataBR,dataISO,
-  categoria:cat,status:'pendente',fotoUrl,
+ // ═══ Entra na MESMA Fila de Conferência das NF-e (status "pronto" — já lido pela IA) ═══
+ const fila=gFila();
+ fila.push({
+  id:uid(),
+  tipo:'informal',
+  fornecedor:forn,
+  numero:'',
+  valor,
+  data:dataBR,
+  categoria:cat,
+  formaPagamento:'cheque',
+  itens:[{nome:prod||'Produto',qtd,un}],
+  fotoUrl,
+  status:'pronto',
+  horario:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
   criadoEm:new Date().toISOString()
- };
- db.recibosInformais.push(recibo);
-
- // Lança no DRE
- if(!db[dataBR])db[dataBR]={r:[],c:[]};
- if(!db[dataBR].c)db[dataBR].c=[];
- db[dataBR].c.push({
-  id:lancId,
-  d:forn+(prod?' — '+prod:''),
-  v:valor,cat,seg:'',dt:dataBR,
-  _informal:true,fotoUrl
  });
- sdb(db);
+ sFila(fila);
 
  document.querySelector('[style*="inset:0"]')?.remove();
  const n=document.createElement('div');
  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
- n.textContent='✅ R$ '+valor.toFixed(2)+' — '+forn+(fotoUrl?' 📎':'');
- document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
- render();
+ n.textContent='📥 Entrada na fila! '+forn+' — R$ '+valor.toFixed(2)+(fotoUrl?' 📎':'')+'\nConfira e toque em Lançar.';
+ document.body.appendChild(n);setTimeout(()=>n.remove(),4000);
+ ir('fila');
 }
 
 function abrirGrupoFornecedor(){
