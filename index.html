@@ -23011,6 +23011,22 @@ async function lerReciboFoto(input){
  r.readAsDataURL(input.files[0]);
 }
 
+function _existeDuplicado(fornecedor,valor,dataBR){
+ const db=ldb();
+ const fila=gFila();
+ const dupFila=fila.find(f=>f.status!=='lançado'&&
+  (f.fornecedor||'').toLowerCase().trim()===fornecedor.toLowerCase().trim()&&
+  Math.abs((f.valor||0)-valor)<0.01&&f.data===dataBR);
+ if(dupFila)return {local:'fila',item:dupFila};
+ const diaArr=(db[dataBR]?.c)||[];
+ const dupDre=diaArr.find(x=>{
+  const nome=(x.d||'').toLowerCase();
+  return nome.includes(fornecedor.toLowerCase().trim())&&Math.abs((x.v||0)-valor)<0.01;
+ });
+ if(dupDre)return {local:'dre',item:dupDre};
+ return null;
+}
+
 async function salvarReciboInformal(){
  const forn=document.getElementById('ri-forn')?.value?.trim();
  const prod=document.getElementById('ri-prod')?.value?.trim()||'';
@@ -23023,6 +23039,11 @@ async function salvarReciboInformal(){
 
  if(!forn){alert('Informe o fornecedor!');return;}
  if(!valor||valor<=0){alert('Informe o valor!');return;}
+ const dup=_existeDuplicado(forn,valor,dataBR);
+ if(dup){
+  const onde=dup.local==='fila'?'na fila (ainda não lançado)':'já lançado no DRE';
+  if(!confirm('⚠️ Possível duplicado!\n\n'+forn+' — R$ '+valor.toFixed(2)+' ('+dataBR+')\njá existe '+onde+'.\n\nDeseja registrar mesmo assim?')){return;}
+ }
 
  const dataBR=dataISO?dataISO.split('-').reverse().join('/'):hj();
 
