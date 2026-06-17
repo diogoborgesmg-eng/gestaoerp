@@ -22786,6 +22786,114 @@ function copiarTexto(txt){
  });
 }
 
+// ═══ RECLASSIFICAÇÃO EM LOTE ═══════════════════════════════
+function abrirReclassificacaoLote(){
+ const db=ldb();
+ // Coleta todos os custos de todos os dias
+ const todos=[];
+ Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(dia=>{
+  (db[dia].c||[]).forEach(l=>{ todos.push({...l,_dia:dia}); });
+ });
+ if(!todos.length){alert('Nenhum lançamento encontrado.');return;}
+
+ const cats=[...new Set(todos.map(l=>(l.cat||'').replace(/ \(.*\)/,'').trim()))].filter(Boolean).sort();
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+   <div>
+    <p style="font-size:15px;font-weight:900;">🔄 Reclassificar em Lote</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${todos.length} lançamentos</p>
+   </div>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Filtro por categoria -->
+  <div style="margin-bottom:10px;">
+   <label style="font-size:11px;color:rgba(255,255,255,0.5);">Filtrar por categoria atual</label>
+   <select id="rl-filtro" onchange="filtrarLote()" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;margin-top:4px;">
+    <option value="">Todas as categorias</option>
+    ${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}
+   </select>
+  </div>
+
+  <!-- Nova categoria -->
+  <div style="margin-bottom:10px;">
+   <label style="font-size:11px;color:rgba(255,255,255,0.5);">Nova categoria para os selecionados</label>
+   <select id="rl-nova-cat" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;margin-top:4px;">
+    ${CATS.map(c=>`<option value="${c.n}">${c.n}</option>`).join('')}
+   </select>
+  </div>
+
+  <div style="display:flex;gap:6px;margin-bottom:10px;">
+   <button onclick="selecionarTodosLote(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">☑️ Todos</button>
+   <button onclick="selecionarTodosLote(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">☐ Nenhum</button>
+   <button onclick="aplicarReclassificacao()" style="flex:2;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">✅ Aplicar</button>
+  </div>
+
+  <div id="rl-lista" style="display:flex;flex-direction:column;gap:4px;">
+   ${todos.map((l,i)=>`
+   <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;cursor:pointer;">
+    <input type="checkbox" class="rl-check" data-idx="${i}" style="width:16px;height:16px;cursor:pointer;"/>
+    <div style="flex:1;min-width:0;">
+     <p style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.d||'Sem nome'}</p>
+     <p style="font-size:10px;color:rgba(255,255,255,0.4);">${(l.cat||'').replace(/ \(.*\)/,'').trim()} · R$ ${(l.v||0).toFixed(2)} · ${l._dia}</p>
+    </div>
+   </label>`).join('')}
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ div._todos=todos;
+ document.body.appendChild(div);
+}
+
+function filtrarLote(){
+ const filtro=document.getElementById('rl-filtro')?.value||'';
+ const items=document.querySelectorAll('.rl-check');
+ items.forEach(cb=>{
+  const label=cb.closest('label');
+  const catEl=label?.querySelector('p:last-child');
+  if(!filtro){label.style.display='flex';return;}
+  const cat=(catEl?.textContent||'').split('·')[0].trim();
+  label.style.display=cat===filtro?'flex':'none';
+ });
+}
+
+function selecionarTodosLote(sel){
+ const items=document.querySelectorAll('.rl-check');
+ items.forEach(cb=>{
+  const label=cb.closest('label');
+  if(label.style.display!=='none') cb.checked=sel;
+ });
+}
+
+function aplicarReclassificacao(){
+ const novaCat=document.getElementById('rl-nova-cat')?.value;
+ if(!novaCat){alert('Selecione a nova categoria!');return;}
+ const selecionados=[...document.querySelectorAll('.rl-check:checked')];
+ if(!selecionados.length){alert('Selecione ao menos um lançamento!');return;}
+ const div=document.querySelector('[style*="inset:0"]');
+ const todos=div?._todos||[];
+ const db=ldb();
+ let count=0;
+ selecionados.forEach(cb=>{
+  const idx=parseInt(cb.dataset.idx);
+  const l=todos[idx];
+  if(!l)return;
+  const arr=db[l._dia]?.c||[];
+  const item=arr.find(x=>x.id===l.id);
+  if(item){item.cat=novaCat;count++;}
+ });
+ sdb(db);
+ div?.remove();
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent='✅ '+count+' lançamento(s) reclassificado(s)!';
+ document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
+ render();
+}
+
 render();
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
