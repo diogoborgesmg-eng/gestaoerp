@@ -243,3 +243,50 @@ server.listen(PORT, () => {
   console.log('API Key:', AKEY ? 'OK' : 'FALTA');
   console.log('GitHub Token:', GHTOKEN ? 'OK' : 'FALTA');
 });
+
+
+// ═══ DISPATCH DIÁRIO 6H — Balanço de ontem + Contas a Pagar de hoje ═══
+let ultimoDispatchDia = '';
+async function checarDispatchDiario(){
+  try{
+    const agora = new Date();
+    const brHora = agora.toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour12:false,hour:'2-digit',minute:'2-digit'});
+    const brDataChave = agora.toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+    if (brHora !== '06:00') return;
+    if (ultimoDispatchDia === brDataChave) return;
+    ultimoDispatchDia = brDataChave;
+
+    const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/main/dre_sync.json?t='+Date.now(),null,{});
+    if (!r || typeof r !== 'object') { console.log('Dispatch 6h: sem dre_sync.json ainda'); return; }
+
+    const ontem = new Date(agora.getTime() - 24*60*60*1000);
+    const ontemBR = ontem.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+    const hojeBR = agora.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+
+    const diaOntem = r[ontemBR] || { r: [], c: [] };
+    const receita = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    const custo = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    const lucro = receita - custo;
+
+    const contasHoje = (r.contasPagar||[]).filter(c => c.status === 'pendente' && c.vencimento === hojeBR);
+    const totalContas = contasHoje.reduce((s,c)=>s+Number(c.valor||0),0);
+
+    let msg = '📊 *Balanço — ' + ontemBR + '*\n\n';
+    msg += '💰 Receita: R$ ' + receita.toFixed(2) + '\n';
+    msg += '💸 Custos: R$ ' + custo.toFixed(2) + '\n';
+    msg += (lucro >= 0 ? '✅' : '⚠️') + ' Resultado: R$ ' + lucro.toFixed(2) + '\n\n';
+
+    if (contasHoje.length) {
+      msg += '🏦 *Contas a pagar hoje (' + hojeBR + ')*\n';
+      contasHoje.forEach(c => { msg += '• ' + c.fornecedor + ': R$ ' + Number(c.valor).toFixed(2) + '\n'; });
+      msg += '\n*Total do dia: R$ ' + totalContas.toFixed(2) + '*';
+    } else {
+      msg += '🏦 Nenhuma conta vence hoje.';
+    }
+
+    await wpp('5534996853258', msg); // Diogo
+    await wpp('5534997692282', msg); // Herielly
+    console.log('✅ Dispatch diário enviado — ' + ontemBR);
+  } catch(e) { console.log('Erro dispatch diario:', e.message); }
+}
+setInterval(checarDispatchDiario, 60000);
