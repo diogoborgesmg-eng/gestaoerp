@@ -1500,7 +1500,7 @@
       "tipo_lancamento": "custo",
       "reciboUrl": "https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/recibos/2026-06-17T04-24-03.jpg",
       "criadoEm": "2026-06-17T04:24:04.786Z",
-      "sincronizado": false
+      "sincronizado": true
     },
     {
       "id": "mqhkgpzh",
@@ -1948,7 +1948,7 @@
       "tipo_lancamento": "custo",
       "reciboUrl": "https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/recibos/2026-06-17T18-28-33.jpg",
       "criadoEm": "2026-06-17T18:28:35.191Z",
-      "sincronizado": true
+      "sincronizado": false
     },
     {
       "id": "mqien8nk",
