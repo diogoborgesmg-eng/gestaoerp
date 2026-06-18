@@ -22964,7 +22964,7 @@ function abrirReciboInformal(){
    <div>
     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Categoria</label>
     <select id="ri-cat" class="inpm" style="margin-top:3px;">
-     ${CATS.map(c=>`<option value="${c.n}"${c.n.includes('Matéria')?' selected':''}>${c.n}</option>`).join('')}
+     ${CATS.map(c=>`<option value="${c}"${c.includes('Matéria')?' selected':''}>${c}</option>`).join('')}
     </select>
    </div>
   </div>
@@ -23283,7 +23283,7 @@ function abrirReclassificacaoLote(){
   <div style="margin-bottom:10px;">
    <label style="font-size:11px;color:rgba(255,255,255,0.5);">Nova categoria para os selecionados</label>
    <select id="rl-nova-cat" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;margin-top:4px;">
-    ${CATS.map(c=>`<option value="${c.n}">${c.n}</option>`).join('')}
+    ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
    </select>
   </div>
 
@@ -23412,7 +23412,7 @@ function abrirLancarCheque(){
    <div>
     <label style="font-size:11px;color:rgba(255,255,255,0.5);">Categoria</label>
     <select id="cheque-cat" class="inpm" style="margin-top:3px;">
-     ${CATS.map(c=>`<option value="${c.n}">${c.n}</option>`).join('')}
+     ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
     </select>
    </div>
    <div>
