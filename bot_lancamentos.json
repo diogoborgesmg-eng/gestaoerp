@@ -1420,7 +1420,7 @@
       "tipo_lancamento": "custo",
       "reciboUrl": null,
       "criadoEm": "2026-06-17T04:23:53.342Z",
-      "sincronizado": false
+      "sincronizado": true
     },
     {
       "id": "mqhkgf8g",
@@ -1532,7 +1532,7 @@
       "tipo_lancamento": "custo",
       "reciboUrl": null,
       "criadoEm": "2026-06-17T04:24:11.364Z",
-      "sincronizado": true
+      "sincronizado": false
     },
     {
       "id": "mqhkgv8i",
