@@ -8309,7 +8309,7 @@ function buffetConfirmarSaida(dia,btn){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,ponto:rPonto,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -23572,6 +23572,303 @@ async function sincronizarDreNuvem(){
 }
 setInterval(sincronizarDreNuvem,5*60*1000);
 setTimeout(sincronizarDreNuvem,8000);
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO RH COMPLETO — Ponto + Férias/13º + Docs + Benefícios + Banco de Horas
+// ═══════════════════════════════════════════════════════════
+
+// ─── PONTO DIGITAL ───────────────────────────────────────
+function rPonto(){
+ const db=ldb();
+ const funcs=gFuncs().filter(f=>f.ativo);
+ const hoje=hj();
+ const mesAtual=`${String(new Date().getMonth()+1).padStart(2,'0')}/${new Date().getFullYear()}`;
+
+ return`<div style="padding:12px 12px 80px;">
+  <p style="font-size:15px;font-weight:900;margin-bottom:12px;">🕐 Ponto Digital</p>
+
+  <!-- Bater ponto hoje -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:800;margin-bottom:10px;">📅 ${hoje}</p>
+   ${funcs.map(f=>{
+    const p=(db._ponto?.[hoje]?.[f.id])||{};
+    const ent=p.entrada||'';
+    const sai=p.saida||'';
+    const hrs=ent&&sai?(()=>{
+     const[he,me]=ent.split(':').map(Number);
+     const[hs,ms]=sai.split(':').map(Number);
+     const diff=((hs*60+ms)-(he*60+me));
+     if(diff<=0)return '—';
+     return Math.floor(diff/60)+'h'+String(diff%60).padStart(2,'0');
+    })():'—';
+    const extra=ent&&sai?(()=>{
+     const[he,me]=ent.split(':').map(Number);
+     const[hs,ms]=sai.split(':').map(Number);
+     const diff=((hs*60+ms)-(he*60+me));
+     const jornadaMin=(f.jornada||8)*60;
+     return diff-jornadaMin;
+    })():0;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+     <div>
+      <p style="font-size:12px;font-weight:700;">${f.nome}</p>
+      <p style="font-size:10px;color:var(--mu);">${f.cargo||'Funcionário'}</p>
+     </div>
+     <div style="display:flex;gap:6px;align-items:center;">
+      ${ent?`<span style="font-size:11px;color:var(--gr);">▶ ${ent}</span>`:`<button onclick="baterPonto('${f.id}','entrada')" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:11px;font-weight:800;cursor:pointer;">▶ Entrada</button>`}
+      ${ent&&!sai?`<button onclick="baterPonto('${f.id}','saida')" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,68,68,0.15);color:var(--re);font-size:11px;font-weight:800;cursor:pointer;">■ Saída</button>`:ent&&sai?`<span style="font-size:11px;color:var(--re);">■ ${sai}</span>`:''}
+      ${hrs!=='—'?`<span style="font-size:11px;font-weight:800;color:${extra>0?'#4488ff':extra<0?'var(--ye)':'var(--mu)'};">${hrs}${extra>0?' +'+Math.floor(extra/60)+'h':''}${extra<0?' -'+Math.floor(Math.abs(extra)/60)+'h':''}</span>`:''}
+     </div>
+    </div>`;
+   }).join('')}
+  </div>
+
+  <!-- Banco de horas do mês -->
+  <div class="card" style="margin-bottom:12px;">
+   <p style="font-size:12px;font-weight:800;margin-bottom:10px;">📊 Banco de Horas — ${mesAtual}</p>
+   ${funcs.map(f=>{
+    let saldoMin=0;
+    Object.keys(db._ponto||{}).forEach(dia=>{
+     const[d,m,y]=dia.split('/');
+     if(`${m}/${y}`!==mesAtual)return;
+     const p=db._ponto[dia][f.id]||{};
+     if(!p.entrada||!p.saida)return;
+     const[he,me]=p.entrada.split(':').map(Number);
+     const[hs,ms]=p.saida.split(':').map(Number);
+     const diff=(hs*60+ms)-(he*60+me);
+     saldoMin+=diff-((f.jornada||8)*60);
+    });
+    const sinal=saldoMin>=0?'+':'-';
+    const abs=Math.abs(saldoMin);
+    return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+     <span style="font-size:11px;">${f.nome}</span>
+     <span style="font-size:11px;font-weight:800;color:${saldoMin>=0?'var(--gr)':'var(--ye)'}">${sinal}${Math.floor(abs/60)}h${String(abs%60).padStart(2,'0')}</span>
+    </div>`;
+   }).join('')}
+  </div>
+ </div>`;
+}
+
+function baterPonto(funcId,tipo){
+ const agora=new Date();
+ const hora=`${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`;
+ const db=ldb();
+ if(!db._ponto)db._ponto={};
+ if(!db._ponto[hj()])db._ponto[hj()]={};
+ if(!db._ponto[hj()][funcId])db._ponto[hj()][funcId]={};
+ const tipo2=tipo==='entrada'?'entrada':'saida';
+ if(db._ponto[hj()][funcId][tipo2]){
+  if(!confirm(`${tipo2==='entrada'?'Entrada':'Saída'} já registrada às ${db._ponto[hj()][funcId][tipo2]}. Sobrescrever?`))return;
+ }
+ db._ponto[hj()][funcId][tipo2]=hora;
+ sdb(db);
+ const f=gFuncs().find(x=>x.id===funcId);
+ const n=document.createElement('div');
+ n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--gr);color:#000;padding:10px 18px;border-radius:10px;z-index:999;font-size:13px;font-weight:800;';
+ n.textContent=(tipo2==='entrada'?'▶ Entrada':'■ Saída')+' — '+(f?.nome||'')+'  '+hora;
+ document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
+ render();
+}
+
+// ─── FÉRIAS E 13º ────────────────────────────────────────
+function abrirFeriasDecimo(funcId){
+ const f=gFuncs().find(x=>x.id===funcId);
+ if(!f)return;
+ const hoje=new Date();
+ const[dd,mm,yy]=f.admissao.split('/').map(Number);
+ const adm=new Date(yy,mm-1,dd);
+ const diasTotal=Math.floor((hoje-adm)/(1000*60*60*24));
+ const anosCompletos=Math.floor(diasTotal/365);
+ const mesesDecimo=hoje.getMonth()+1;
+ const salario=Number(f.salario||0);
+
+ // Férias
+ const diasFerias=Math.floor((diasTotal%365)/365*30);
+ const vlrFerias=(salario/30)*diasFerias*(4/3); // inclui 1/3
+
+ // 13º proporcional
+ const vlrDecimo=(salario/12)*mesesDecimo;
+
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;display:flex;align-items:center;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:16px;padding:20px;width:90%;max-width:340px;">
+  <p style="font-size:15px;font-weight:900;margin-bottom:14px;">🏖️ Férias & 13º — ${f.nome}</p>
+  <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;margin-bottom:10px;">
+   <p style="font-size:11px;color:var(--mu);">Admissão: ${f.admissao} · ${diasTotal} dias trabalhados</p>
+   <p style="font-size:11px;color:var(--mu);margin-top:4px;">${anosCompletos} ano(s) completo(s)</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+   <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:10px;padding:12px;">
+    <p style="font-size:11px;color:var(--mu);">🏖️ Férias proporcionais</p>
+    <p style="font-size:20px;font-weight:900;color:var(--gr);">R$ ${vlrFerias.toFixed(2)}</p>
+    <p style="font-size:10px;color:var(--mu);">${diasFerias} dias + 1/3 constitucional</p>
+   </div>
+   <div style="background:rgba(68,136,255,0.06);border:1px solid rgba(68,136,255,0.2);border-radius:10px;padding:12px;">
+    <p style="font-size:11px;color:var(--mu);">🎄 13º proporcional (${mesesDecimo}/12)</p>
+    <p style="font-size:20px;font-weight:900;color:#4488ff;">R$ ${vlrDecimo.toFixed(2)}</p>
+    <p style="font-size:10px;color:var(--mu);">Base: R$ ${salario.toFixed(2)}/mês</p>
+   </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+   <button onclick="lancarFerias('${funcId}',${vlrFerias.toFixed(2)},${diasFerias})" style="flex:1;padding:10px;border-radius:9px;border:none;background:rgba(0,255,136,0.15);color:var(--gr);font-size:12px;font-weight:800;cursor:pointer;">💾 Lançar Férias</button>
+   <button onclick="lancarDecimo('${funcId}',${vlrDecimo.toFixed(2)})" style="flex:1;padding:10px;border-radius:9px;border:none;background:rgba(68,136,255,0.15);color:#4488ff;font-size:12px;font-weight:800;cursor:pointer;">💾 Lançar 13º</button>
+  </div>
+  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Fechar</button>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+function lancarFerias(funcId,valor,dias){
+ const f=gFuncs().find(x=>x.id===funcId);
+ if(!confirm(`Lançar férias de ${f?.nome} — R$ ${Number(valor).toFixed(2)} (${dias} dias)?`))return;
+ const db=ldb();
+ if(!db[hj()])db[hj()]={r:[],c:[]};
+ db[hj()].c.push({id:uid(),d:`Férias — ${f?.nome}`,cat:'👥 RH / Mão de Obra',v:Number(valor),seg:'',dt:hj(),fonte:'ferias'});
+ if(!db.contasPagar)db.contasPagar=[];
+ db.contasPagar.push({id:uid(),tipo:'ferias',fornecedor:f?.nome,valor:Number(valor),vencimento:hj(),categoria:'👥 RH / Mão de Obra',status:'pago',criadoEm:new Date().toISOString()});
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ const f2=gFuncs();
+ const idx=f2.findIndex(x=>x.id===funcId);
+ if(idx>=0){f2[idx].ultimasFerias=hj();sFuncs(f2);}
+ alert('✅ Férias lançadas!');render();
+}
+
+function lancarDecimo(funcId,valor){
+ const f=gFuncs().find(x=>x.id===funcId);
+ if(!confirm(`Lançar 13º de ${f?.nome} — R$ ${Number(valor).toFixed(2)}?`))return;
+ const db=ldb();
+ if(!db[hj()])db[hj()]={r:[],c:[]};
+ db[hj()].c.push({id:uid(),d:`13º Salário — ${f?.nome}`,cat:'👥 RH / Mão de Obra',v:Number(valor),seg:'',dt:hj(),fonte:'decimo'});
+ sdb(db);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ alert('✅ 13º lançado!');render();
+}
+
+// ─── DOCUMENTOS DO FUNCIONÁRIO ───────────────────────────
+function abrirDocsFuncionario(funcId){
+ const f=gFuncs().find(x=>x.id===funcId);
+ if(!f)return;
+ const docs=f.docs||{};
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px 14px 80px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">📄 Docs — ${f.nome}</p>
+   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+  ${['rg','cpf','ctps','aso','contrato'].map(tipo=>{
+   const labels={rg:'RG',cpf:'CPF',ctps:'CTPS',aso:'ASO (Exame Admissional)',contrato:'Contrato de Trabalho'};
+   const url=docs[tipo]||'';
+   return`<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+     <p style="font-size:12px;font-weight:700;">${labels[tipo]}</p>
+     ${url?`<a href="${url}" target="_blank" style="font-size:11px;color:var(--gr);text-decoration:none;">📎 Ver</a>`:'<span style="font-size:10px;color:var(--mu);">Não enviado</span>'}
+    </div>
+    <div style="margin-top:8px;">
+     <input type="file" id="doc-${funcId}-${tipo}" accept="image/*,application/pdf" style="display:none" onchange="uploadDocFuncionario('${funcId}','${tipo}',this)"/>
+     <button onclick="document.getElementById('doc-${funcId}-${tipo}').click()" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;">📷 ${url?'Substituir':'Enviar'}</button>
+     <span id="doc-status-${funcId}-${tipo}" style="font-size:10px;color:var(--mu);margin-left:6px;"></span>
+    </div>
+   </div>`;
+  }).join('')}
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ document.body.appendChild(div);
+}
+
+async function uploadDocFuncionario(funcId,tipo,input){
+ if(!input.files[0])return;
+ const st=document.getElementById(`doc-status-${funcId}-${tipo}`);
+ if(st)st.textContent='☁️ Enviando...';
+ const r=new FileReader();
+ r.onload=async e=>{
+  const url=await salvarFotoGitHub(e.target.result,`docs/${funcId}`);
+  if(url){
+   const funcs=gFuncs();
+   const idx=funcs.findIndex(x=>x.id===funcId);
+   if(idx>=0){
+    if(!funcs[idx].docs)funcs[idx].docs={};
+    funcs[idx].docs[tipo]=url;
+    sFuncs(funcs);
+    if(st)st.textContent='✅ Salvo!';
+    setTimeout(()=>{if(st)st.textContent='';},2000);
+   }
+  } else {
+   if(st)st.textContent='❌ Erro';
+  }
+ };
+ r.readAsDataURL(input.files[0]);
+}
+
+// ─── BENEFÍCIOS ──────────────────────────────────────────
+function abrirBeneficios(funcId){
+ const f=gFuncs().find(x=>x.id===funcId);
+ if(!f)return;
+ const div=document.createElement('div');
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;display:flex;align-items:center;justify-content:center;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:16px;padding:20px;width:90%;max-width:340px;">
+  <p style="font-size:15px;font-weight:900;margin-bottom:14px;">🎁 Benefícios — ${f.nome}</p>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+   <div>
+    <label style="font-size:11px;color:var(--mu);">🚌 Vale-Transporte (mensal)</label>
+    <input id="ben-vt-${funcId}" type="number" step="0.01" class="inpm" value="${f.valeTransporte||0}" placeholder="0,00" style="margin-top:3px;"/>
+   </div>
+   <div>
+    <label style="font-size:11px;color:var(--mu);">🍽️ Vale-Alimentação / Refeição (mensal)</label>
+    <input id="ben-va-${funcId}" type="number" step="0.01" class="inpm" value="${f.valeAlimentacao||0}" placeholder="0,00" style="margin-top:3px;"/>
+   </div>
+   <div>
+    <label style="font-size:11px;color:var(--mu);">🏥 Plano de Saúde (mensal)</label>
+    <input id="ben-ps-${funcId}" type="number" step="0.01" class="inpm" value="${f.planoSaude||0}" placeholder="0,00" style="margin-top:3px;"/>
+   </div>
+   <div>
+    <label style="font-size:11px;color:var(--mu);">💼 Outros benefícios (mensal)</label>
+    <input id="ben-ou-${funcId}" type="number" step="0.01" class="inpm" value="${f.outrosBeneficios||0}" placeholder="0,00" style="margin-top:3px;"/>
+   </div>
+  </div>
+  <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:12px;text-align:center;">
+   <p style="font-size:11px;color:var(--mu);">Custo total mensal com benefícios</p>
+   <p style="font-size:18px;font-weight:900;color:#4488ff;" id="ben-total-${funcId}">R$ ${((f.valeTransporte||0)+(f.valeAlimentacao||0)+(f.planoSaude||0)+(f.outrosBeneficios||0)).toFixed(2)}</p>
+  </div>
+  <div style="display:flex;gap:8px;">
+   <button onclick="salvarBeneficios('${funcId}')" style="flex:1;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar</button>
+   <button onclick="this.closest('[style*=inset]').remove()" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--mu);font-size:12px;cursor:pointer;">Fechar</button>
+  </div>
+ </div>`;
+ div.onclick=e=>{if(e.target===div)div.remove();};
+ // Atualiza total em tempo real
+ ['vt','va','ps','ou'].forEach(k=>{
+  setTimeout(()=>{
+   document.getElementById(`ben-${k}-${funcId}`)?.addEventListener('input',()=>{
+    const vt=parseFloat(document.getElementById(`ben-vt-${funcId}`)?.value||0);
+    const va=parseFloat(document.getElementById(`ben-va-${funcId}`)?.value||0);
+    const ps=parseFloat(document.getElementById(`ben-ps-${funcId}`)?.value||0);
+    const ou=parseFloat(document.getElementById(`ben-ou-${funcId}`)?.value||0);
+    const el=document.getElementById(`ben-total-${funcId}`);
+    if(el)el.textContent='R$ '+(vt+va+ps+ou).toFixed(2);
+   });
+  },100);
+ });
+ document.body.appendChild(div);
+}
+
+function salvarBeneficios(funcId){
+ const vt=parseFloat(document.getElementById(`ben-vt-${funcId}`)?.value||0);
+ const va=parseFloat(document.getElementById(`ben-va-${funcId}`)?.value||0);
+ const ps=parseFloat(document.getElementById(`ben-ps-${funcId}`)?.value||0);
+ const ou=parseFloat(document.getElementById(`ben-ou-${funcId}`)?.value||0);
+ const funcs=gFuncs();
+ const idx=funcs.findIndex(x=>x.id===funcId);
+ if(idx<0)return;
+ funcs[idx].valeTransporte=vt;
+ funcs[idx].valeAlimentacao=va;
+ funcs[idx].planoSaude=ps;
+ funcs[idx].outrosBeneficios=ou;
+ sFuncs(funcs);
+ document.querySelector('[style*="inset:0"]')?.remove();
+ alert('✅ Benefícios salvos!');render();
+}
 
 render();
 setTimeout(checkBotPending,2000);
