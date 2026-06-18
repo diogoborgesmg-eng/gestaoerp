@@ -100,7 +100,7 @@ async function salvarGitHub(lanc, reciboUrl) {
   if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
   try {
     const fi = await req2('GET',
-      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
+      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
       null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
     console.log('GitHub resposta:', JSON.stringify(fi).substring(0,200));
     if (!fi.content) { console.error('fi.content undefined! Resposta:', JSON.stringify(fi).substring(0,200)); return; }
@@ -111,8 +111,8 @@ async function salvarGitHub(lanc, reciboUrl) {
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
     await req2('PUT',
-      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',
-      { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },
+      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
+      { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
       { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
     console.log('GitHub OK:', lanc.valor, lanc.categoria);
   } catch(eg) {
@@ -188,7 +188,7 @@ const server = http.createServer((req, res) => {
         if (!lanc || !lanc.valor) { await wpp(num, 'Nao identifiquei os dados. Tente enviar como foto.'); return; }
         // Salva no GitHub (mesmo fluxo das imagens)
         try {
-          const fi = await req2('GET','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',null,{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+          const fi = await req2('GET','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',null,{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
           if (!fi || !fi.content) { await wpp(num, 'Erro GitHub.'); return; }
           const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
           if (!fd.lancamentos) fd.lancamentos = [];
@@ -197,7 +197,7 @@ const server = http.createServer((req, res) => {
             fd.lancamentos.push({ id: (Date.now()+1).toString(36), ...lancJuros, tipo_lancamento: 'custo', setor: 'Geral', criadoEm: new Date().toISOString(), sincronizado: false });
           }
           if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
-          await req2('PUT','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',{ message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
+          await req2('PUT','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',{ message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
           let msgOk = 'Lancado! R$ '+lanc.valor.toFixed(2)+' - '+lanc.categoria;
           if (lancJuros) msgOk += '\n+ Juros: R$ '+lancJuros.valor.toFixed(2)+' - '+lancJuros.categoria;
           await wpp(num, msgOk);
