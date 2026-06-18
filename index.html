@@ -19905,7 +19905,7 @@ async function buscarNFsSEFAZ(){
   let novas=0;
   (data.nfs||[]).forEach(nf=>{
    if(!fila.find(f=>f.id===nf.id)){
-    fila.push({...nf,status:'pendente',recebidoEm:new Date().toISOString()});
+    fila.push({...nf,fornecedor:nf.emitente||nf.fornecedor||'Fornecedor SEFAZ',status:'pronto',recebidoEm:new Date().toISOString()});
     novas++;
    }
   });
