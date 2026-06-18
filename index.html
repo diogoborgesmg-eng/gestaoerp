@@ -6808,7 +6808,6 @@ function ir(n){
  aba=n;
  if(n!=="nf"){fs="idle"; fd=null; }
  document.querySelectorAll(".tb,.ni").forEach(b=>b.classList.remove("a"));
- render();
  const tabs=["dre","est","fila","vendas","voz","forn","ficha","compras","fixos","conf","ia","bi","mkt","fin","cfo","comp","aval","rh","pdv"];
  const ti=tabs.indexOf(n);
  if(ti>=0) document.querySelectorAll(".tb")[ti]?.classList.add("a");
@@ -19910,12 +19909,13 @@ async function buscarNFsSEFAZ(){
     novas++;
    }
   });
-  sFila(fila);
+  // Salva fila E NSU no mesmo objeto para evitar race condition
+  db.fila=fila;
   sdb(db);
   
   if(novas>0){
-   ir('fila');
-   setTimeout(()=>alert('✅ '+novas+' NF(s) nova(s) na fila!\nConfira abaixo 👇'),200);
+   render();
+   alert('✅ '+novas+' NF(s) nova(s) encontrada(s)!\nVerifique a Fila NF.');
   }else{
    alert('Resultado salvo!\nPeça pro Claude verificar o diagnóstico.\n\ncStat: '+(data.cStat||'?'));
   }
