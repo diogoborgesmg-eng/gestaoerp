@@ -329,7 +329,6 @@ module.exports = async function handler(req, res) {
       const maxNSU = (xml.match(/maxNSU>([\d]+)/) || [])[1] || novoNSU;
       const nfs = [];
       // Tenta múltiplos formatos de docZip (com e sem namespace, com espaços)
-      const docZipPattern = /docZip[^>]*schema[^>]*>([\s\S]+?)<\/[\w:]*docZip>/g;
       const docZipPattern2 = /<[\w:]*docZip[^>]*>([^<]+)<\/[\w:]*docZip>/g;
       const matches = [...xml.matchAll(docZipPattern2)];
       console.log('docZip encontrados:', matches.length, 'cStat:', cStat, 'maxNSU:', maxNSU);
@@ -344,60 +343,41 @@ module.exports = async function handler(req, res) {
           } catch(eg) {
             try { doc = buf.toString('utf8'); } catch(ez) { continue; }
           }
-          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1] || (doc.match(/Id="NFe([0-9]{44})/) || [])[1];
-          if (!chave) continue;
-          const emit = (doc.match(/<emit>[\s\S]*?<xNome>([^<]+)/) || [])[1] ||
-                       (doc.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
-          const cnpjEmit = (doc.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] ||
-                           (doc.match(/CNPJ>([^<]+)/) || [])[1] || '';
-          nfs.push({
-            id: chave, chave,
-            numero: (doc.match(/nNF>([^<]+)/) || [])[1] || '',
-            serie: (doc.match(/<serie>([^<]+)/) || [])[1] || '',
-            emitente: emit,
-            emitCNPJ: cnpjEmit,
-            valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1] || '0'),
-            data: ((doc.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
-            status: 'pendente'
-          });
+
+          // Um docZip pode conter 1 NFe completa (procNFe) OU vários resumos (resNFe) concatenados
+          const innerResNFe = [...doc.matchAll(/<resNFe[^>]*>([\s\S]*?)<\/resNFe>/g)];
+          const blocos = innerResNFe.length > 0 ? innerResNFe.map(x => x[1]) : [doc];
+
+          for (const bloco of blocos) {
+            const chave = (bloco.match(/chNFe>([^<]+)/) || [])[1] || (bloco.match(/Id="NFe([0-9]{44})/) || [])[1];
+            if (!chave) continue;
+            if (nfs.find(n => n.chave === chave)) continue; // evita duplicado
+            const emit = (bloco.match(/<emit>[\s\S]*?<xNome>([^<]+)/) || [])[1] ||
+                         (bloco.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
+            const cnpjEmit = (bloco.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] ||
+                             (bloco.match(/CNPJ>([^<]+)/) || [])[1] || '';
+            nfs.push({
+              id: chave, chave,
+              numero: (bloco.match(/nNF>([^<]+)/) || [])[1] || '',
+              serie: (bloco.match(/<serie>([^<]+)/) || [])[1] || '',
+              emitente: emit,
+              emitCNPJ: cnpjEmit,
+              valor: parseFloat((bloco.match(/vNF>([^<]+)/) || [])[1] || '0'),
+              data: ((bloco.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
+              status: 'pendente',
+              resumo: innerResNFe.length > 0
+            });
+          }
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
       }
-
-      // Também processa resNFe (resumo) — comum quando o XML completo não está mais disponível
-      const resNFePattern = /<resNFe[^>]*>([\s\S]*?)<\/resNFe>/g;
-      const resMatches = [...xml.matchAll(resNFePattern)];
-      console.log('resNFe encontrados:', resMatches.length);
-      let resumosAdicionados = 0;
-      for (const m of resMatches) {
-        try {
-          const doc = m[1];
-          const chave = (doc.match(/chNFe>([^<]+)/) || [])[1];
-          if (!chave) continue;
-          if (nfs.find(n => n.chave === chave)) continue; // já tem via docZip
-          const emit = (doc.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
-          const cnpjEmit = (doc.match(/CNPJ>([^<]+)/) || [])[1] || '';
-          nfs.push({
-            id: chave, chave,
-            numero: (doc.match(/nNF>([^<]+)/) || [])[1] || '',
-            serie: (doc.match(/serie>([^<]+)/) || [])[1] || '',
-            emitente: emit,
-            emitCNPJ: cnpjEmit,
-            valor: parseFloat((doc.match(/vNF>([^<]+)/) || [])[1] || '0'),
-            data: ((doc.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
-            status: 'pendente',
-            resumo: true
-          });
-          resumosAdicionados++;
-        } catch(ep2) { console.log('Erro parse resNFe:', ep2.message); }
-      }
-      console.log('Total NFs (docZip + resumo):', nfs.length, '| resumos:', resumosAdicionados);
+      console.log('Total NFs extraidas:', nfs.length);
 
       return res.status(200).json({
         ok: true, nfs, total: nfs.length, cnpjEnviado: cnpjLimpo, cnpjNoCert: cnpjNoCert||'nao detectado', certSubjectDebug: certSubjectFull||'', nsuEnviado: nsu,
         ultNSU: novoNSU, maxNSU, cStat, xMotivo,
-        docZipCount: matches.length, resNFeCount: resMatches.length,
+        docZipCount: matches.length,
         xmlDebug: xml.substring(0,1500),
-        msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU+' | docZip:'+matches.length+' resNFe:'+resMatches.length
+        msg: nfs.length > 0 ? nfs.length+' NF(s) encontrada(s)!' : 'cStat:'+cStat+' '+xMotivo+' | maxNSU:'+maxNSU+' | docZip:'+matches.length
       });
     } catch(e) { return res.status(200).json({ ok: false, erro: e.message }); }
   }
