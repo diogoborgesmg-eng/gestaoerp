@@ -1,25 +1,13 @@
 {
-  "timestamp": "2026-06-17T18:32:11.981Z",
-  "nsuEnviado": "000000000004236",
+  "timestamp": "2026-06-18T04:16:30.753Z",
+  "nsuEnviado": "000000000000000",
   "certUsado": "Cert 1 CNPJ 44686412000100",
   "cnpjConsultado": "44686412000100",
   "resposta": {
-    "ok": true,
-    "nfs": [],
-    "total": 0,
-    "cnpjEnviado": "44686412000100",
-    "cnpjNoCert": "44686412000100",
-    "certSubjectDebug": "countryName=BR || organizationName=ICP-Brasil || stateOrProvinceName=MG || localityName=PATOS DE MINAS || organizationalUnitName=20746095000102 || organizationalUnitName=Secretaria da Receita Federal do Brasil - RFB || organizationalUnitName=RFB e-CNPJ A1 || organizationalUnitName=presencial || commonName=DIOGO JOSE DOS SANTOS BORGES LTDA:44686412000100",
-    "nsuEnviado": "000000000004236",
-    "ultNSU": "000000000004286",
-    "maxNSU": "000000000004660",
-    "cStat": "138",
-    "xMotivo": "Documento(s) localizado(s)",
-    "docZipCount": 50,
-    "resNFeCount": 0,
-    "xmlDebug": "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><nfeDistDFeInteresseResponse xmlns=\"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe\"><nfeDistDFeInteresseResult><retDistDFeInt xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" versao=\"1.01\" xmlns=\"http://www.portalfiscal.inf.br/nfe\"><tpAmb>1</tpAmb><verAplic>1.7.7</verAplic><cStat>138</cStat><xMotivo>Documento(s) localizado(s)</xMotivo><dhResp>2026-06-17T15:32:10-03:00</dhResp><ultNSU>000000000004286</ultNSU><maxNSU>000000000004660</maxNSU><loteDistDFeInt><docZip NSU=\"000000000004237\" schema=\"resNFe_v1.01.xsd\">H4sIAAAAAAAEAIVSXW+CMBT9K4Z36W2hVsi1CVPMXBw6ULPsDRGFRMFAp26/fkXcFveyPrS3J+fj9qZYpXUwTjuXw76o3Uu9GRiZUkeXkPP5bJ4ts6x2hAFQ8vo8jZIsPcTGDzn/n9zNi1rFRZIanVNa1XE5MKgJ9OZxpz+WlYr327xO4r2ZF1tzXZFimxoSk0y3KC3KemAxq09txwa9HCE412kAjDc4UCEc3rcZtZG0GhwG8yd5r0FyBfESlIdULh/8cOoFo4nXCf1x6EfDWdSZLkYekpaAE18K0J5cMJsy0UeiEdxk/iGXDFivC1aX8QV1XGCu5eirC4CkJaA6BmNJkVxPPOmN90yhG2xK3OS7VbyXIUxfkt1lvF4F1rvn84+oeFSzyZv9uRxop5akI8M0WavyTyqlLhO/qTcOFvOqVJI2UxM29ARYHPTbWxiTKFfNgHRn3yWS9i/IL3aRmCYUAgAA</docZip><docZip NSU=\"000000000004238\" schema=\"procNFe_v4.00.xsd\">H4sIAAAAAAAEAO2deZOiutrAvwo1b92qe6vPCIR9ymMVq6ICiuD2nyLS7rbi+unfJIjt2to9c07duXXOIsmTkPXJjychpLPTflhZzAJiHS6Wndmf39gMRX0jtpPxdPnnt9c4nv8gyc1mk5nPFnFn3B8sg844M5j2M90",
-    "msg": "cStat:138 Documento(s) localizado(s) | maxNSU:000000000004660 | docZip:50 resNFe:0"
+    "ok": false,
+    "erro": "SEFAZ HTTP 403",
+    "raw": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\r\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\r\n<head>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\r\n<title>403 - Forbidden: Access is denied.</title>\r\n<style type=\"text/css\">\r\n<!--\r\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\r\nfieldset{padding:0 15px 10px 15px;} \r\nh1{font-size:2.4em;margin:0;color:#FFF;}"
   },
-  "ok": true,
-  "erro": null
+  "ok": false,
+  "erro": "SEFAZ HTTP 403"
 }
