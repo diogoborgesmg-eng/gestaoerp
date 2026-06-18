@@ -162,11 +162,12 @@ const server = http.createServer((req, res) => {
           'Nao consegui extrair. Tente: 1) salvar a imagem e reenviar, 2) tirar foto da tela do comprovante.' : 
           'Analise:\n' + analise.substring(0,300);
         await wpp(num, msgAnalise);
-        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa fisica - NAO usar para alimentos,comida,feira,mercado,padaria,carne,frango,legumes,hortifruti)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. Se nao tiver valor retorne {"valor":0}';
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"valorJuros":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa fisica - NAO usar para alimentos,comida,feira,mercado,padaria,carne,frango,legumes,hortifruti)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. IMPORTANTE: valorJuros e o valor de JUROS ou MULTA cobrado SEPARADAMENTE do valor principal (comum em boleto pago com atraso). Se o comprovante mostrar "Valor original" + "Juros/Multa" separados, valor=valor original e valorJuros=juros/multa. Se nao houver juros/multa, valorJuros=0. Se nao tiver valor retorne {"valor":0}';
         const r2 = await claude([{ role:'user', content: prompt2 }], 300);
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
         const match = texto2.match(/\{[\s\S]*\}/);
         let lanc = null;
+        let lancJuros = null;
         if (match) {
           try {
             const d = JSON.parse(match[0]);
@@ -179,6 +180,9 @@ const server = http.createServer((req, res) => {
               const _desc = d.descricao&&d.descricao!==d.destinatario&&d.descricao!=='SEM_DESCRICAO' ? d.descricao : '';
               return { valor: d.valor, categoria: d.categoria||'Outros', descricao: _desc, destinatario: _dest, tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: 'alta', setor: 'Geral', origem: 'whatsapp_texto' };
             })();
+            if (d.valorJuros && d.valorJuros > 0) {
+              lancJuros = { valor: d.valorJuros, categoria: '💳 Taxas / Impostos', descricao: 'Juros/multa', destinatario: lanc.destinatario + ' (juros)', tipo: lanc.tipo, data: lanc.data, confianca: 'alta', setor: 'Geral', origem: 'whatsapp_texto' };
+            }
           } catch(e) { lanc = null; }
         }
         if (!lanc || !lanc.valor) { await wpp(num, 'Nao identifiquei os dados. Tente enviar como foto.'); return; }
@@ -189,9 +193,14 @@ const server = http.createServer((req, res) => {
           const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
           if (!fd.lancamentos) fd.lancamentos = [];
           fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', criadoEm: new Date().toISOString(), sincronizado: false });
+          if (lancJuros) {
+            fd.lancamentos.push({ id: (Date.now()+1).toString(36), ...lancJuros, tipo_lancamento: 'custo', setor: 'Geral', criadoEm: new Date().toISOString(), sincronizado: false });
+          }
           if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
           await req2('PUT','https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json',{ message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha },{'Authorization':'token '+GHTOKEN,'Accept':'application/vnd.github.v3+json'});
-          await wpp(num, 'Lancado! R$ '+lanc.valor.toFixed(2)+' - '+lanc.categoria);
+          let msgOk = 'Lancado! R$ '+lanc.valor.toFixed(2)+' - '+lanc.categoria;
+          if (lancJuros) msgOk += '\n+ Juros: R$ '+lancJuros.valor.toFixed(2)+' - '+lancJuros.categoria;
+          await wpp(num, msgOk);
         } catch(e) { await wpp(num, 'Erro ao salvar: '+e.message); }
         return;
       }
@@ -202,15 +211,16 @@ const server = http.createServer((req, res) => {
         await wpp(num, 'Analisando...');
         const r1 = await claude([{ role:'user', content:[
           tipo === 'documentMessage' ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data:b64 } } : { type:'image', source:{ type:'base64', media_type: b64.startsWith('/9j/')||b64.startsWith('/9J/')?'image/jpeg':b64.startsWith('iVBORw')?'image/png':'image/jpeg', data:b64 } },
-          { type:'text', text:'Leia este comprovante de pagamento. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR: campo "Valor" ou "Total"; (2) NOME DE QUEM RECEBEU: Stone/C6/Itau: procure em "DADOS DE DESTINO > Nome" ou "Destino > Nome"; PIX comum: procure em "Favorecido", "Beneficiario", "Para", "Recebedor"; Cartao/maquininha: nome do estabelecimento cobrado; NUNCA use "Di Casa Gastronomia" como nome - esse e o pagador, nao o recebedor; (3) DATA: campo "Data", "Realizada em", "Data/Hora"; (4) TIPO: pix, credito, debito, boleto ou dinheiro; (5) OBSERVACAO: campo descricao, motivo, historico do pagamento. Se nao tiver informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
+          { type:'text', text:'Leia este comprovante de pagamento. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR: campo "Valor" ou "Total"; (2) NOME DE QUEM RECEBEU: Stone/C6/Itau: procure em "DADOS DE DESTINO > Nome" ou "Destino > Nome"; PIX comum: procure em "Favorecido", "Beneficiario", "Para", "Recebedor"; Cartao/maquininha: nome do estabelecimento cobrado; NUNCA use "Di Casa Gastronomia" como nome - esse e o pagador, nao o recebedor; (3) DATA: campo "Data", "Realizada em", "Data/Hora"; (4) TIPO: pix, credito, debito, boleto ou dinheiro; (5) OBSERVACAO: campo descricao, motivo, historico do pagamento; (6) JUROS/MULTA: se houver cobranca de juros ou multa SEPARADA do valor principal (comum em boleto pago com atraso), informe o valor desses juros/multa separadamente do valor original. Se nao tiver informe SEM_DESCRICAO. Liste cada campo claramente em portugues.' }
         ]}], 800);
         const analise = r1.content && r1.content[0] ? r1.content[0].text : 'Nao consegui extrair.';
         console.log('Analise:', analise.substring(0,100));
-        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"destinatario":"NOME COMPLETO da conta/pessoa que recebeu - campo Favorecido/Beneficiario/Nome da conta destino - NAO usar observacao/descricao/motivo do pix","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. Se nao tiver valor retorne {"valor":0}';
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"valorJuros":0.00,"destinatario":"NOME COMPLETO da conta/pessoa que recebeu - campo Favorecido/Beneficiario/Nome da conta destino - NAO usar observacao/descricao/motivo do pix","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. IMPORTANTE: valorJuros e o valor de JUROS ou MULTA cobrado SEPARADAMENTE do valor principal (comum em boleto pago com atraso). Se o comprovante mostrar "Valor original" + "Juros/Multa" separados, valor=valor original e valorJuros=juros/multa. Se nao houver juros/multa, valorJuros=0. Se nao tiver valor retorne {"valor":0}';
         const r2 = await claude([{ role:'user', content: prompt2 }], 200);
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
         const match = texto2.match(/\{[\s\S]*\}/);
         let lanc = null;
+        let lancJuros = null;
         if (match) {
           try {
             const d = JSON.parse(match[0]);
@@ -225,13 +235,18 @@ const server = http.createServer((req, res) => {
               const _desc = d.descricao&&d.descricao!==d.destinatario&&d.descricao!=='SEM_DESCRICAO' ? d.descricao : '';
               return { valor: d.valor, categoria: d.categoria||'Outros', descricao: _desc, destinatario: _dest, tipo: d.tipo||'pix', data: d.data||new Date().toLocaleDateString('pt-BR'), confianca: d.confianca||'alta', setor: d.setor||'Geral', origem: 'whatsapp' };
             })();
+              if (d.valorJuros && d.valorJuros > 0) {
+                lancJuros = { valor: d.valorJuros, categoria: '💳 Taxas / Impostos', descricao: 'Juros/multa', destinatario: lanc.destinatario + ' (juros)', tipo: lanc.tipo, data: lanc.data, confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
+              }
               const reciboUrl2 = await salvarReciboGitHub(b64, tipo);
               await salvarGitHub(lanc, reciboUrl2);
+              if (lancJuros) await salvarGitHub(lancJuros, reciboUrl2);
             }
           } catch(ep) { console.error('parse err:', ep.message); }
         }
         let resp = 'Analise:\n' + analise + '\n\n_Di Casa Laranjinha_';
         if (lanc) resp += '\n\nLancado! R$ ' + lanc.valor.toFixed(2) + ' - ' + lanc.categoria;
+        if (lancJuros) resp += '\n+ Juros: R$ ' + lancJuros.valor.toFixed(2) + ' - ' + lancJuros.categoria;
         await wpp(num, resp);
       }
     } catch(e) { console.error('Erro:', e.message); }
