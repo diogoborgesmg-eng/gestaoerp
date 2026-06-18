@@ -19882,7 +19882,7 @@ async function buscarNFsSEFAZ(){
      if(ck.ok){const ckd=await ck.json();shaExist=ckd.sha;}
     }catch(e){}
     const body={message:'sefaz debug '+new Date().toISOString(),
-     content:btoa(unescape(encodeURIComponent(JSON.stringify(diag,null,2))))};
+     content:btoa(unescape(encodeURIComponent(JSON.stringify(diag,null,2)))),branch:'dados'};
     if(shaExist)body.sha=shaExist;
     await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/sefaz_debug.json',{
      method:'PUT',
@@ -23560,7 +23560,7 @@ async function sincronizarDreNuvem(){
     {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
    if(ck.ok){const ckd=await ck.json();shaExist=ckd.sha;}
   }catch(e){}
-  const body={message:'sync dre '+new Date().toISOString(),content:b64};
+  const body={message:'sync dre '+new Date().toISOString(),content:b64,branch:'dados'};
   if(shaExist)body.sha=shaExist;
   const resp=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/dre_sync.json',{
    method:'PUT',
