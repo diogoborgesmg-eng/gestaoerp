@@ -5885,7 +5885,7 @@ ${gauge(pct,0,100,"Conformidade","%",[{val:40,cor:"#ff3366"},{val:60,cor:"#f59e0
 <button onclick="exportarCompliancePDF()" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:11px;font-weight:700;cursor:pointer;">📄 Exportar</button>
 </div>
 <div id="comp-ia-res" style="margin-top:8px;"></div>
-<button onclick="abrirReclassificacaoLote()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:#4488ff;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:8px;">🔄 Reclassificar em Lote</button>
+
 </div><!-- RESUMO POR CATEGORIA -->
 <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
 ${Object.entries(porCat).map(([cat,data])=>{
@@ -10728,7 +10728,8 @@ ${SEGS.map(sg=>{
 </div>`:""}
 
 <!-- CUSTOS POR CATEGORIA -->
-${c>0&&isDiario?`<div class="card" style="margin-bottom:10px;">
+${c>0&&isDiario?`<button onclick="abrirReclassificacaoLote()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:#4488ff;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:8px;">🔄 Reclassificar em Lote</button>
+<div class="card" style="margin-bottom:10px;">
 <p class="lbl">🔴 Custos por Categoria</p>
 ${Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>{
  const barW=c>0?(val/c*100):0;
