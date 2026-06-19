@@ -19753,7 +19753,7 @@ function confirmarRecebimentoNF(nfId,total,pedidoId){
 // ═══ SINCRONIZAÇÃO BOT → SISTEMA ════════════════════════════
 async function sincronizarBotLancamentos(){
  try{
-  const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?nocache='+Date.now());
+  const resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/dados/bot_lancamentos.json?nocache='+Date.now());
   const data=await resp.json();
   const ja=ldb().botSincIds||[];
   const pendentes=(data.lancamentos||[]).filter(l=>!l.sincronizado&&!ja.includes(l.id));
@@ -19868,7 +19868,7 @@ async function confirmarLancamentosBot(){
 
 async function checkBotPending(){
  try{
-  const _resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const _resp=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/dados/bot_lancamentos.json?t='+Date.now());
   const _data=await _resp.json();
   const _rej=(ldb().botRejeitados||[]);
    const _pend=(_data.lancamentos||[]).filter(function(l){return !l.sincronizado&&!_rej.includes(l.id);});
@@ -22720,7 +22720,7 @@ async function lancarNFCompleta(nfId){
 
 async function marcarBotSincronizado(botId){
  try{
-  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/main/bot_lancamentos.json?t='+Date.now());
+  const r=await fetch('https://raw.githubusercontent.com/diogoborgesmg-eng/gestaoerp/dados/bot_lancamentos.json?t='+Date.now());
   const data=await r.json();
   const db2=ldb();
   const df=gDadosFiscais();
@@ -22737,14 +22737,14 @@ async function marcarBotSincronizado(botId){
    if(l.id===botId&&!l.sincronizado){l.sincronizado=true;changed=true;}
   });
   if(!changed)return;
-  const infoR=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',
+  const infoR=await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json?ref=dados',
    {headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}});
   const info=await infoR.json();
   await fetch('https://api.github.com/repos/diogoborgesmg-eng/gestaoerp/contents/bot_lancamentos.json',{
    method:'PUT',
    headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
    body:JSON.stringify({message:'sync: marca lancamento como sincronizado',
-    content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))),'sha':info.sha})
+    content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))),'sha':info.sha,branch:'dados'})
   });
  }catch(e){console.log('marcarBotSincronizado erro:',e.message);}
 }
