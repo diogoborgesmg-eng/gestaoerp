@@ -95,6 +95,31 @@ async function claude(messages, maxTok) {
   });
 }
 
+async function salvarGitHubBatch(lancamentos, reciboUrl) {
+  if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
+  if (!lancamentos || !lancamentos.length) return;
+  try {
+    const fi = await req2('GET',
+      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
+      null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
+    if (!fi.content) { console.error('fi.content undefined!'); return; }
+    const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
+    if (!fd.lancamentos) fd.lancamentos = [];
+    lancamentos.forEach((lanc, idx) => {
+      fd.lancamentos.push({ id: Date.now().toString(36)+'_'+idx, ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
+        criadoEm: new Date().toISOString(), sincronizado: false });
+    });
+    if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
+    await req2('PUT',
+      'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
+      { message: 'bot:lote:'+lancamentos.length, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
+      { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
+    console.log('GitHub OK - lote de', lancamentos.length, 'lancamento(s) salvos juntos');
+  } catch(eg) {
+    console.error('GitHub batch err:', eg.message);
+  }
+}
+
 async function salvarGitHub(lanc, reciboUrl) {
   console.log('GHTOKEN presente:', !!GHTOKEN);
   if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
@@ -233,14 +258,13 @@ const server = http.createServer((req, res) => {
               for (const pre of _prefixos) { if (_dest.toLowerCase().startsWith(pre.toLowerCase())) { _dest = _dest.slice(pre.length).trim(); break; } }
               const _desc = p.descricao && p.descricao !== p.destinatario && p.descricao !== 'SEM_DESCRICAO' ? p.descricao : '';
               const lanc = { valor: p.valor, categoria: p.categoria || 'Outros', descricao: _desc, destinatario: _dest, tipo: p.tipo || 'pix', data: p.data || new Date().toLocaleDateString('pt-BR'), confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
-              await salvarGitHub(lanc, reciboUrl2);
               lancamentosFeitos.push(lanc);
               if (p.valorJuros && p.valorJuros > 0) {
                 const lancJuros = { valor: p.valorJuros, categoria: '💳 Taxas / Impostos', descricao: 'Juros/multa', destinatario: _dest + ' (juros)', tipo: lanc.tipo, data: lanc.data, confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
-                await salvarGitHub(lancJuros, reciboUrl2);
                 lancamentosFeitos.push(lancJuros);
               }
             }
+            await salvarGitHubBatch(lancamentosFeitos, reciboUrl2);
           } catch(ep) { console.error('parse err:', ep.message); }
         }
         let resp = 'Analise:\n' + analise + '\n\n_Di Casa Laranjinha_';
