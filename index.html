@@ -9332,6 +9332,11 @@ async function testarIfood(){
 async function importarIfoodExcel(inp){
  const f=inp?.files?.[0]; if(!f)return; inp.value="";
  const res=document.getElementById("ifood-excel-res");
+
+ // Pede qual loja é esse arquivo (formato novo não tem nome de loja legível)
+ const lojaEscolhida=prompt('Qual loja é esse arquivo do iFood?\n\nDigite: Restaurante, Pizzaria ou Espetaria');
+ if(!lojaEscolhida){if(res)res.innerHTML='';return;}
+
  if(res)res.innerHTML=`<div class="ial ay"><span>⟳</span><span>Carregando...</span></div>`;
  try{
  if(!window.XLSX){
@@ -9345,54 +9350,62 @@ async function importarIfoodExcel(inp){
  if(res)res.innerHTML=`<div class="ial ay"><span>⟳</span><span>Processando...</span></div>`;
  const buf=await f.arrayBuffer();
  const wb=window.XLSX.read(buf,{type:'array'});
- const ws=wb.Sheets[wb.SheetNames[0]];
+ // Aba "Relatório de Conciliação" (formato atual do iFood) ou primeira aba
+ const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('concilia'))||wb.SheetNames[0];
+ const ws=wb.Sheets[sheetName];
  const rows=window.XLSX.utils.sheet_to_json(ws,{defval:""});
  if(!rows.length)throw new Error("Arquivo vazio");
 
  const db=ldb(); const resumo={};
+ const pegaDia=(dataStr)=>{
+  if(!dataStr)return null;
+  // Formato ISO: 2026-06-01T19:16:49...Z OU número serial do Excel
+  const s=String(dataStr);
+  if(/^\d+(\.\d+)?$/.test(s.trim())){
+   const d=new Date(Math.round((parseFloat(s)-25569)*86400*1000));
+   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return `${m[3]}/${m[2]}/${m[1]}`;
+  return null;
+ };
+
  rows.forEach(row=>{
- const status=String(row["STATUS FINAL DO PEDIDO"]||"");
- if(!status.includes("CONCLU"))return;
- // Data pode vir como texto DD/MM/AAAA ou número serial do Excel
- let dtHora=String(row["DATA E HORA DO PEDIDO"]||"");
- if(/^\d+(\.\d+)?$/.test(dtHora.trim())){
- const d=new Date(Math.round((parseFloat(dtHora)-25569)*86400*1000));
- dtHora=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
- }else{
- dtHora=dtHora.split("")[0]||"";
- }
- if(!dtHora||dtHora.length<8)return;
- const loja=row["NOME DA LOJA"]||"iFood";
- const vendas=parseFloat(row["VALOR DOS ITENS (R$)"]||0);
- const taxas=Math.abs(parseFloat(row["TAXAS E COMISSOES (R$)"]||0));
- const liquido=parseFloat(row["VALOR LIQUIDO (R$)"]||0);
- const promoLoja=Math.abs(parseFloat(row["INCENTIVO PROMOCIONAL DA LOJA (R$)"]||0));
- const incentivoIfood=Math.abs(parseFloat(row["INCENTIVO PROMOCIONAL DO IFOOD (R$)"]||row["INCENTIVO DO IFOOD (R$)"]||row["SUBSIDIO IFOOD (R$)"]||0));
- const key=`${dtHora}||${loja}`;
- if(!resumo[key])resumo[key]={data:dtHora,loja,vendas:0,taxas:0,liquido:0,promoLoja:0,incentivoIfood:0,pedidos:0};
- resumo[key].vendas+=vendas; resumo[key].taxas+=taxas;
- resumo[key].liquido+=liquido; resumo[key].promoLoja+=promoLoja;
- resumo[key].incentivoIfood+=incentivoIfood;
- resumo[key].pedidos++;
+  const tipo=String(row["tipo_lancamento"]||"");
+  const desc=String(row["descricao_lancamento"]||"");
+  const valor=parseFloat(row["valor"]||0);
+  const dia=pegaDia(row["data_faturamento"]);
+  if(!dia)return;
+  const key=`${dia}||${lojaEscolhida}`;
+  if(!resumo[key])resumo[key]={data:dia,loja:lojaEscolhida,vendas:0,taxas:0,promoLoja:0,incentivoIfood:0,pedidos:0};
+
+  if(tipo==='Entrada Financeira'){
+   resumo[key].vendas+=valor;
+   resumo[key].pedidos++;
+  } else if(tipo==='Cobrança'||tipo==='Retenção'){
+   resumo[key].taxas+=Math.abs(valor);
+  } else if(tipo==='Subsídio'){
+   if(desc.includes('custeada pela loja')) resumo[key].promoLoja+=Math.abs(valor);
+   else if(desc.includes('custeada pelo iFood')) resumo[key].incentivoIfood+=Math.abs(valor);
+  }
  });
 
- let tv=0,tt=0,tl=0;
+ let tv=0,tt=0,tp=0;
  Object.values(resumo).forEach(r=>{
  const dia=r.data; if(!db[dia])db[dia]={r:[],c:[]};
- db[dia].r=db[dia].r.filter(x=>x.fonte!=="ifood");
- db[dia].c=db[dia].c.filter(x=>x.fonte!=="ifood_taxa"&&x.fonte!=="ifood_promo");
+ db[dia].r=db[dia].r.filter(x=>x.fonte!=="ifood"||x._lojaIfood!==r.loja);
+ db[dia].c=db[dia].c.filter(x=>(x.fonte!=="ifood_taxa"&&x.fonte!=="ifood_promo")||x._lojaIfood!==r.loja);
  if(!db[dia]._ifoodIncentivo)db[dia]._ifoodIncentivo={};
- if(r.vendas>0)db[dia].r.push({id:uid(),d:`iFood ${r.loja} (${r.pedidos} ped.)`,s:detectarSegmentoLoja(r.loja),v:r.vendas,fonte:"ifood"});
- if(r.taxas>0)db[dia].c.push({id:uid(),d:`Taxa iFood ${r.loja}`,cat:"Delivery (taxas)",s:detectarSegmentoLoja(r.loja),v:r.taxas,fonte:"ifood_taxa"});
- if(r.promoLoja>0)db[dia].c.push({id:uid(),d:`Promoção iFood ${r.loja}`,cat:"Marketing",s:detectarSegmentoLoja(r.loja),v:r.promoLoja,fonte:"ifood_promo"});
- // Incentivo do iFood — só informativo, não é custo nem receita
+ if(r.vendas>0)db[dia].r.push({id:uid(),d:`iFood ${r.loja} (${r.pedidos} ped.)`,s:detectarSegmentoLoja(r.loja),v:r.vendas,fonte:"ifood",_lojaIfood:r.loja});
+ if(r.taxas>0)db[dia].c.push({id:uid(),d:`Taxa iFood ${r.loja}`,cat:"🚚 Frete / Entregador",s:detectarSegmentoLoja(r.loja),v:r.taxas,fonte:"ifood_taxa",_lojaIfood:r.loja});
+ if(r.promoLoja>0)db[dia].c.push({id:uid(),d:`Promoção iFood ${r.loja}`,cat:"📱 Telecom / Internet",s:detectarSegmentoLoja(r.loja),v:r.promoLoja,fonte:"ifood_promo",_lojaIfood:r.loja});
  if(r.incentivoIfood>0)db[dia]._ifoodIncentivo[r.loja]=(db[dia]._ifoodIncentivo[r.loja]||0)+r.incentivoIfood;
- tv+=r.vendas; tt+=r.taxas; tl+=r.liquido;
+ tv+=r.vendas; tt+=r.taxas; tp+=r.promoLoja;
  });
  sdb(db);
  const dias=Object.keys(resumo).length;
- if(!dias)throw new Error("Nenhum pedido CONCLUÍDO encontrado");
- if(res)res.innerHTML=`<div class="ial ag"><span>✅</span><span>${dias} dia(s) · Vendas: ${brl(tv)} · Taxas: ${brl(tt)} · Líquido: ${brl(tl)}</span></div>`;
+ if(!dias)throw new Error("Nenhum dado encontrado no arquivo");
+ if(res)res.innerHTML=`<div class="ial ag"><span>✅</span><span>${lojaEscolhida} — ${dias} dia(s) · Vendas: ${brl(tv)} · Taxas: ${brl(tt)} · Promo: ${brl(tp)}</span></div>`;
  render();
  }catch(e){
  if(res)res.innerHTML=`<div class="ial ar"><span>❌</span><span>${e.message}</span></div>`;
