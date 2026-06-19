@@ -14430,7 +14430,7 @@ async function processarArquivoNF(file){
 
  try{
  setMsg("Preparando imagem...","Otimizando para leitura");
- const b64=await comprimirImagem(file,1800,1800,0.85);
+ const b64=await comprimirImagem(file,2400,2400,0.95);
  if(!b64)throw new Error("Não foi possível processar a imagem");
 
  setMsg("Lendo documento...","IA analisando");
