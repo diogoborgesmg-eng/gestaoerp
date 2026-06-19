@@ -23433,26 +23433,53 @@ async function confirmarEmissaoCheque(fornecedor, total, ids){
 }
 
 // ═══ RECLASSIFICAÇÃO EM LOTE ═══════════════════════════════
-function abrirReclassificacaoLote(){
+function abrirReclassificacaoLote(periodo){
+ periodo = periodo || 'hoje';
  const db=ldb();
- // Coleta todos os custos de todos os dias
- const todos=[];
+ const todosDias=[];
  Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(dia=>{
-  (db[dia].c||[]).forEach(l=>{ todos.push({...l,_dia:dia}); });
+  (db[dia].c||[]).forEach(l=>{ todosDias.push({...l,_dia:dia}); });
  });
- if(!todos.length){alert('Nenhum lançamento encontrado.');return;}
+ if(!todosDias.length){alert('Nenhum lançamento encontrado.');return;}
+
+ const hoje=new Date();hoje.setHours(0,0,0,0);
+ const filtrarPorPeriodo=(item)=>{
+  if(periodo==='tudo')return true;
+  const[d,m,y]=item._dia.split('/').map(Number);
+  const dt=new Date(y,m-1,d);
+  const diffDias=Math.round((hoje-dt)/(1000*60*60*24));
+  if(periodo==='hoje')return diffDias===0;
+  if(periodo==='7dias')return diffDias>=0&&diffDias<=7;
+  if(periodo==='30dias')return diffDias>=0&&diffDias<=30;
+  return true;
+ };
+ const todos=todosDias.filter(filtrarPorPeriodo);
 
  const cats=[...new Set(todos.map(l=>(l.cat||'').replace(/ \(.*\)/,'').trim()))].filter(Boolean).sort();
 
+ // Remove modal anterior se existir
+ document.getElementById('modal-reclassificar')?.remove();
  const div=document.createElement('div');
+ div.id='modal-reclassificar';
  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
  div.innerHTML=`<div style="padding:14px 14px 80px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
    <div>
     <p style="font-size:15px;font-weight:900;">🔄 Reclassificar em Lote</p>
-    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${todos.length} lançamentos</p>
+    <p style="font-size:11px;color:rgba(255,255,255,0.4);">${todos.length} lançamentos (${todosDias.length} no total)</p>
    </div>
-   <button onclick="this.closest('[style*=inset]').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+   <button onclick="document.getElementById('modal-reclassificar').remove()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">✕</button>
+  </div>
+
+  <!-- Filtro de período -->
+  <div style="margin-bottom:10px;">
+   <label style="font-size:11px;color:rgba(255,255,255,0.5);">Período</label>
+   <select onchange="abrirReclassificacaoLote(this.value)" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;margin-top:4px;">
+    <option value="hoje" ${periodo==='hoje'?'selected':''}>Hoje</option>
+    <option value="7dias" ${periodo==='7dias'?'selected':''}>Últimos 7 dias</option>
+    <option value="30dias" ${periodo==='30dias'?'selected':''}>Últimos 30 dias</option>
+    <option value="tudo" ${periodo==='tudo'?'selected':''}>Tudo</option>
+   </select>
   </div>
 
   <!-- Filtro por categoria -->
@@ -23519,7 +23546,7 @@ function aplicarReclassificacao(){
  if(!novaCat){alert('Selecione a nova categoria!');return;}
  const selecionados=[...document.querySelectorAll('.rl-check:checked')];
  if(!selecionados.length){alert('Selecione ao menos um lançamento!');return;}
- const div=document.querySelector('[style*="inset:0"]');
+ const div=document.getElementById('modal-reclassificar');
  const todos=div?._todos||[];
  const db=ldb();
  let count=0;
