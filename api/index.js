@@ -3,6 +3,24 @@
 // Di Casa Laranjinha — CNPJ: 44.686.412/0001-00
 // ═══════════════════════════════════════════════════════════
 
+// Parser XML real (com fallback seguro se o pacote nao carregar)
+let XMLParser = null;
+try { XMLParser = require('fast-xml-parser').XMLParser; } catch(eReq) { console.log('fast-xml-parser indisponivel, usando regex fallback'); }
+
+// Busca recursiva por uma chave em qualquer profundidade do objeto (tolera variações de estrutura)
+function deepFind(obj, key) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+  for (const k in obj) {
+    const v = obj[k];
+    if (v && typeof v === 'object') {
+      const found = deepFind(v, key);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
 const API_TOKEN = process.env.API_TOKEN || 'gestaoerp_diCasa_44686412';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY || '';
 
@@ -348,55 +366,116 @@ module.exports = async function handler(req, res) {
           const innerResNFe = [...doc.matchAll(/<resNFe[^>]*>([\s\S]*?)<\/resNFe>/g)];
           const blocos = innerResNFe.length > 0 ? innerResNFe.map(x => x[1]) : [doc];
 
-          const TPAG_MAP = {'01':'dinheiro','02':'cheque','03':'cartao','04':'cartao','05':'cartao','10':'cheque','15':'boleto','16':'deposito','17':'pix','18':'pix','90':'sem_pagamento'};
-
           for (const bloco of blocos) {
-            const chave = (bloco.match(/chNFe>([^<]+)/) || [])[1] || (bloco.match(/Id="NFe([0-9]{44})/) || [])[1];
+            let chave, emit='Fornecedor', cnpjEmit='', numero='', serie='', valor=0, data='', itens=[], parcelas=[], formaPagamento='';
+            let usouParser = false;
+
+            // ═══ MÉTODO 1 (preferencial): parser XML real ═══
+            if (XMLParser) {
+              try {
+                const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, attributeNamePrefix: '@_', parseTagValue: false });
+                const obj = parser.parse(bloco);
+
+                const infNFe = deepFind(obj, 'infNFe');
+                if (infNFe) {
+                  // Documento completo (procNFe)
+                  chave = deepFind(obj, 'chNFe') || (deepFind(infNFe, '@_Id') || '').toString().replace('NFe', '');
+                  const emitObj = deepFind(infNFe, 'emit');
+                  if (emitObj) {
+                    emit = deepFind(emitObj, 'xNome') || emit;
+                    cnpjEmit = deepFind(emitObj, 'CNPJ') || deepFind(emitObj, 'CPF') || '';
+                  }
+                  const ide = deepFind(infNFe, 'ide');
+                  if (ide) {
+                    numero = String(deepFind(ide, 'nNF') || '');
+                    serie = String(deepFind(ide, 'serie') || '');
+                    data = String(deepFind(ide, 'dhEmi') || deepFind(ide, 'dEmi') || '').substring(0,10);
+                  }
+                  const total = deepFind(infNFe, 'ICMSTot');
+                  if (total) valor = parseFloat(deepFind(total, 'vNF') || 0);
+
+                  let det = deepFind(infNFe, 'det');
+                  if (det) {
+                    const detArr = Array.isArray(det) ? det : [det];
+                    itens = detArr.map(d => {
+                      const p = deepFind(d, 'prod') || {};
+                      return {
+                        nome: deepFind(p, 'xProd') || '',
+                        qtd: parseFloat(deepFind(p, 'qCom') || 0),
+                        un: deepFind(p, 'uCom') || 'un'
+                      };
+                    }).filter(it => it.nome);
+                  }
+
+                  let dup = deepFind(infNFe, 'dup');
+                  if (dup) {
+                    const dupArr = Array.isArray(dup) ? dup : [dup];
+                    parcelas = dupArr.map(d => ({
+                      vencimento: deepFind(d, 'dVenc') || '',
+                      valor: parseFloat(deepFind(d, 'vDup') || 0)
+                    })).filter(p => p.vencimento);
+                  }
+
+                  let detPag = deepFind(infNFe, 'detPag');
+                  if (detPag) {
+                    const pagArr = Array.isArray(detPag) ? detPag : [detPag];
+                    const tPagCod = deepFind(pagArr[0], 'tPag') || '';
+                    const TPAG_MAP = {'01':'dinheiro','02':'cheque','03':'cartao','04':'cartao','05':'cartao','10':'cheque','15':'boleto','16':'deposito','17':'pix','18':'pix','90':'sem_pagamento'};
+                    formaPagamento = TPAG_MAP[tPagCod] || '';
+                  }
+                  usouParser = !!chave;
+                } else {
+                  // Resumo (resNFe) — sem itens
+                  chave = deepFind(obj, 'chNFe');
+                  if (chave) {
+                    emit = deepFind(obj, 'xNome') || emit;
+                    cnpjEmit = deepFind(obj, 'CNPJ') || deepFind(obj, 'CPF') || '';
+                    valor = parseFloat(deepFind(obj, 'vNF') || 0);
+                    data = String(deepFind(obj, 'dhEmi') || '').substring(0,10);
+                    usouParser = true;
+                  }
+                }
+              } catch (eParser) {
+                console.log('Parser XML falhou, usando fallback regex:', eParser.message);
+              }
+            }
+
+            // ═══ MÉTODO 2 (fallback de segurança): regex — só roda se o parser não achou nada ═══
+            if (!usouParser) {
+              chave = (bloco.match(/chNFe>([^<]+)/) || [])[1] || (bloco.match(/Id="NFe([0-9]{44})/) || [])[1];
+              if (!chave) continue;
+              emit = (bloco.match(/<emit>[\s\S]*?<xNome>([^<]+)/) || [])[1] || (bloco.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
+              cnpjEmit = (bloco.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] || (bloco.match(/CNPJ>([^<]+)/) || [])[1] || '';
+              numero = (bloco.match(/nNF>([^<]+)/) || [])[1] || '';
+              serie = (bloco.match(/<serie>([^<]+)/) || [])[1] || '';
+              valor = parseFloat((bloco.match(/vNF>([^<]+)/) || [])[1] || '0');
+              data = ((bloco.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10);
+              const detsRaw = [...bloco.matchAll(/<det\b[^>]*>([\s\S]*?)<\/det>/g)];
+              itens = detsRaw.map(d => {
+                const p = d[1];
+                return { nome: (p.match(/xProd>([^<]+)/) || [])[1] || '', qtd: parseFloat((p.match(/qCom>([^<]+)/) || [])[1] || '0'), un: (p.match(/uCom>([^<]+)/) || [])[1] || 'un' };
+              }).filter(it => it.nome);
+              const dupsRaw = [...bloco.matchAll(/<dup\b[^>]*>([\s\S]*?)<\/dup>/g)];
+              parcelas = dupsRaw.map(d => ({ vencimento: (d[1].match(/dVenc>([^<]+)/) || [])[1] || '', valor: parseFloat((d[1].match(/vDup>([^<]+)/) || [])[1] || '0') })).filter(p => p.vencimento);
+              const tPagCod = (bloco.match(/tPag>([^<]+)/) || [])[1] || '';
+              const TPAG_MAP = {'01':'dinheiro','02':'cheque','03':'cartao','04':'cartao','05':'cartao','10':'cheque','15':'boleto','16':'deposito','17':'pix','18':'pix','90':'sem_pagamento'};
+              formaPagamento = TPAG_MAP[tPagCod] || '';
+            }
+
             if (!chave) continue;
-            if (nfs.find(n => n.chave === chave)) continue; // evita duplicado
-            const emit = (bloco.match(/<emit>[\s\S]*?<xNome>([^<]+)/) || [])[1] ||
-                         (bloco.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
-            const cnpjEmit = (bloco.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] ||
-                             (bloco.match(/CNPJ>([^<]+)/) || [])[1] || '';
-
-            // ═══ ITENS — extrai cada <det> (produto) do documento completo ═══
-            const detsRaw = [...bloco.matchAll(/<det\b[^>]*>([\s\S]*?)<\/det>/g)];
-            const itens = detsRaw.map(d => {
-              const p = d[1];
-              return {
-                nome: (p.match(/xProd>([^<]+)/) || [])[1] || '',
-                qtd: parseFloat((p.match(/qCom>([^<]+)/) || [])[1] || '0'),
-                un: (p.match(/uCom>([^<]+)/) || [])[1] || 'un',
-                valorUnit: parseFloat((p.match(/vUnCom>([^<]+)/) || [])[1] || '0'),
-                valorTotal: parseFloat((p.match(/vProd>([^<]+)/) || [])[1] || '0')
-              };
-            }).filter(it => it.nome);
-
-            // ═══ PARCELAS — extrai cada <dup> (duplicata/vencimento) ═══
-            const dupsRaw = [...bloco.matchAll(/<dup\b[^>]*>([\s\S]*?)<\/dup>/g)];
-            const parcelas = dupsRaw.map(d => ({
-              vencimento: (d[1].match(/dVenc>([^<]+)/) || [])[1] || '',
-              valor: parseFloat((d[1].match(/vDup>([^<]+)/) || [])[1] || '0')
-            })).filter(p => p.vencimento);
-
-            // ═══ FORMA DE PAGAMENTO — <tPag> código ═══
-            const tPagCod = (bloco.match(/tPag>([^<]+)/) || [])[1] || '';
-            const formaPagamento = TPAG_MAP[tPagCod] || '';
+            if (nfs.find(n => n.chave === chave)) continue;
 
             nfs.push({
-              id: chave, chave,
-              numero: (bloco.match(/nNF>([^<]+)/) || [])[1] || '',
-              serie: (bloco.match(/<serie>([^<]+)/) || [])[1] || '',
-              emitente: emit,
-              emitCNPJ: cnpjEmit,
-              valor: parseFloat((bloco.match(/vNF>([^<]+)/) || [])[1] || '0'),
-              data: ((bloco.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
+              id: chave, chave, numero, serie,
+              emitente: emit, emitCNPJ: cnpjEmit,
+              valor, data,
               status: 'pendente',
-              resumo: innerResNFe.length > 0 || itens.length === 0,
-              itens: itens.length ? itens.map(it=>({nome:it.nome,qtd:it.qtd,un:it.un})) : undefined,
+              resumo: itens.length === 0,
+              itens: itens.length ? itens : undefined,
               parcelas: parcelas.length ? parcelas : undefined,
               vencimento: parcelas.length ? parcelas[0].vencimento : undefined,
-              formaPagamento: formaPagamento || undefined
+              formaPagamento: formaPagamento || undefined,
+              metodoLeitura: usouParser ? 'parser' : 'regex'
             });
           }
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
