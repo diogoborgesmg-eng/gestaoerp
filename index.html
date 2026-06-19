@@ -544,6 +544,17 @@ function abrirRevisao(id){
 </div>
 <div class="campo"><label>Vencimento (FAT)</label>
 <input type="text" id="rev-venc" value="${item.vencimento||''}" placeholder="DD/MM/AAAA" style="background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:12px;width:100%;"/></div>
+<div style="display:flex;gap:8px;">
+<div class="campo" style="flex:1;"><label>Tipo de Nota</label>
+<select id="rev-tipo" style="background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:12px;width:100%;">
+<option value="formal" ${item.tipo!=='informal'?'selected':''}>📄 NF-e Formal</option>
+<option value="informal" ${item.tipo==='informal'?'selected':''}>📝 Nota Informal</option>
+</select></div>
+<div class="campo" style="flex:1;"><label>Forma Pagamento</label>
+<select id="rev-pag" style="background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:12px;width:100%;">
+${['boleto','pix','cheque','dinheiro','cartao'].map(p=>`<option value="${p}" ${item.formaPagamento===p?'selected':''}>${p}</option>`).join('')}
+</select></div>
+</div>
 <div class="campo"><label>Valor Total (R$)</label>
 <input type="number" id="rev-valor" value="${item.valor||''}" step="0.01" style="background:var(--sf);border:1px solid rgba(255,51,102,0.4);border-radius:8px;padding:8px;color:var(--re);font-size:14px;font-weight:700;width:100%;"/></div>
 ${item.avisovalor?`<div class="ial ay"><span>⚠️</span><span>${item.avisovalor}</span></div>`:""}
@@ -582,6 +593,10 @@ placeholder="Nome do produto"/>
 <span style="font-size:10px;color:var(--mu);">Qtd:</span>
 <input type="number" value="${it.quantidade}" step="0.01" onchange="revEditItem(${i},'quantidade',parseFloat(this.value))"
 style="background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:4px 6px;color:var(--tx);font-size:12px;width:60px;font-family:'Space Mono',monospace;"/>
+
+<select onchange="revEditItem(${i},'unidade',this.value)" style="background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:4px 3px;color:var(--tx);font-size:11px;">
+${['cx','kg','un','lt','dz','g'].map(u=>`<option value="${u}"${(it.unidade||'cx')===u?' selected':''}>${u}</option>`).join('')}
+</select>
 </div>
 <div style="display:flex;align-items:center;gap:4px;">
 <span style="font-size:10px;color:var(--mu);">UN/cx:</span>
@@ -732,6 +747,8 @@ function confirmarRevisao(id){
  item.data=document.getElementById("rev-data")?.value?.trim()||item.data;
  item.vencimento=document.getElementById("rev-venc")?.value?.trim()||item.vencimento;
  item.valor=parseFloat(document.getElementById("rev-valor")?.value)||item.valor;
+ item.tipo=document.getElementById("rev-tipo")?.value||item.tipo||"formal";
+ item.formaPagamento=document.getElementById("rev-pag")?.value||item.formaPagamento;
  if(item.itens&&item.fornecedor){
  item.itens.forEach(it=>{
  if(it.unidades_por_cx&&it.unidades_por_cx>1){
@@ -1264,7 +1281,7 @@ function lancarItemNoSistema(item){
  const grp=it.categoria==="venda_direta"?{...detectarGrupo(it.descricao),cat:"venda_direta"}:
  it.categoria==="limpeza_embalagem"?{...detectarGrupo(it.descricao),cat:"limpeza_embalagem"}:
  detectarGrupo(it.descricao);
- db.est.push({id:uid(),n:it.descricao,u:"cx",q:qtdCx,qi:qtdCx,qun:qtdUn,upc,
+ db.est.push({id:uid(),n:it.descricao,u:(it.unidade||"cx"),q:qtdCx,qi:qtdCx,qun:qtdUn,upc,
  cu:cuPorUn,cuAnterior:cuPorUn,grupo:grp,
  lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:hj(),nf:item.numero||""}],min:0,s:[],perdas:[]});
  }
@@ -14435,6 +14452,8 @@ async function processarArquivoNF(file){
 
  setMsg("Lendo documento...","IA analisando");
 
+ const fotoUrlScan=await salvarFotoGitHub('data:image/jpeg;base64,'+b64,'notas');
+
  const data=await claudeAPI({
  model:MODEL,
  max_tokens:2000,
@@ -14451,7 +14470,7 @@ async function processarArquivoNF(file){
  const parsed=JSON.parse(jsonMatch[0]);
  if(parsed.valor_total<0)parsed.valor_total=0;
  parsed.itens=(parsed.itens||[]).filter(it=>it.descricao&&it.descricao.trim());
- fd=parsed; fs="done";
+ fd=parsed; fd.fotoUrl=fotoUrlScan; fs="done";
  fd._autoLancado=false;
 
  }catch(e){
