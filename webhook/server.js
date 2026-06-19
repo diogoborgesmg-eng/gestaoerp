@@ -298,37 +298,67 @@ async function checarDispatchDiario(){
     if (ultimoDispatchDia === brDataChave) return;
     ultimoDispatchDia = brDataChave;
 
-    const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/main/dre_sync.json?t='+Date.now(),null,{});
+    const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
     if (!r || typeof r !== 'object') { console.log('Dispatch 6h: sem dre_sync.json ainda'); return; }
 
     const ontem = new Date(agora.getTime() - 24*60*60*1000);
     const ontemBR = ontem.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
     const hojeBR = agora.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+    const destinos = ['5534996853258','5534997692282']; // Diogo, Herielly
 
-    const diaOntem = r[ontemBR] || { r: [], c: [] };
-    const receita = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
-    const custo = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
-    const lucro = receita - custo;
-
+    // ═══ MENSAGEM 1: Contas a Pagar de hoje ═══
     const contasHoje = (r.contasPagar||[]).filter(c => c.status === 'pendente' && c.vencimento === hojeBR);
     const totalContas = contasHoje.reduce((s,c)=>s+Number(c.valor||0),0);
 
-    let msg = '📊 *Balanço — ' + ontemBR + '*\n\n';
-    msg += '💰 Receita: R$ ' + receita.toFixed(2) + '\n';
-    msg += '💸 Custos: R$ ' + custo.toFixed(2) + '\n';
-    msg += (lucro >= 0 ? '✅' : '⚠️') + ' Resultado: R$ ' + lucro.toFixed(2) + '\n\n';
-
+    let msg1 = '🏦 *Contas a Pagar — ' + hojeBR + '*\n\n';
     if (contasHoje.length) {
-      msg += '🏦 *Contas a pagar hoje (' + hojeBR + ')*\n';
-      contasHoje.forEach(c => { msg += '• ' + c.fornecedor + ': R$ ' + Number(c.valor).toFixed(2) + '\n'; });
-      msg += '\n*Total do dia: R$ ' + totalContas.toFixed(2) + '*';
+      contasHoje.forEach(c => { msg1 += '• ' + c.fornecedor + ': R$ ' + Number(c.valor).toFixed(2) + '\n'; });
+      msg1 += '\n*Total do dia: R$ ' + totalContas.toFixed(2) + '*';
     } else {
-      msg += '🏦 Nenhuma conta vence hoje.';
+      msg1 += 'Nenhuma conta vence hoje. ✅';
     }
 
-    await wpp('5534996853258', msg); // Diogo
-    await wpp('5534997692282', msg); // Herielly
-    console.log('✅ Dispatch diário enviado — ' + ontemBR);
+    // ═══ MENSAGEM 2: Balanço de ontem + evolução dia a dia do mês ═══
+    const diaOntem = r[ontemBR] || { r: [], c: [] };
+    const receitaOntem = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    const custoOntem = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    const lucroOntem = receitaOntem - custoOntem;
+
+    let msg2 = '📊 *Balanço — ' + ontemBR + '*\n\n';
+    msg2 += '💰 Receita: R$ ' + receitaOntem.toFixed(2) + '\n';
+    msg2 += '💸 Custos: R$ ' + custoOntem.toFixed(2) + '\n';
+    msg2 += (lucroOntem >= 0 ? '✅' : '⚠️') + ' Resultado: R$ ' + lucroOntem.toFixed(2) + '\n';
+
+    // Evolução dia a dia do mês atual (dia 1 até ontem)
+    const mesAtual = ontem.getMonth();
+    const anoAtual = ontem.getFullYear();
+    const diasDoMes = [];
+    for (let d = 1; d <= ontem.getDate(); d++) {
+      const dt = new Date(anoAtual, mesAtual, d);
+      const diaBR = dt.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+      const diaData = r[diaBR] || { r: [], c: [] };
+      const rec = (diaData.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+      const cus = (diaData.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+      diasDoMes.push({ dia: d, receita: rec, custo: cus, resultado: rec - cus });
+    }
+
+    const totalMesReceita = diasDoMes.reduce((s,d)=>s+d.receita,0);
+    const totalMesCusto = diasDoMes.reduce((s,d)=>s+d.custo,0);
+    const totalMesResultado = totalMesReceita - totalMesCusto;
+    const margemMes = totalMesReceita > 0 ? (totalMesResultado/totalMesReceita*100) : 0;
+
+    msg2 += '\n📆 *Evolução do mês (dia a dia)*\n';
+    diasDoMes.forEach(d => {
+      const icon = d.resultado >= 0 ? '🟢' : '🔴';
+      msg2 += icon + ' ' + String(d.dia).padStart(2,'0') + ': R$ ' + d.resultado.toFixed(2) + '\n';
+    });
+    msg2 += '\n*Total mês:* Receita R$ ' + totalMesReceita.toFixed(2) + ' · Resultado R$ ' + totalMesResultado.toFixed(2) + ' (' + margemMes.toFixed(1) + '%)';
+
+    for (const num of destinos) {
+      await wpp(num, msg1);
+      await wpp(num, msg2);
+    }
+    console.log('✅ Dispatch diário enviado (2 msgs) — ' + ontemBR);
   } catch(e) { console.log('Erro dispatch diario:', e.message); }
 }
 setInterval(checarDispatchDiario, 60000);
