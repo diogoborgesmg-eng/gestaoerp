@@ -348,6 +348,8 @@ module.exports = async function handler(req, res) {
           const innerResNFe = [...doc.matchAll(/<resNFe[^>]*>([\s\S]*?)<\/resNFe>/g)];
           const blocos = innerResNFe.length > 0 ? innerResNFe.map(x => x[1]) : [doc];
 
+          const TPAG_MAP = {'01':'dinheiro','02':'cheque','03':'cartao','04':'cartao','05':'cartao','10':'cheque','15':'boleto','16':'deposito','17':'pix','18':'pix','90':'sem_pagamento'};
+
           for (const bloco of blocos) {
             const chave = (bloco.match(/chNFe>([^<]+)/) || [])[1] || (bloco.match(/Id="NFe([0-9]{44})/) || [])[1];
             if (!chave) continue;
@@ -356,6 +358,31 @@ module.exports = async function handler(req, res) {
                          (bloco.match(/xNome>([^<]+)/) || [])[1] || 'Fornecedor';
             const cnpjEmit = (bloco.match(/<emit>[\s\S]*?<CNPJ>([^<]+)/) || [])[1] ||
                              (bloco.match(/CNPJ>([^<]+)/) || [])[1] || '';
+
+            // ═══ ITENS — extrai cada <det> (produto) do documento completo ═══
+            const detsRaw = [...bloco.matchAll(/<det\b[^>]*>([\s\S]*?)<\/det>/g)];
+            const itens = detsRaw.map(d => {
+              const p = d[1];
+              return {
+                nome: (p.match(/xProd>([^<]+)/) || [])[1] || '',
+                qtd: parseFloat((p.match(/qCom>([^<]+)/) || [])[1] || '0'),
+                un: (p.match(/uCom>([^<]+)/) || [])[1] || 'un',
+                valorUnit: parseFloat((p.match(/vUnCom>([^<]+)/) || [])[1] || '0'),
+                valorTotal: parseFloat((p.match(/vProd>([^<]+)/) || [])[1] || '0')
+              };
+            }).filter(it => it.nome);
+
+            // ═══ PARCELAS — extrai cada <dup> (duplicata/vencimento) ═══
+            const dupsRaw = [...bloco.matchAll(/<dup\b[^>]*>([\s\S]*?)<\/dup>/g)];
+            const parcelas = dupsRaw.map(d => ({
+              vencimento: (d[1].match(/dVenc>([^<]+)/) || [])[1] || '',
+              valor: parseFloat((d[1].match(/vDup>([^<]+)/) || [])[1] || '0')
+            })).filter(p => p.vencimento);
+
+            // ═══ FORMA DE PAGAMENTO — <tPag> código ═══
+            const tPagCod = (bloco.match(/tPag>([^<]+)/) || [])[1] || '';
+            const formaPagamento = TPAG_MAP[tPagCod] || '';
+
             nfs.push({
               id: chave, chave,
               numero: (bloco.match(/nNF>([^<]+)/) || [])[1] || '',
@@ -365,7 +392,11 @@ module.exports = async function handler(req, res) {
               valor: parseFloat((bloco.match(/vNF>([^<]+)/) || [])[1] || '0'),
               data: ((bloco.match(/dhEmi>([^<]+)/) || [])[1] || '').substring(0,10),
               status: 'pendente',
-              resumo: innerResNFe.length > 0
+              resumo: innerResNFe.length > 0 || itens.length === 0,
+              itens: itens.length ? itens.map(it=>({nome:it.nome,qtd:it.qtd,un:it.un})) : undefined,
+              parcelas: parcelas.length ? parcelas : undefined,
+              vencimento: parcelas.length ? parcelas[0].vencimento : undefined,
+              formaPagamento: formaPagamento || undefined
             });
           }
         } catch(ep) { console.log('Erro parse doc:', ep.message); }
