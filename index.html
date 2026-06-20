@@ -8565,16 +8565,6 @@ ${funcs.filter(f=>f.ativo).length>0?`<div style="display:flex;justify-content:sp
 <div><label style="font-size:10px;color:var(--mu);">URL Backend SEFAZ</label><input id="cfg-backend-url" class="inpm" placeholder="https://gestaoerp-api.vercel.app" style="font-size:10px;"/></div>
 <div><label style="font-size:10px;color:var(--mu);">Token API</label><input id="cfg-backend-token" class="inpm" placeholder="gestaoerp_diCasa_..." style="font-size:10px;"/></div>
 </div>
-<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--br);">
-<p style="font-size:11px;font-weight:800;margin-bottom:8px;">☁️ Sincronização em Tempo Real (Supabase)</p>
-<p style="font-size:10px;color:var(--mu);margin-bottom:8px;">Use o MESMO link e chave em todos os dispositivos (seu e da Herielly) pra verem os mesmos dados.</p>
-<div style="display:flex;flex-direction:column;gap:6px;">
-<div><label style="font-size:10px;color:var(--mu);">URL do Projeto Supabase</label><input id="cfg-sb-url" class="inpm" placeholder="https://xxxxx.supabase.co" style="font-size:10px;"/></div>
-<div><label style="font-size:10px;color:var(--mu);">Chave (anon/publishable)</label><input id="cfg-sb-key" class="inpm" placeholder="sb_publishable_..." style="font-size:10px;"/></div>
-</div>
-<button onclick="salvarConfigSupabase()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:linear-gradient(135deg,#4488ff,#00bbff);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">☁️ Salvar e Sincronizar Agora</button>
-<p id="sb-status" style="font-size:10px;margin-top:6px;"></p>
-</div>
 <button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
 <button onclick="publicarNoVercel()" id="btn-publicar" style="width:100%;margin-top:6px;padding:11px;border-radius:8px;border:2px solid rgba(255,204,0,0.5);background:rgba(255,204,0,0.12);color:var(--ye);font-size:13px;font-weight:800;cursor:pointer;">🚀 Publicar Atualização no Vercel</button>
 <p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia o sistema para o GitHub → Vercel atualiza em ~1 min</p>
@@ -24029,47 +24019,27 @@ async function sincronizarDreNuvem(){
 setInterval(sincronizarDreNuvem,5*60*1000);
 setTimeout(sincronizarDreNuvem,8000);
 
-const SB_DEVICE_ID = 'dicasalaranjinha'; // fixo e compartilhado entre todos os dispositivos
 
-function salvarConfigSupabase(){
- const url=document.getElementById('cfg-sb-url')?.value?.trim();
- const key=document.getElementById('cfg-sb-key')?.value?.trim();
- const status=document.getElementById('sb-status');
- if(!url||!key){if(status){status.textContent='⚠️ Preencha URL e chave.';status.style.color='var(--ye)';}return;}
- localStorage.setItem('erp_sb_url',url);
- localStorage.setItem('erp_sb_key',key);
- localStorage.setItem('erp_sb_device',SB_DEVICE_ID);
- if(status){status.textContent='💾 Salvo! Sincronizando...';status.style.color='var(--mu);';}
- // Salva o estado atual imediatamente (cria a primeira linha) e tenta carregar em seguida
- sdb(ldb());
- setTimeout(()=>carregarDoSupabase(true),1000);
-}
-
-async function carregarDoSupabase(manual){
+// Sincronizacao automatica silenciosa ao abrir o app (usa o mais recente entre dispositivos)
+async function autoSyncSupabaseInicial(){
  const cfg=getSupabaseCfg();
- const status=document.getElementById('sb-status');
- if(!cfg.url||!cfg.key||!cfg.deviceId)return;
- try{
-  const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?device_id=eq.${cfg.deviceId}&select=data,updated_at`,{
-   headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
-  });
-  if(!resp.ok)throw new Error('HTTP '+resp.status);
-  const rows=await resp.json();
-  if(rows&&rows.length&&rows[0].data){
-   const dadosNuvem=JSON.parse(rows[0].data);
-   localStorage.setItem('erp',JSON.stringify(dadosNuvem));
-   if(status){status.textContent='✅ Sincronizado! Atualizado em '+new Date(rows[0].updated_at).toLocaleString('pt-BR');status.style.color='var(--gr)';}
-   if(manual){render();}
-  }else if(status){
-   status.textContent='☁️ Nenhum dado salvo ainda na nuvem (normal na primeira vez).';status.style.color='var(--mu)';
-  }
- }catch(e){
-  if(status){status.textContent='❌ Erro ao sincronizar: '+e.message;status.style.color='var(--re)';}
-  console.log('Erro carregarDoSupabase:',e.message);
+ if(!cfg.url||!cfg.key)return;
+ const remote=await syncSupabaseLoad();
+ if(!remote)return;
+ const localUltimoSync=localStorage.getItem('erp_ultimo_sync_ts');
+ const remoteTs=remote.time.getTime();
+ if(!localUltimoSync||remoteTs>Number(localUltimoSync)){
+  sdb(remote.data);
+  localStorage.setItem('erp_ultimo_sync_ts',String(remoteTs));
+  localStorage.setItem('erp_ultimo_sync',new Date().toLocaleString('pt-BR'));
+  render();
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#3ecf8e;color:#000;padding:9px 16px;border-radius:10px;z-index:999;font-size:12px;font-weight:800;';
+  n.textContent='☁️ Sincronizado automaticamente';
+  document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
  }
 }
-
-setTimeout(()=>carregarDoSupabase(false),3000);
+setTimeout(autoSyncSupabaseInicial,2500);
 
 render();
 setTimeout(checkBotPending,2000);
