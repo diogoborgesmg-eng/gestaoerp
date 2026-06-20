@@ -1787,7 +1787,6 @@ async function syncSupabaseSave(data,cfg){
  method:"POST",
  headers:{
  "apikey":cfg.key,
- "Authorization":"Bearer "+cfg.key,
  "Content-Type":"application/json",
  "Prefer":"resolution=merge-duplicates"
  },
@@ -1802,7 +1801,7 @@ async function syncSupabaseLoad(){
  // Busca o registro mais recente de qualquer dispositivo
  const r=await fetch(
  `${cfg.url}/rest/v1/erp_sync?order=updated_at.desc&limit=1`,
- {headers:{"apikey":cfg.key,"Authorization":"Bearer "+cfg.key}}
+ {headers:{"apikey":cfg.key}}
  );
  if(!r.ok)return null;
  const rows=await r.json();
@@ -24052,7 +24051,7 @@ async function carregarDoSupabase(manual){
  if(!cfg.url||!cfg.key||!cfg.deviceId)return;
  try{
   const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?device_id=eq.${cfg.deviceId}&select=data,updated_at`,{
-   headers:{'apikey':cfg.key}
+   headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
   });
   if(!resp.ok)throw new Error('HTTP '+resp.status);
   const rows=await resp.json();
