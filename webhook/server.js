@@ -361,8 +361,17 @@ function brOrdinal(ano,mes,dia){
 
 async function executarDispatch(diaForcado){
   const agora = new Date();
-  const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
-  if (!r || typeof r !== 'object') { console.log('Dispatch: sem dre_sync.json ainda'); return {ok:false,erro:'sem dre_sync.json'}; }
+  const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+  const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+  let r = null;
+  try {
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,updated_at&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (Array.isArray(rows) && rows.length && rows[0].data) r = JSON.parse(rows[0].data);
+  } catch(eSb) { console.log('Erro ler Supabase, tentando GitHub:', eSb.message); }
+  if (!r) {
+    r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
+  }
+  if (!r || typeof r !== 'object') { console.log('Dispatch: sem dados ainda'); return {ok:false,erro:'sem dados disponiveis'}; }
 
   let anoOntem, mesOntem, diaOntemNum, ontemBR;
   if (diaForcado) {
