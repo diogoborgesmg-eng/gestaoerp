@@ -314,14 +314,36 @@ server.listen(PORT, () => {
 
 // ═══ DISPATCH DIÁRIO 6H — Balanço de ontem + Contas a Pagar de hoje ═══
 let ultimoDispatchDia = '';
+// Converte um Date para {ano,mes,dia} no fuso de Brasília, sem depender do fuso do servidor
+function brDataPartes(d){
+  const s = d.toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}); // YYYY-MM-DD
+  const [ano,mes,dia] = s.split('-').map(Number);
+  return { ano, mes, dia };
+}
+function brDataStr(ano,mes,dia){
+  return String(dia).padStart(2,'0')+'/'+String(mes).padStart(2,'0')+'/'+ano;
+}
+function brOrdinal(ano,mes,dia){
+  return ano*10000+mes*100+dia;
+}
+
 async function executarDispatch(diaForcado){
   const agora = new Date();
   const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
   if (!r || typeof r !== 'object') { console.log('Dispatch: sem dre_sync.json ainda'); return {ok:false,erro:'sem dre_sync.json'}; }
 
-  const ontem = diaForcado ? new Date(diaForcado+'T12:00:00') : new Date(agora.getTime() - 24*60*60*1000);
-  const ontemBR = diaForcado || ontem.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
-  const hojeBR = agora.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  let anoOntem, mesOntem, diaOntemNum, ontemBR;
+  if (diaForcado) {
+    [diaOntemNum, mesOntem, anoOntem] = diaForcado.split('/').map(Number);
+    ontemBR = diaForcado;
+  } else {
+    const ontemDate = new Date(agora.getTime() - 24*60*60*1000);
+    const p = brDataPartes(ontemDate);
+    anoOntem = p.ano; mesOntem = p.mes; diaOntemNum = p.dia;
+    ontemBR = brDataStr(anoOntem, mesOntem, diaOntemNum);
+  }
+  const hojeP = brDataPartes(agora);
+  const hojeOrdinal = brOrdinal(hojeP.ano, hojeP.mes, hojeP.dia);
   const destinos = ['5534996853258','5534997692282']; // Diogo, Herielly
 
   const diaOntem = r[ontemBR] || { r: [], c: [] };
@@ -329,13 +351,10 @@ async function executarDispatch(diaForcado){
   const custoOntem = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
   const lucroOntem = receitaOntem - custoOntem;
 
-  // Evolução dia a dia do mês atual (dia 1 até o dia do relatório)
-  const mesAtual = ontem.getMonth();
-  const anoAtual = ontem.getFullYear();
+  // Evolução dia a dia do mês (dia 1 até o dia do relatório) — tudo via Brasília, sem Date getters
   const diasDoMes = [];
-  for (let d = 1; d <= ontem.getDate(); d++) {
-    const dt = new Date(anoAtual, mesAtual, d);
-    const diaBRloop = dt.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  for (let d = 1; d <= diaOntemNum; d++) {
+    const diaBRloop = brDataStr(anoOntem, mesOntem, d);
     const diaData = r[diaBRloop] || { r: [], c: [] };
     const rec = (diaData.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
     const cus = (diaData.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
@@ -353,12 +372,13 @@ async function executarDispatch(diaForcado){
     const cat = (x.cat||'Outros').split(' (')[0].trim();
     catTotaisOntem[cat] = (catTotaisOntem[cat]||0) + Number(x.v||0);
   });
-  const hojeDate=new Date();hojeDate.setHours(0,0,0,0);
+
+  // Contas a pagar vencidas ou de hoje — comparacao por numero ordinal (sem Date), no fuso de Brasilia
   const contasPdf = (r.contasPagar||[]).filter(c=>{
     if(c.status!=='pendente')return false;
     const[d,m,y]=(c.vencimento||'').split('/').map(Number);
     if(!d)return false;
-    return new Date(y,m-1,d)<=hojeDate;
+    return brOrdinal(y,m,d) <= hojeOrdinal;
   });
 
   let pdfBase64 = null, erroPdf = null;
@@ -376,8 +396,8 @@ async function executarDispatch(diaForcado){
       await wppDocumento(num, pdfBase64, 'Fechamento_'+ontemBR.replace(/\//g,'-')+'.pdf', '📄 Fechamento — '+ontemBR);
     }
   }
-  console.log('✅ Dispatch (PDF) — ' + ontemBR + ' — receita:'+receitaOntem+' custo:'+custoOntem);
-  return { ok: !!pdfBase64, ontemBR, receitaOntem, custoOntem, lucroOntem, diasComDados: diasDoMes.filter(d=>d.receita>0||d.custo>0).length, erroPdf };
+  console.log('✅ Dispatch (PDF) — ' + ontemBR + ' — receita:'+receitaOntem+' custo:'+custoOntem+' — hoje(BR):'+brDataStr(hojeP.ano,hojeP.mes,hojeP.dia));
+  return { ok: !!pdfBase64, ontemBR, hojeBR: brDataStr(hojeP.ano,hojeP.mes,hojeP.dia), receitaOntem, custoOntem, lucroOntem, diasComDados: diasDoMes.filter(d=>d.receita>0||d.custo>0).length, erroPdf };
 }
 
 async function checarDispatchDiario(){
