@@ -159,7 +159,21 @@ async function salvarGitHub(lanc, reciboUrl) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET') { res.writeHead(200); res.end(JSON.stringify({status:'ok v8'})); return; }
+  if (req.method === 'GET') {
+    if (req.url && req.url.startsWith('/test-dispatch')) {
+      const urlObj = new URL(req.url, 'http://x');
+      const diaParam = urlObj.searchParams.get('dia');
+      executarDispatch(diaParam||null).then(resultado => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify(resultado));
+      }).catch(e => {
+        res.writeHead(500, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro:e.message}));
+      });
+      return;
+    }
+    res.writeHead(200); res.end(JSON.stringify({status:'ok v8'})); return;
+  }
   let body = '';
   req.on('data', c => body += c);
   req.on('end', async () => {
@@ -300,6 +314,72 @@ server.listen(PORT, () => {
 
 // ═══ DISPATCH DIÁRIO 6H — Balanço de ontem + Contas a Pagar de hoje ═══
 let ultimoDispatchDia = '';
+async function executarDispatch(diaForcado){
+  const agora = new Date();
+  const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
+  if (!r || typeof r !== 'object') { console.log('Dispatch: sem dre_sync.json ainda'); return {ok:false,erro:'sem dre_sync.json'}; }
+
+  const ontem = diaForcado ? new Date(diaForcado+'T12:00:00') : new Date(agora.getTime() - 24*60*60*1000);
+  const ontemBR = diaForcado || ontem.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  const hojeBR = agora.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  const destinos = ['5534996853258','5534997692282']; // Diogo, Herielly
+
+  const diaOntem = r[ontemBR] || { r: [], c: [] };
+  const receitaOntem = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+  const custoOntem = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+  const lucroOntem = receitaOntem - custoOntem;
+
+  // Evolução dia a dia do mês atual (dia 1 até o dia do relatório)
+  const mesAtual = ontem.getMonth();
+  const anoAtual = ontem.getFullYear();
+  const diasDoMes = [];
+  for (let d = 1; d <= ontem.getDate(); d++) {
+    const dt = new Date(anoAtual, mesAtual, d);
+    const diaBRloop = dt.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+    const diaData = r[diaBRloop] || { r: [], c: [] };
+    const rec = (diaData.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    const cus = (diaData.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+    diasDoMes.push({ dia: d, receita: rec, custo: cus, resultado: rec - cus });
+  }
+
+  const segTotaisOntem = {};
+  (diaOntem.r||[]).forEach(x=>{
+    const segId = x.s || 'geral';
+    if(!segTotaisOntem[segId]) segTotaisOntem[segId] = { nome: segId, icone: '', valor: 0 };
+    segTotaisOntem[segId].valor += Number(x.v||0);
+  });
+  const catTotaisOntem = {};
+  (diaOntem.c||[]).forEach(x=>{
+    const cat = (x.cat||'Outros').split(' (')[0].trim();
+    catTotaisOntem[cat] = (catTotaisOntem[cat]||0) + Number(x.v||0);
+  });
+  const hojeDate=new Date();hojeDate.setHours(0,0,0,0);
+  const contasPdf = (r.contasPagar||[]).filter(c=>{
+    if(c.status!=='pendente')return false;
+    const[d,m,y]=(c.vencimento||'').split('/').map(Number);
+    if(!d)return false;
+    return new Date(y,m-1,d)<=hojeDate;
+  });
+
+  let pdfBase64 = null, erroPdf = null;
+  try {
+    const pdfBuffer = await gerarPdfFechamento({
+      diaBR: ontemBR, receita: receitaOntem, custo: custoOntem, resultado: lucroOntem,
+      segTotais: segTotaisOntem, catTotais: catTotaisOntem,
+      contasPagar: contasPdf, evolucaoMes: diasDoMes
+    });
+    pdfBase64 = pdfBuffer.toString('base64');
+  } catch(ePdf) { erroPdf = ePdf.message; console.log('Erro gerar PDF dispatch:', ePdf.message); }
+
+  if (pdfBase64) {
+    for (const num of destinos) {
+      await wppDocumento(num, pdfBase64, 'Fechamento_'+ontemBR.replace(/\//g,'-')+'.pdf', '📄 Fechamento — '+ontemBR);
+    }
+  }
+  console.log('✅ Dispatch (PDF) — ' + ontemBR + ' — receita:'+receitaOntem+' custo:'+custoOntem);
+  return { ok: !!pdfBase64, ontemBR, receitaOntem, custoOntem, lucroOntem, diasComDados: diasDoMes.filter(d=>d.receita>0||d.custo>0).length, erroPdf };
+}
+
 async function checarDispatchDiario(){
   try{
     const agora = new Date();
@@ -308,93 +388,7 @@ async function checarDispatchDiario(){
     if (brHora !== '06:00') return;
     if (ultimoDispatchDia === brDataChave) return;
     ultimoDispatchDia = brDataChave;
-
-    const r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
-    if (!r || typeof r !== 'object') { console.log('Dispatch 6h: sem dre_sync.json ainda'); return; }
-
-    const ontem = new Date(agora.getTime() - 24*60*60*1000);
-    const ontemBR = ontem.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
-    const hojeBR = agora.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
-    const destinos = ['5534996853258','5534997692282']; // Diogo, Herielly
-
-    // ═══ MENSAGEM 1: Contas a Pagar de hoje ═══
-    const contasHoje = (r.contasPagar||[]).filter(c => c.status === 'pendente' && c.vencimento === hojeBR);
-    const totalContas = contasHoje.reduce((s,c)=>s+Number(c.valor||0),0);
-
-    let msg1 = '🏦 *Contas a Pagar — ' + hojeBR + '*\n\n';
-    if (contasHoje.length) {
-      contasHoje.forEach(c => { msg1 += '• ' + c.fornecedor + ': R$ ' + Number(c.valor).toFixed(2) + '\n'; });
-      msg1 += '\n*Total do dia: R$ ' + totalContas.toFixed(2) + '*';
-    } else {
-      msg1 += 'Nenhuma conta vence hoje. ✅';
-    }
-
-    // ═══ MENSAGEM 2: Balanço de ontem + evolução dia a dia do mês ═══
-    const diaOntem = r[ontemBR] || { r: [], c: [] };
-    const receitaOntem = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
-    const custoOntem = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
-    const lucroOntem = receitaOntem - custoOntem;
-
-    let msg2 = '📊 *Balanço — ' + ontemBR + '*\n\n';
-    msg2 += '💰 Receita: R$ ' + receitaOntem.toFixed(2) + '\n';
-    msg2 += '💸 Custos: R$ ' + custoOntem.toFixed(2) + '\n';
-    msg2 += (lucroOntem >= 0 ? '✅' : '⚠️') + ' Resultado: R$ ' + lucroOntem.toFixed(2) + '\n';
-
-    // Evolução dia a dia do mês atual (dia 1 até ontem)
-    const mesAtual = ontem.getMonth();
-    const anoAtual = ontem.getFullYear();
-    const diasDoMes = [];
-    for (let d = 1; d <= ontem.getDate(); d++) {
-      const dt = new Date(anoAtual, mesAtual, d);
-      const diaBR = dt.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
-      const diaData = r[diaBR] || { r: [], c: [] };
-      const rec = (diaData.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
-      const cus = (diaData.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
-      diasDoMes.push({ dia: d, receita: rec, custo: cus, resultado: rec - cus });
-    }
-
-    const totalMesReceita = diasDoMes.reduce((s,d)=>s+d.receita,0);
-    const totalMesCusto = diasDoMes.reduce((s,d)=>s+d.custo,0);
-    const totalMesResultado = totalMesReceita - totalMesCusto;
-    const margemMes = totalMesReceita > 0 ? (totalMesResultado/totalMesReceita*100) : 0;
-
-    msg2 += '\n📆 *Evolução do mês (dia a dia)*\n';
-    diasDoMes.forEach(d => {
-      const icon = d.resultado >= 0 ? '🟢' : '🔴';
-      msg2 += icon + ' ' + String(d.dia).padStart(2,'0') + ': R$ ' + d.resultado.toFixed(2) + '\n';
-    });
-    msg2 += '\n*Total mês:* Receita R$ ' + totalMesReceita.toFixed(2) + ' · Resultado R$ ' + totalMesResultado.toFixed(2) + ' (' + margemMes.toFixed(1) + '%)';
-
-    // ═══ PDF: relatorio completo em colunas ═══
-    let pdfBase64 = null;
-    try {
-      const segTotaisOntem = {};
-      (diaOntem.r||[]).forEach(x=>{
-        const segId = x.s || 'geral';
-        if(!segTotaisOntem[segId]) segTotaisOntem[segId] = { nome: segId, icone: '', valor: 0 };
-        segTotaisOntem[segId].valor += Number(x.v||0);
-      });
-      const catTotaisOntem = {};
-      (diaOntem.c||[]).forEach(x=>{
-        const cat = (x.cat||'Outros').split(' (')[0].trim();
-        catTotaisOntem[cat] = (catTotaisOntem[cat]||0) + Number(x.v||0);
-      });
-      const contasPdf = (r.contasPagar||[]).filter(c=>c.status==='pendente');
-
-      const pdfBuffer = await gerarPdfFechamento({
-        diaBR: ontemBR, receita: receitaOntem, custo: custoOntem, resultado: lucroOntem,
-        segTotais: segTotaisOntem, catTotais: catTotaisOntem,
-        contasPagar: contasPdf, evolucaoMes: diasDoMes
-      });
-      pdfBase64 = pdfBuffer.toString('base64');
-    } catch(ePdf) { console.log('Erro gerar PDF dispatch:', ePdf.message); }
-
-    for (const num of destinos) {
-      await wpp(num, msg1);
-      await wpp(num, msg2);
-      if (pdfBase64) await wppDocumento(num, pdfBase64, 'Fechamento_'+ontemBR.replace(/\//g,'-')+'.pdf', '📄 Relatorio completo em PDF');
-    }
-    console.log('✅ Dispatch diário enviado (2 msgs + PDF) — ' + ontemBR);
+    await executarDispatch();
   } catch(e) { console.log('Erro dispatch diario:', e.message); }
 }
 setInterval(checarDispatchDiario, 60000);
