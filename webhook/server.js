@@ -31,6 +31,17 @@ async function wpp(numero, texto) {
   catch(e) { console.error('wpp err:', e.message); }
 }
 
+async function wppDocumento(numero, base64Pdf, nomeArquivo, legenda) {
+  try {
+    await req2('POST', EVO+'/message/sendMedia/'+INST, {
+      number: numero, mediatype: 'document', mimetype: 'application/pdf',
+      caption: legenda||'', media: base64Pdf, fileName: nomeArquivo
+    }, { apikey: EVO_KEY });
+  } catch(e) { console.error('wppDocumento err:', e.message); }
+}
+
+const { gerarPdfFechamento } = require('./pdf.js');
+
 
 async function salvarReciboGitHub(b64, tipo, data) {
   try {
@@ -354,11 +365,36 @@ async function checarDispatchDiario(){
     });
     msg2 += '\n*Total mês:* Receita R$ ' + totalMesReceita.toFixed(2) + ' · Resultado R$ ' + totalMesResultado.toFixed(2) + ' (' + margemMes.toFixed(1) + '%)';
 
+    // ═══ PDF: relatorio completo em colunas ═══
+    let pdfBase64 = null;
+    try {
+      const segTotaisOntem = {};
+      (diaOntem.r||[]).forEach(x=>{
+        const segId = x.s || 'geral';
+        if(!segTotaisOntem[segId]) segTotaisOntem[segId] = { nome: segId, icone: '', valor: 0 };
+        segTotaisOntem[segId].valor += Number(x.v||0);
+      });
+      const catTotaisOntem = {};
+      (diaOntem.c||[]).forEach(x=>{
+        const cat = (x.cat||'Outros').split(' (')[0].trim();
+        catTotaisOntem[cat] = (catTotaisOntem[cat]||0) + Number(x.v||0);
+      });
+      const contasPdf = (r.contasPagar||[]).filter(c=>c.status==='pendente');
+
+      const pdfBuffer = await gerarPdfFechamento({
+        diaBR: ontemBR, receita: receitaOntem, custo: custoOntem, resultado: lucroOntem,
+        segTotais: segTotaisOntem, catTotais: catTotaisOntem,
+        contasPagar: contasPdf, evolucaoMes: diasDoMes
+      });
+      pdfBase64 = pdfBuffer.toString('base64');
+    } catch(ePdf) { console.log('Erro gerar PDF dispatch:', ePdf.message); }
+
     for (const num of destinos) {
       await wpp(num, msg1);
       await wpp(num, msg2);
+      if (pdfBase64) await wppDocumento(num, pdfBase64, 'Fechamento_'+ontemBR.replace(/\//g,'-')+'.pdf', '📄 Relatorio completo em PDF');
     }
-    console.log('✅ Dispatch diário enviado (2 msgs) — ' + ontemBR);
+    console.log('✅ Dispatch diário enviado (2 msgs + PDF) — ' + ontemBR);
   } catch(e) { console.log('Erro dispatch diario:', e.message); }
 }
 setInterval(checarDispatchDiario, 60000);
