@@ -195,7 +195,11 @@ const SEGS=[{id:"restaurante",n:"Restaurante",i:"🍽️",c:"#f59e0b"},{id:"hamb
 const CATS=["❓ Classificar","🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","⚠️ Extravio / Perda","🔄 Outros"];
 const brl=v=>"R$"+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const uid=()=>Math.random().toString(36).slice(2,9);
-const hj=()=>new Date().toLocaleDateString("pt-BR");
+const hj=()=>{
+ const d=new Date();
+ if(d.getHours()<5)d.setDate(d.getDate()-1); // antes das 5h ainda conta como o dia comercial anterior (turno noturno)
+ return d.toLocaleDateString("pt-BR");
+};
 const semana=()=>{const d=new Date();const s=Math.ceil(d.getDate()/7);return `${d.getMonth()+1}/${d.getFullYear()}-S${s}`;};
 
 function gFila(){const d=ldb();if(!d.fila)d.fila=[];return d.fila;}
