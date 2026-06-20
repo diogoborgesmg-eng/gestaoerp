@@ -186,6 +186,13 @@ const server = http.createServer((req, res) => {
       return;
     }
     if (req.url && req.url.startsWith('/test-dispatch')) {
+      const agoraMs = Date.now();
+      if (global._ultimoTestDispatch && (agoraMs - global._ultimoTestDispatch) < 20000) {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, ignorado:true, motivo:'Disparo duplicado bloqueado (aguarde 20s entre testes)'}));
+        return;
+      }
+      global._ultimoTestDispatch = agoraMs;
       const urlObj = new URL(req.url, 'http://x');
       const diaParam = urlObj.searchParams.get('dia');
       executarDispatch(diaParam||null).then(resultado => {
