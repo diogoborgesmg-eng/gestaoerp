@@ -9101,15 +9101,18 @@ function selecionarSegVenda(id){
 
 function lancVendaManual(){
  const val=parseFloat(document.getElementById("venda-manual-val")?.value||0);
+ const qtd=parseInt(document.getElementById("venda-manual-qtd")?.value||0);
  if(!val||val<=0){alert("Informe o valor!");return;}
  if(!_segVendaSelecionado){alert("Selecione um segmento!");return;}
  const sg=SEGS.find(s=>s.id===_segVendaSelecionado);
  const db=ldb();const dia=getDia();
  if(!db[dia])db[dia]={r:[],c:[]};
- db[dia].r.push({id:uid(),d:`Vendas ${sg?.n||"Manual"}`,s:_segVendaSelecionado,v:val,fonte:"manual"});
+ db[dia].r.push({id:uid(),d:`Vendas ${sg?.n||"Manual"}${qtd?` (${qtd} ped.)`:''}`,s:_segVendaSelecionado,v:val,qtdPedidos:qtd||0,fonte:"manual"});
  sdb(db);
  const el=document.getElementById("venda-manual-val");
+ const elQ=document.getElementById("venda-manual-qtd");
  if(el)el.value="";
+ if(elQ)elQ.value="";
  render();
 }
 
@@ -9669,6 +9672,9 @@ ${sg.i} ${sg.n}</button>`).join("")}
 <div style="display:flex;gap:5px;align-items:center;">
 <input type="number" id="venda-manual-val" placeholder="R$ valor..." step="0.01" min="0"
 style="flex:1;background:var(--sf2);border:1px solid rgba(0,255,136,0.3);border-radius:7px;padding:8px;color:var(--tx);font-size:14px;font-family:'Space Mono',monospace;"
+onkeydown="if(event.key==='Enter'){lancVendaManual();}"/>
+<input type="number" id="venda-manual-qtd" placeholder="Qtd ped." step="1" min="1"
+style="width:70px;background:var(--sf2);border:1px solid rgba(0,255,136,0.3);border-radius:7px;padding:8px;color:var(--tx);font-size:13px;font-family:'Space Mono',monospace;"
 onkeydown="if(event.key==='Enter'){lancVendaManual();}"/>
 <button onclick="lancVendaManual()" style="padding:9px 14px;border-radius:7px;border:none;background:#00ff88;color:#000;font-size:14px;font-weight:900;cursor:pointer;">✓</button>
 </div>
@@ -18338,6 +18344,74 @@ function abrirSaldoInicial(diaKey,turno,atual){
  db._saldoInicial[diaKey+'-'+turno]=val;sdb(db);render();
 }
 
+function gerarGraficoAranha(segTotais, receitas){
+ const eixos=['Receita','Ticket Médio','Qtd. Pedidos'];
+ const segs=Object.entries(segTotais).map(([id,sg])=>{
+  const itensSeg=receitas.filter(r=>(SEGS.find(s=>s.id===r.s)?.id||'geral')===id);
+  const qtdPed=itensSeg.reduce((s,r)=>s+Number(r.qtdPedidos||0),0);
+  const ticket=qtdPed>0?(sg.valor/qtdPed):0;
+  return {nome:sg.nome,icone:sg.icone,receita:sg.valor,ticket,qtdPed};
+ }).filter(s=>s.receita>0);
+
+ if(segs.length<2)return '<p style="font-size:11px;color:#999;">Precisa de pelo menos 2 segmentos com vendas pra comparar.</p>';
+
+ const maxReceita=Math.max(...segs.map(s=>s.receita),1);
+ const maxTicket=Math.max(...segs.map(s=>s.ticket),1);
+ const maxQtd=Math.max(...segs.map(s=>s.qtdPed),1);
+ const temTicket=segs.some(s=>s.qtdPed>0);
+
+ const cx=140,cy=140,raio=105;
+ const numEixos=eixos.length;
+ const angulo=(i)=>(Math.PI*2*i/numEixos)-Math.PI/2;
+ const ponto=(i,frac)=>{
+  const a=angulo(i);
+  return [cx+Math.cos(a)*raio*frac, cy+Math.sin(a)*raio*frac];
+ };
+
+ // Grades de fundo (círculos concêntricos em 25/50/75/100%)
+ let svg=`<svg viewBox="0 0 280 300" style="width:100%;max-width:280px;display:block;margin:0 auto;">`;
+ [0.25,0.5,0.75,1].forEach(frac=>{
+  const pts=eixos.map((_,i)=>ponto(i,frac).join(',')).join(' ');
+  svg+=`<polygon points="${pts}" fill="none" stroke="#e5e5e5" stroke-width="1"/>`;
+ });
+ // Eixos (linhas do centro pra fora) + labels
+ eixos.forEach((nome,i)=>{
+  const [x,y]=ponto(i,1);
+  svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#ddd" stroke-width="1"/>`;
+  const [lx,ly]=ponto(i,1.18);
+  svg+=`<text x="${lx}" y="${ly}" font-size="9" text-anchor="middle" fill="#666">${nome}</text>`;
+ });
+
+ // Um polígono colorido por segmento
+ const cores=['#0a9d56','#2563eb','#d97706','#db2777','#7c3aed'];
+ segs.forEach((sg,idx)=>{
+  const cor=cores[idx%cores.length];
+  const fracs=[
+   sg.receita/maxReceita,
+   temTicket?(sg.ticket/maxTicket):0,
+   temTicket?(sg.qtdPed/maxQtd):0
+  ];
+  const pts=fracs.map((f,i)=>ponto(i,f).join(',')).join(' ');
+  svg+=`<polygon points="${pts}" fill="${cor}" fill-opacity="0.18" stroke="${cor}" stroke-width="2"/>`;
+ });
+ svg+=`</svg>`;
+
+ // Legenda
+ let legenda='<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px;">';
+ segs.forEach((sg,idx)=>{
+  const cor=cores[idx%cores.length];
+  legenda+=`<div style="display:flex;align-items:center;gap:4px;font-size:10px;"><span style="width:8px;height:8px;border-radius:50%;background:${cor};display:inline-block;"></span>${sg.icone} ${sg.nome}</div>`;
+ });
+ legenda+='</div>';
+
+ if(!temTicket){
+  legenda+='<p style="font-size:9px;color:#bbb;text-align:center;margin-top:6px;">Ticket médio e Qtd. Pedidos exigem informar a quantidade no lançamento manual.</p>';
+ }
+
+ return svg+legenda;
+}
+
+
 function imprimirFechamento(diaKey,turno){
  const db=ldb();
  const dia=db[diaKey]||{r:[],c:[]};
@@ -18443,6 +18517,11 @@ ${Object.values(segTotais).length?Object.values(segTotais).sort((a,b)=>b.valor-a
  <div class="barra-bg"><div class="barra-fg" style="width:${bar}%;background:#0a9d56;"></div></div>
  </div>`;
 }).join(''):'<p style="font-size:11px;color:#999;">Nenhuma venda lançada neste dia.</p>'}
+</div>
+
+<div class="card">
+<h4>🕸️ Comparativo entre Segmentos</h4>
+${gerarGraficoAranha(segTotais, receitas)}
 </div>
 
 <div class="card">
