@@ -66,12 +66,12 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
       const yMP = doc.y;
       const colMP = larguraPagina / 2;
       if (melhorDia) {
-        doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('MELHOR DIA DO MES', 36, yMP, { width: colMP - 10 });
-        doc.fontSize(12).fillColor(corVerde).font('Helvetica-Bold').text('Dia ' + String(melhorDia.dia).padStart(2,'0') + ' — R$ ' + brlFmt(melhorDia.resultado), 36, yMP + 11, { width: colMP - 10 });
+        doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('MELHOR DIA EM VENDAS', 36, yMP, { width: colMP - 10 });
+        doc.fontSize(12).fillColor(corVerde).font('Helvetica-Bold').text('Dia ' + String(melhorDia.dia).padStart(2,'0') + ' — R$ ' + brlFmt(melhorDia.receita), 36, yMP + 11, { width: colMP - 10 });
       }
       if (piorDia) {
-        doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('PIOR DIA DO MES', 36 + colMP, yMP, { width: colMP - 10 });
-        doc.fontSize(12).fillColor(corVermelho).font('Helvetica-Bold').text('Dia ' + String(piorDia.dia).padStart(2,'0') + ' — R$ ' + brlFmt(piorDia.resultado), 36 + colMP, yMP + 11, { width: colMP - 10 });
+        doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('PIOR DIA EM VENDAS', 36 + colMP, yMP, { width: colMP - 10 });
+        doc.fontSize(12).fillColor(corVermelho).font('Helvetica-Bold').text('Dia ' + String(piorDia.dia).padStart(2,'0') + ' — R$ ' + brlFmt(piorDia.receita), 36 + colMP, yMP + 11, { width: colMP - 10 });
       }
       doc.y = yMP + 32;
       if (mediaResultadoMes !== undefined) {
