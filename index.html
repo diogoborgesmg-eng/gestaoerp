@@ -24052,7 +24052,7 @@ async function carregarDoSupabase(manual){
  if(!cfg.url||!cfg.key||!cfg.deviceId)return;
  try{
   const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?device_id=eq.${cfg.deviceId}&select=data,updated_at`,{
-   headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+   headers:{'apikey':cfg.key}
   });
   if(!resp.ok)throw new Error('HTTP '+resp.status);
   const rows=await resp.json();
