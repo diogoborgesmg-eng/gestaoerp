@@ -1,5 +1,10 @@
 const PDFDocument = require('pdfkit');
 
+function brlFmt(v) {
+  const n = Number(v||0);
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // Remove emojis/simbolos que a fonte padrao do PDF nao renderiza, mantendo acentos
 function limparEmoji(txt) {
   return String(txt||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, '').trim();
@@ -32,13 +37,13 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
     resumoItens.forEach((item, i) => {
       const x = 36 + colW * i;
       doc.fontSize(8).fillColor(corCinza).font('Helvetica').text(item.label, x, yResumo, { width: colW, align: 'center' });
-      doc.fontSize(14).fillColor(item.cor).font('Helvetica-Bold').text('R$ ' + item.valor.toFixed(2), x, yResumo + 12, { width: colW, align: 'center' });
+      doc.fontSize(14).fillColor(item.cor).font('Helvetica-Bold').text('R$ ' + brlFmt(item.valor), x, yResumo + 12, { width: colW, align: 'center' });
     });
     doc.y = yResumo + 40;
     doc.moveDown(1.5);
 
     // Funcao auxiliar pra desenhar tabela em colunas
-    function desenharTabela(titulo, colunas, linhas) {
+    function desenharTabela(titulo, colunas, linhas, corPorCelula) {
       doc.fontSize(11).fillColor('#111').font('Helvetica-Bold').text(titulo);
       doc.moveDown(0.3);
       const larguras = colunas.map(c => c.w);
@@ -55,11 +60,12 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
       if (!linhas.length) {
         doc.fontSize(9).fillColor(corCinza).font('Helvetica').text('Nenhum dado.', { italics: true });
       } else {
-        linhas.forEach(linha => {
+        linhas.forEach((linha, li) => {
           const yLinha = doc.y;
           x = 36;
           colunas.forEach((c, i) => {
-            doc.fontSize(9).fillColor('#222').font('Helvetica').text(String(linha[i]), x, yLinha, { width: larguras[i], align: c.align || 'left' });
+            const cor = (corPorCelula && corPorCelula(linha, li, i)) || '#222';
+            doc.fontSize(9).fillColor(cor).font('Helvetica').text(String(linha[i]), x, yLinha, { width: larguras[i], align: c.align || 'left' });
             x += larguras[i];
           });
           doc.moveDown(0.35);
@@ -70,7 +76,7 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
 
     // Vendas por Segmento
     const segLinhas = Object.values(segTotais || {}).sort((a, b) => b.valor - a.valor).map(s => [
-      limparEmoji(s.icone) + ' ' + s.nome, 'R$ ' + s.valor.toFixed(2), (receita > 0 ? (s.valor / receita * 100).toFixed(1) : '0') + '%'
+      limparEmoji(s.icone) + ' ' + s.nome, 'R$ ' + brlFmt(s.valor), (receita > 0 ? (s.valor / receita * 100).toFixed(1) : '0') + '%'
     ]);
     desenharTabela('Vendas por Segmento', [
       { nome: 'Segmento', w: larguraPagina * 0.5 },
@@ -79,14 +85,14 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
     ], segLinhas);
 
     // Custos por Categoria
-    const catLinhas = Object.entries(catTotais || {}).sort((a, b) => b[1] - a[1]).map(([cat, v]) => [limparEmoji(cat), 'R$ ' + v.toFixed(2)]);
+    const catLinhas = Object.entries(catTotais || {}).sort((a, b) => b[1] - a[1]).map(([cat, v]) => [limparEmoji(cat), 'R$ ' + brlFmt(v)]);
     desenharTabela('Custos por Categoria', [
       { nome: 'Categoria', w: larguraPagina * 0.65 },
       { nome: 'Valor', w: larguraPagina * 0.35, align: 'right' }
     ], catLinhas);
 
     // Contas a Pagar
-    const cpLinhas = (contasPagar || []).map(c => [c.fornecedor, c.vencimento, 'R$ ' + Number(c.valor).toFixed(2)]);
+    const cpLinhas = (contasPagar || []).map(c => [c.fornecedor, c.vencimento, 'R$ ' + brlFmt(Number(c.valor))]);
     desenharTabela('Contas a Pagar (vencidas + hoje)', [
       { nome: 'Fornecedor', w: larguraPagina * 0.5 },
       { nome: 'Vencimento', w: larguraPagina * 0.25, align: 'center' },
@@ -96,15 +102,18 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
     // Evolucao do mes
     if (doc.y > doc.page.height - 200) doc.addPage();
     const evLinhas = (evolucaoMes || []).map(d => [
-      String(d.dia).padStart(2, '0'), 'R$ ' + d.receita.toFixed(2), 'R$ ' + d.custo.toFixed(2),
-      (d.resultado >= 0 ? '+' : '') + 'R$ ' + d.resultado.toFixed(2)
+      String(d.dia).padStart(2, '0'), 'R$ ' + brlFmt(d.receita), 'R$ ' + brlFmt(d.custo),
+      (d.resultado >= 0 ? '+' : '') + 'R$ ' + brlFmt(d.resultado)
     ]);
     desenharTabela('Evolucao Diaria do Mes', [
       { nome: 'Dia', w: larguraPagina * 0.15, align: 'center' },
       { nome: 'Receita', w: larguraPagina * 0.28, align: 'right' },
       { nome: 'Custo', w: larguraPagina * 0.28, align: 'right' },
       { nome: 'Resultado', w: larguraPagina * 0.29, align: 'right' }
-    ], evLinhas);
+    ], evLinhas, (linha, li, coluna) => {
+      if (coluna === 3) return (evolucaoMes[li].resultado >= 0) ? corVerde : corVermelho;
+      return null;
+    });
 
     doc.end();
   });
