@@ -1097,12 +1097,12 @@ async function processarFila(){
  {type:"text",text:`Transcreva TODO o texto desta nota fiscal brasileira.
 FOQUE EM:
 1."VALOR A COBRAR" — canto superior direito
-2."FAT" ou"FATURA" — data de vencimento abaixo do município 
+2."FAT" ou"FATURA" — data de vencimento abaixo do município — SE HOUVER MAIS DE UM VENCIMENTO/BOLETO/PARCELA (ex: Parcela 1, Parcela 2, Parcela 3), transcreva TODOS, cada um com sua data e valor
 3. Tabela de produtos — CADA LINHA COMPLETA com: descrição, qtd, unidade, V.UNIT, V.TOTAL
 4. Emitente (fornecedor) — bloco superior direito
 5. Número da NF e série
 
-Transcreva linha por linha da tabela de produtos sem omitir nada.`}
+Transcreva linha por linha da tabela de produtos sem omitir nada. Se houver uma tabela de duplicatas/parcelas com várias linhas de vencimento, transcreva essa tabela completa também.`}
  ]}]
  });
  const texto=(e1.content||[]).map(b=>b.text||"").join("").trim();
@@ -1139,7 +1139,7 @@ ${texto.slice(0,2000)}`}]
 REGRAS CRÍTICAS:
 1. Cada linha de produto = item separado. NUNCA una produtos diferentes.
 2. Formato NxM = unidades por caixa: 12X1→upc:12, 6X1→upc:6, 24X1→upc:24
-3. Vencimento: campo FAT/FATURA abaixo do município. NÃO use data de emissão.
+3. Vencimento: campo FAT/FATURA abaixo do município. NÃO use data de emissão. Se houver VÁRIAS parcelas/boletos (Parcela 1, 2, 3...), liste TODAS em"parcelas" com data e valor de cada uma — a soma deve fechar com valor_total.
 4. Valor total da NF: VALOR A COBRAR do cabeçalho/rodapé
 5. Quantidade: coluna QTD (ex: 1,000 = 1; 2,000 = 2)
 6. valor_unitario: coluna"V. UNIT." = preço por cx/un SEM imposto
@@ -1151,7 +1151,7 @@ REGRAS CRÍTICAS:
  -"materia_prima" = carnes, aves, peixes, hortifrúti, cereais, laticínios, temperos, óleos
  -"limpeza_embalagem" = detergente, sabão, marmita, embalagem, descartável, luva, touca
 
-JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"DD/MM/AAAA","valor_total":0.00,"itens":[{"descricao":"","quantidade":0,"unidade":"cx","unidades_por_cx":1,"valor_unitario":0.00,"valor_total":0.00,"categoria":"materia_prima"}]}`,
+JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"DD/MM/AAAA","parcelas":[{"vencimento":"DD/MM/AAAA","valor":0.00}],"valor_total":0.00,"itens":[{"descricao":"","quantidade":0,"unidade":"cx","unidades_por_cx":1,"valor_unitario":0.00,"valor_total":0.00,"categoria":"materia_prima"}]}`,
  messages:[{role:"user",content:`Extraia dados desta NF. Para valor_total de cada item use a ÚLTIMA COLUNA da tabela (valor com imposto).${memStr}\n\nTEXTO:\n${texto}`}]
  });
  const t3txt=(e3.content||[]).map(b=>b.text||"").join("").trim();
@@ -1185,6 +1185,7 @@ JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"D
  item.numero=dados.numero||"";
  item.data=dados.data||"";
  item.vencimento=dados.vencimento||"";
+ item.parcelas=dados.parcelas||[];
  item.valor=dados.valor_total||0;
  item.itens=dados.itens||[];
  item.avisovalor=dados._aviso_valor;
@@ -1258,9 +1259,18 @@ function lancarItemNoSistema(item){
   return;
  }
 
- db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:item.valor,
- venc:converterDataParaInput(item.vencimento||item.data),pag:item.formaPagamento||"boleto",pago:false,
- nf:item.numero||"",semana:semana(),dt:hj()});
+ if(item.parcelas&&item.parcelas.length>1){
+  // Multiplos boletos/parcelas — uma conta a pagar POR parcela, com seu proprio vencimento e valor
+  item.parcelas.forEach((p,idx)=>{
+   db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:Number(p.valor)||0,
+    venc:converterDataParaInput(p.vencimento||item.data),pag:item.formaPagamento||"boleto",pago:false,
+    nf:(item.numero||"")+(item.parcelas.length>1?` (${idx+1}/${item.parcelas.length})`:""),semana:semana(),dt:hj()});
+  });
+ }else{
+  db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:item.valor,
+   venc:converterDataParaInput(item.vencimento||item.data),pag:item.formaPagamento||"boleto",pago:false,
+   nf:item.numero||"",semana:semana(),dt:hj()});
+ }
  (item.itens||[]).forEach(it=>{
  if(!it.descricao&&it.nome){
   // Schema simples (nome/qtd/un) — preenchido manualmente em NF resumo
@@ -11664,6 +11674,7 @@ Responda SOMENTE JSON válido sem markdown:
 "cnpj_destinatario":"",
 "data_emissao":"",
 "data_vencimento":"",
+"parcelas": [{"vencimento":"DD/MM/AAAA","valor":0.00}],
 "valor_total": 0.00,
 "valor_produtos": 0.00,
 "valor_desconto": 0.00,
@@ -11687,6 +11698,12 @@ const PROMPT_OCR_USER = `Leia este DANFE brasileiro com atenção máxima em doi
  - Se não achar, use"VALOR TOTAL DA NOTA"
  - Informe em"campo_valor_usado" qual campo usou
  - Converta BR: vírgula=decimal, ponto=milhar
+
+2b. PARCELAS/BOLETOS — pode haver MAIS DE UM vencimento (fatura parcelada):
+ - Procure na area de"FATURA"/"DUPLICATA"/"VENCIMENTO" por uma TABELA com varias linhas (ex: Parcela 1, Parcela 2, Parcela 3)
+ - Cada linha tem sua propria DATA e VALOR — liste TODAS em"parcelas", uma por uma
+ - A soma das parcelas deve ser igual ao valor_total
+ - Se houver apenas 1 vencimento, retorne parcelas com 1 item só
 
 3. ITENS: extraia todos da tabela central com descrição completa, qtd, unidade e valores
 
