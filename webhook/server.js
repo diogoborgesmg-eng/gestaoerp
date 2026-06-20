@@ -160,6 +160,31 @@ async function salvarGitHub(lanc, reciboUrl) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
+    if (req.url && req.url.startsWith('/test-supabase')) {
+      const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+      const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+      req2('GET', SB_URL+'/rest/v1/erp_sync?device_id=eq.dicasalaranjinha&select=data,updated_at',null,
+        {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+      ).then(rows=>{
+        let resumo = {ok:true, encontrado: Array.isArray(rows)&&rows.length>0};
+        if (resumo.encontrado) {
+          const d = JSON.parse(rows[0].data);
+          resumo.updated_at = rows[0].updated_at;
+          resumo.dias_no_banco = Object.keys(d).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
+          resumo.tem_19_06 = !!d['19/06/2026'];
+          if (d['19/06/2026']) {
+            resumo.receita_19_06 = (d['19/06/2026'].r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+            resumo.custo_19_06 = (d['19/06/2026'].c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+          }
+        }
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(resumo,null,2));
+      }).catch(e=>{
+        res.writeHead(500,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url && req.url.startsWith('/test-dispatch')) {
       const urlObj = new URL(req.url, 'http://x');
       const diaParam = urlObj.searchParams.get('dia');
