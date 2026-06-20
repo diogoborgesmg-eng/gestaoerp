@@ -437,8 +437,8 @@ async function executarDispatch(diaForcado){
 
   // Melhor e pior dia do mes (entre os dias com movimento)
   const diasComMovimento = diasDoMes.filter(d=>d.receita>0||d.custo>0);
-  const melhorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.resultado>a.resultado?b:a) : null;
-  const piorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.resultado<a.resultado?b:a) : null;
+  const melhorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.receita>a.receita?b:a) : null;
+  const piorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.receita<a.receita?b:a) : null;
   const mediaResultadoMes = diasComMovimento.length ? diasComMovimento.reduce((s,d)=>s+d.resultado,0)/diasComMovimento.length : 0;
 
   let pdfBase64 = null, erroPdf = null;
