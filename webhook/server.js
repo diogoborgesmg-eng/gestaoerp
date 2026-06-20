@@ -164,7 +164,7 @@ const server = http.createServer((req, res) => {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
       req2('GET', SB_URL+'/rest/v1/erp_sync?device_id=eq.dicasalaranjinha&select=data,updated_at',null,
-        {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+        {'apikey':SB_KEY}
       ).then(rows=>{
         let resumo = {ok:true, encontrado: Array.isArray(rows)&&rows.length>0};
         if (resumo.encontrado) {
