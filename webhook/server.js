@@ -364,8 +364,9 @@ async function executarDispatch(diaForcado){
   const segTotaisOntem = {};
   (diaOntem.r||[]).forEach(x=>{
     const segId = x.s || 'geral';
-    if(!segTotaisOntem[segId]) segTotaisOntem[segId] = { nome: segId, icone: '', valor: 0 };
+    if(!segTotaisOntem[segId]) segTotaisOntem[segId] = { nome: segId, icone: '', valor: 0, qtdPedidos: 0 };
     segTotaisOntem[segId].valor += Number(x.v||0);
+    segTotaisOntem[segId].qtdPedidos += Number(x.qtdPedidos||0);
   });
   const catTotaisOntem = {};
   (diaOntem.c||[]).forEach(x=>{
@@ -381,12 +382,32 @@ async function executarDispatch(diaForcado){
     return brOrdinal(y,m,d) <= hojeOrdinal;
   });
 
+  // KPIs: CMV e RH (% sobre receita) — por palavra-chave, igual ao sistema
+  function totalPorPalavras(catTotais, palavras){
+    return Object.entries(catTotais).reduce((s,[cat,v])=>{
+      const cl = cat.toLowerCase();
+      return palavras.some(p=>cl.includes(p)) ? s+v : s;
+    },0);
+  }
+  const custoMP = totalPorPalavras(catTotaisOntem, ['matéria','materia','embalagem']);
+  const custoRH = totalPorPalavras(catTotaisOntem, ['rh','mão de obra','mao de obra','folha','diári','diaria','freelancer','autônomo','autonomo','salári','salario','funcionári','funcionario']);
+  const cmvPct = receitaOntem > 0 ? (custoMP/receitaOntem*100) : 0;
+  const rhPct = receitaOntem > 0 ? (custoRH/receitaOntem*100) : 0;
+
+  // Melhor e pior dia do mes (entre os dias com movimento)
+  const diasComMovimento = diasDoMes.filter(d=>d.receita>0||d.custo>0);
+  const melhorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.resultado>a.resultado?b:a) : null;
+  const piorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.resultado<a.resultado?b:a) : null;
+  const mediaResultadoMes = diasComMovimento.length ? diasComMovimento.reduce((s,d)=>s+d.resultado,0)/diasComMovimento.length : 0;
+
   let pdfBase64 = null, erroPdf = null;
   try {
     const pdfBuffer = await gerarPdfFechamento({
       diaBR: ontemBR, receita: receitaOntem, custo: custoOntem, resultado: lucroOntem,
       segTotais: segTotaisOntem, catTotais: catTotaisOntem,
-      contasPagar: contasPdf, evolucaoMes: diasDoMes
+      contasPagar: contasPdf, evolucaoMes: diasDoMes,
+      cmvPct, rhPct, metaCmv: 35, metaRh: 30,
+      melhorDia, piorDia, mediaResultadoMes, mesNome: mesOntem, anoMes: anoOntem
     });
     pdfBase64 = pdfBuffer.toString('base64');
   } catch(ePdf) { erroPdf = ePdf.message; console.log('Erro gerar PDF dispatch:', ePdf.message); }
