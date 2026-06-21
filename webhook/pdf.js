@@ -10,7 +10,7 @@ function limparEmoji(txt) {
   return String(txt||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, '').trim();
 }
 
-function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTotais, contasPagar, evolucaoMes, cmvPct, rhPct, metaCmv, metaRh, melhorDia, piorDia, mediaResultadoMes }) {
+function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTotais, contasPagar, evolucaoMes, cmvPct, rhPct, metaCmv, metaRh, melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 36 });
     const chunks = [];
@@ -74,6 +74,11 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
         doc.fontSize(12).fillColor(corVermelho).font('Helvetica-Bold').text('Dia ' + String(piorDia.dia).padStart(2,'0') + ' — R$ ' + brlFmt(piorDia.receita), 36 + colMP, yMP + 11, { width: colMP - 10 });
       }
       doc.y = yMP + 32;
+      if (diaMaiorCusto) {
+        doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('DIA DE MAIOR CUSTO', 36, doc.y, { width: colMP - 10 });
+        doc.fontSize(12).fillColor(corVermelho).font('Helvetica-Bold').text('Dia ' + String(diaMaiorCusto.dia).padStart(2,'0') + ' — R$ ' + brlFmt(diaMaiorCusto.custo), 36, doc.y + 11, { width: colMP - 10 });
+        doc.y = doc.y + 32;
+      }
       if (mediaResultadoMes !== undefined) {
         doc.fontSize(8).fillColor(corCinza).font('Helvetica').text('Media diaria do mes: R$ ' + brlFmt(mediaResultadoMes) + ' | Hoje vs media: ' + (resultado >= mediaResultadoMes ? '+' : '') + 'R$ ' + brlFmt(resultado - mediaResultadoMes));
       }
