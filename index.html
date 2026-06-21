@@ -1198,7 +1198,13 @@ function lancarItemFila(id){
  const fila=gFila();
  const item=fila.find(f=>f.id===id);
  if(!item||item.status!=="pronto")return;
- if(!confirm(`Lançar NF ${item.fornecedor} — ${brl(item.valor||0)}?`))return;
+ const dup=_existeDuplicado(item.fornecedor,item.valor,item.data||hj());
+ if(dup){
+  const onde=dup.local==='fila'?'na fila (outro item pendente)':'já lançado no DRE (pode ter vindo do bot)';
+  if(!confirm(`⚠️ Possível duplicado!\n\n${item.fornecedor} — ${brl(item.valor||0)}\njá existe ${onde}.\n\nLançar mesmo assim?`))return;
+ } else {
+  if(!confirm(`Lançar NF ${item.fornecedor} — ${brl(item.valor||0)}?`))return;
+ }
  lancarItemNoSistema(item);
  item.status="lançado";
  sFila(fila);render();
