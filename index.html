@@ -1762,11 +1762,18 @@ function consultarNFsManual(){
 setTimeout(()=>{if(temCertificadoConfigurado())iniciarMonitorNFe();},5000);
 setInterval(()=>{if(temCertificadoConfigurado())iniciarMonitorNFe();},NF_MONITOR_MIN*60*1000);
 
+const SUPABASE_URL_PADRAO="https://bxppiwshjyddiieazoqx.supabase.co";
+const SUPABASE_KEY_PADRAO="sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM";
 function getSupabaseCfg(){
+ let deviceId=localStorage.getItem("erp_sb_device");
+ if(!deviceId){
+  deviceId="device_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+  localStorage.setItem("erp_sb_device",deviceId);
+ }
  return{
- url:localStorage.getItem("erp_sb_url")||"",
- key:localStorage.getItem("erp_sb_key")||"",
- deviceId:localStorage.getItem("erp_sb_device")||""
+ url:localStorage.getItem("erp_sb_url")||SUPABASE_URL_PADRAO,
+ key:localStorage.getItem("erp_sb_key")||SUPABASE_KEY_PADRAO,
+ deviceId
  };
 }
 
