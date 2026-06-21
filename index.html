@@ -537,6 +537,10 @@ function abrirRevisao(id){
 </div>
 <div class="campo"><label>Vencimento (FAT)</label>
 <input type="text" id="rev-venc" value="${item.vencimento||''}" placeholder="DD/MM/AAAA" style="background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:12px;width:100%;"/></div>
+${item.parcelas&&item.parcelas.length>1?`<div class="campo" style="background:rgba(68,136,255,0.06);border:1px solid rgba(68,136,255,0.2);border-radius:8px;padding:8px;">
+<label style="color:#4488ff;">💳 ${item.parcelas.length} Parcelas detectadas (vai criar ${item.parcelas.length} contas a pagar)</label>
+${item.parcelas.map((p,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);"><span>Parcela ${i+1}: ${p.vencimento}</span><span><b>R$ ${Number(p.valor).toFixed(2)}</b></span></div>`).join('')}
+</div>`:''}
 <div style="display:flex;gap:8px;">
 <div class="campo" style="flex:1;"><label>Tipo de Nota</label>
 <select id="rev-tipo" style="background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:var(--tx);font-size:12px;width:100%;">
