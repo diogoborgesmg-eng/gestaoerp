@@ -142,8 +142,8 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
       { nome: 'Valor', w: larguraPagina * 0.25, align: 'right' }
     ], cpLinhas);
 
-    // Evolucao do mes
-    if (doc.y > doc.page.height - 200) doc.addPage();
+    // Evolucao do mes (deixa o PDFKit decidir a quebra de pagina naturalmente)
+    if (doc.y > doc.page.height - 100) doc.addPage();
     const evLinhas = (evolucaoMes || []).map(d => [
       String(d.dia).padStart(2, '0'), 'R$ ' + brlFmt(d.receita), 'R$ ' + brlFmt(d.custo),
       (d.resultado >= 0 ? '+' : '') + 'R$ ' + brlFmt(d.resultado)
