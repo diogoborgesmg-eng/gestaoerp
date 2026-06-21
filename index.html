@@ -3224,7 +3224,7 @@ ${ativos.length>0?(()=>{
  }));
  const horasH=Math.floor(horasRegistradas/60);
  const pctHoras=hMetaMes>0?Math.min(100,(horasH/hMetaMes)*100):0;
- return`<div style="display:flex;justify-content:space-around;background:var(--sf2);border-radius:12px;padding:10px;margin-bottom:10px;">
+ return`<div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:8px;background:var(--sf2);border-radius:12px;padding:10px;margin-bottom:10px;">
 <div style="text-align:center;">
 ${gauge(pctFolha,0,50,"Folha/Receita","%",[{val:15,cor:"#00ff88"},{val:25,cor:"#ffcc00"},{val:35,cor:"#f59e0b"},{val:50,cor:"#ff3366"}])}
 </div>
@@ -6126,7 +6126,7 @@ ${receitaMes>0||totalProx15>0?`<div class="kg" style="margin-bottom:10px;">
 </div>
 
 <!-- GAUGES FINANCEIROS -->
-${receitaMes>0?`<div style="display:flex;justify-content:space-around;background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+${receitaMes>0?`<div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:8px;background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
 <div style="text-align:center;">
 ${gauge(comprometimento,0,100,"Comprometimento","%",[{val:30,cor:"#00ff88"},{val:50,cor:"#ffcc00"},{val:70,cor:"#f59e0b"},{val:100,cor:"#ff3366"}])}
 </div>
@@ -12289,7 +12289,7 @@ ${totalAberto>0?(()=>{
  const concentracao=totalMes>0?((top1/totalMes)*100):0;
  const inadimplencia=totalAberto>0?((vencidas.reduce((a,c)=>a+Number(c.val),0)/totalAberto)*100):0;
  const prazo7=totalAberto>0?((proximas.reduce((a,c)=>a+Number(c.val),0)/totalAberto)*100):0;
- return`<div style="display:flex;justify-content:space-around;background:var(--sf2);border-radius:12px;padding:10px;margin-bottom:10px;">
+ return`<div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:8px;background:var(--sf2);border-radius:12px;padding:10px;margin-bottom:10px;">
 <div style="text-align:center;">
 ${gauge(concentracao,0,100,"Concentração","%",[{val:30,cor:"#00ff88"},{val:50,cor:"#ffcc00"},{val:70,cor:"#f59e0b"},{val:100,cor:"#ff3366"}])}
 </div>
