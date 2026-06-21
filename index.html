@@ -410,6 +410,7 @@ async function adicionarPorChave(){
  fila[idx].numero=dados.numero||"";
  fila[idx].data=dados.data||"";
  fila[idx].vencimento=dados.vencimento||"";
+ fila[idx].parcelas=dados.parcelas||[];
  fila[idx].valor=dados.valor_total||0;
  fila[idx].itens=dados.itens||[];
  fila[idx].textoOriginal="Dados via SEFAZ XML";
@@ -479,10 +480,10 @@ async function adicionarPorTexto(){
  system:`Interprete texto de nota fiscal brasileira. REGRAS:
 1. Cada produto = item separado
 2. Formato NxM = unidades por caixa (12X1 → upc:12)
-3. Vencimento: campo FAT/FATURA
+3. Vencimento: campo FAT/FATURA. Se houver VARIAS parcelas/boletos (ex: formato "[1/N - data - valor] ; [2/N - data - valor]"), liste TODAS em "parcelas", uma por uma, cada uma com sua propria data e valor — NUNCA junte tudo em 1 so vencimento.
 4. Valor: VALOR A COBRAR
 5. Converta BR: vírgula=decimal, ponto=milhar
-JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"DD/MM/AAAA","valor_total":0.00,"itens":[{"descricao":"","quantidade":0,"unidade":"cx","unidades_por_cx":1,"valor_unitario":0.00,"valor_total":0.00}]}`,
+JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"DD/MM/AAAA","parcelas":[{"vencimento":"DD/MM/AAAA","valor":0.00}],"valor_total":0.00,"itens":[{"descricao":"","quantidade":0,"unidade":"cx","unidades_por_cx":1,"valor_unitario":0.00,"valor_total":0.00}]}`,
  messages:[{role:"user",content:`Extraia dados desta NF:\n\n${texto}`}]
  });
  const txt=(interpData.content||[]).map(b=>b.text||"").join("").trim();
@@ -497,6 +498,7 @@ JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"D
  fila[idx].numero=dados.numero||"";
  fila[idx].data=dados.data||"";
  fila[idx].vencimento=dados.vencimento||"";
+ fila[idx].parcelas=dados.parcelas||[];
  fila[idx].valor=dados.valor_total||0;
  fila[idx].itens=dados.itens||[];
  fila[idx].textoOriginal=texto;
