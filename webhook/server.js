@@ -439,6 +439,7 @@ async function executarDispatch(diaForcado){
   const diasComMovimento = diasDoMes.filter(d=>d.receita>0||d.custo>0);
   const melhorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.receita>a.receita?b:a) : null;
   const piorDia = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.receita<a.receita?b:a) : null;
+  const diaMaiorCusto = diasComMovimento.length ? diasComMovimento.reduce((a,b)=>b.custo>a.custo?b:a) : null;
   const mediaResultadoMes = diasComMovimento.length ? diasComMovimento.reduce((s,d)=>s+d.resultado,0)/diasComMovimento.length : 0;
 
   let pdfBase64 = null, erroPdf = null;
@@ -448,7 +449,7 @@ async function executarDispatch(diaForcado){
       segTotais: segTotaisOntem, catTotais: catTotaisOntem,
       contasPagar: contasPdf, evolucaoMes: diasDoMes,
       cmvPct, rhPct, metaCmv: 35, metaRh: 30,
-      melhorDia, piorDia, mediaResultadoMes, mesNome: mesOntem, anoMes: anoOntem
+      melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes, mesNome: mesOntem, anoMes: anoOntem
     });
     pdfBase64 = pdfBuffer.toString('base64');
   } catch(ePdf) { erroPdf = ePdf.message; console.log('Erro gerar PDF dispatch:', ePdf.message); }
