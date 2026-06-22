@@ -1012,7 +1012,19 @@ function buscarCorrecao(fornecedor, descricao){
  const cor=gCorrecoes();
  const key=(fornecedor||"").toLowerCase();
  if(!cor[key])return null;
- return cor[key][descricao?.toLowerCase()]||null;
+ const prod=(descricao||"").toLowerCase().trim();
+ if(!prod)return null;
+ // Tenta exato primeiro (mais rapido e seguro)
+ if(cor[key][prod])return cor[key][prod];
+ // Aproximacao: aceita pequenas variacoes de leitura (igual a memoria de UN/cx),
+ // mas exige pelo menos 6 caracteres em comum pra nao confundir produtos diferentes
+ const prodLimpo=prod.replace(/\s+/g,"");
+ const match=Object.keys(cor[key]).find(k=>{
+  const kLimpo=k.replace(/\s+/g,"");
+  if(kLimpo.length<6||prodLimpo.length<6)return false;
+  return prodLimpo.includes(kLimpo)||kLimpo.includes(prodLimpo);
+ });
+ return match?cor[key][match]:null;
 }
 
 function salvarCorrecao(fornecedor,nomeLido,nomeCorreto,grupo){
