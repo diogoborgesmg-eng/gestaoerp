@@ -1409,11 +1409,12 @@ function lancarFila(){
  render();
 }
 function ldb(){return JSON.parse(localStorage.getItem("erp")||"{}");}
+let _syncBootReady=false; // so permite EMPURRAR pra nuvem depois de tentar BAIXAR primeiro (evita sobrescrever dados de outros dispositivos com base vazia)
 function sdb(d){
  localStorage.setItem("erp",JSON.stringify(d));
  // Sync Supabase assíncrono (não bloqueia UI)
  const cfg=getSupabaseCfg();
- if(cfg.url&&cfg.key&&cfg.deviceId){
+ if(cfg.url&&cfg.key&&cfg.deviceId&&_syncBootReady){
  syncSupabaseSave(d,cfg).catch(()=>{});
  }
 }
@@ -24143,12 +24144,13 @@ setTimeout(sincronizarDreNuvem,8000);
 // Sincronizacao automatica silenciosa ao abrir o app (usa o mais recente entre dispositivos)
 async function autoSyncSupabaseInicial(){
  const cfg=getSupabaseCfg();
- if(!cfg.url||!cfg.key)return;
+ if(!cfg.url||!cfg.key){_syncBootReady=true;return;}
  const remote=await syncSupabaseLoad();
- if(!remote)return;
+ if(!remote){_syncBootReady=true;return;}
  const localUltimoSync=localStorage.getItem('erp_ultimo_sync_ts');
  const remoteTs=remote.time.getTime();
  if(!localUltimoSync||remoteTs>Number(localUltimoSync)){
+  _syncBootReady=true;
   sdb(remote.data);
   localStorage.setItem('erp_ultimo_sync_ts',String(remoteTs));
   localStorage.setItem('erp_ultimo_sync',new Date().toLocaleString('pt-BR'));
@@ -24158,6 +24160,7 @@ async function autoSyncSupabaseInicial(){
   n.textContent='☁️ Sincronizado automaticamente';
   document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
  }
+ _syncBootReady=true;
 }
 setTimeout(autoSyncSupabaseInicial,2500);
 
