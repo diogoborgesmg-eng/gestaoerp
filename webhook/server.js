@@ -106,28 +106,48 @@ async function claude(messages, maxTok) {
   });
 }
 
+function _chaveDuplicado(l) {
+  const dest = (l.destinatario||'').toLowerCase().trim().replace(/\s+/g,' ');
+  const valor = Number(l.valor||0).toFixed(2);
+  return dest+'|'+valor;
+}
 async function salvarGitHubBatch(lancamentos, reciboUrl) {
-  if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return; }
-  if (!lancamentos || !lancamentos.length) return;
+  if (!GHTOKEN) { console.error('GITHUB_TOKEN faltando no Render'); return { salvos:0, ignorados:0 }; }
+  if (!lancamentos || !lancamentos.length) return { salvos:0, ignorados:0 };
   try {
     const fi = await req2('GET',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
       null, { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
-    if (!fi.content) { console.error('fi.content undefined!'); return; }
+    if (!fi.content) { console.error('fi.content undefined!'); return { salvos:0, ignorados:0 }; }
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
-    lancamentos.forEach((lanc, idx) => {
+
+    // Evita duplicado: mesmo destinatario + mesmo valor ja existente -> ignora
+    const chavesExistentes = new Set(fd.lancamentos.map(_chaveDuplicado));
+    let ignorados = 0;
+    const novosUnicos = [];
+    lancamentos.forEach((lanc) => {
+      const chave = _chaveDuplicado(lanc);
+      if (chavesExistentes.has(chave)) { ignorados++; return; }
+      chavesExistentes.add(chave); // evita duplicado tambem DENTRO do mesmo lote
+      novosUnicos.push(lanc);
+    });
+
+    novosUnicos.forEach((lanc, idx) => {
       fd.lancamentos.push({ id: Date.now().toString(36)+'_'+idx, ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
         criadoEm: new Date().toISOString(), sincronizado: false });
     });
     if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
+    if (!novosUnicos.length) return { salvos:0, ignorados };
     await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
-      { message: 'bot:lote:'+lancamentos.length, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
+      { message: 'bot:lote:'+novosUnicos.length, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
       { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
-    console.log('GitHub OK - lote de', lancamentos.length, 'lancamento(s) salvos juntos');
+    console.log('GitHub OK -', novosUnicos.length, 'salvos,', ignorados, 'ignorados (duplicado)');
+    return { salvos: novosUnicos.length, ignorados };
   } catch(eg) {
     console.error('GitHub batch err:', eg.message);
+    return { salvos:0, ignorados:0, erro:eg.message };
   }
 }
 
@@ -327,6 +347,7 @@ const server = http.createServer((req, res) => {
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
         const match = texto2.match(/\{[\s\S]*\}/);
         const lancamentosFeitos = [];
+        let resultadoSalvo = null;
         if (match) {
           try {
             const d = JSON.parse(match[0]);
@@ -346,13 +367,15 @@ const server = http.createServer((req, res) => {
                 lancamentosFeitos.push(lancJuros);
               }
             }
-            await salvarGitHubBatch(lancamentosFeitos, reciboUrl2);
+            resultadoSalvo = await salvarGitHubBatch(lancamentosFeitos, reciboUrl2);
           } catch(ep) { console.error('parse err:', ep.message); }
         }
         let resp = 'Analise:\n' + analise + '\n\n_Di Casa Laranjinha_';
         if (lancamentosFeitos.length) {
-          resp += '\n\n✅ ' + lancamentosFeitos.length + ' lancamento(s):';
+          const ignorados = resultadoSalvo?.ignorados || 0;
+          resp += '\n\n✅ ' + (resultadoSalvo?.salvos ?? lancamentosFeitos.length) + ' lancamento(s):';
           lancamentosFeitos.forEach(l => { resp += '\nR$ ' + l.valor.toFixed(2) + ' - ' + l.destinatario + ' - ' + l.categoria; });
+          if (ignorados > 0) resp += '\n\n⏭️ ' + ignorados + ' ignorado(s) - mesmo valor+destinatario ja lancado antes (duplicado).';
         } else {
           resp += '\n\n⚠️ Nenhum valor identificado pra lancar.';
         }
