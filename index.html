@@ -501,9 +501,11 @@ async function adicionarNaFila(inp){
  if(!files.length)return;
  inp.value="";
  const fila=gFila();
+ let falhas=0;
  for(const f of files){
+ try{
  const b64=await comprimirImagem(f,2400,2400,0.95);
- if(!b64)continue;
+ if(!b64){falhas++;continue;}
  fila.push({
  id:uid(),
  imagem:b64,
@@ -511,8 +513,15 @@ async function adicionarNaFila(inp){
  horario:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),
  fornecedor:null,valor:null,numero:null,data:null,itens:[],erro:null
  });
+ }catch(eComp){
+ falhas++;
+ console.error("Falha ao comprimir uma foto, continuando com as demais:",eComp.message);
+ }
  }
  sFila(fila);render();
+ if(falhas>0){
+ alert(`⚠️ ${falhas} de ${files.length} foto(s) falharam ao processar e foram ignoradas. As demais (${files.length-falhas}) entraram na fila normalmente.`);
+ }
  setTimeout(()=>processarFila(),300);
 }
 
