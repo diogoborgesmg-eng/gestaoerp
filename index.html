@@ -116,16 +116,16 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
-<button class="tb" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
-<button class="tb" onclick="ir('cad')">📦 Cadastros</button>
-<button class="tb a" onclick="ir('dre')">📊 DRE</button>
-<button class="tb" onclick="ir('fin')">💰 Financeiro</button>
-<button class="tb" onclick="ir('dashm')">📈 Dashboards</button>
-<button class="tb" onclick="ir('rh')">👥 Operacional</button>
-<button class="tb" onclick="ir('cozinha')">🧑‍🍳 Cozinha</button>
-<button class="tb" onclick="ir('caixa')">🏦 Caixa</button>
-<button class="tb" onclick="ir('cfg')">⚙️ Config</button>
-<button class="tb" onclick="sincronizarBotLancamentos()" style="color:#00ff88;">📱 Bot</button>
+<button class="tb" data-tab="pdv" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
+<button class="tb" data-tab="cad" onclick="ir('cad')">📦 Cadastros</button>
+<button class="tb a" data-tab="dre" onclick="ir('dre')">📊 DRE</button>
+<button class="tb" data-tab="fin" onclick="ir('fin')">💰 Financeiro</button>
+<button class="tb" data-tab="dashm" onclick="ir('dashm')">📈 Dashboards</button>
+<button class="tb" data-tab="rh" onclick="ir('rh')">👥 Operacional</button>
+<button class="tb" data-tab="cozinha" onclick="ir('cozinha')">🧑‍🍳 Cozinha</button>
+<button class="tb" data-tab="caixa" onclick="ir('caixa')">🏦 Caixa</button>
+<button class="tb" data-tab="cfg" onclick="ir('cfg')">⚙️ Config</button>
+<button class="tb" data-tab="bot" onclick="sincronizarBotLancamentos()" style="color:#00ff88;">📱 Bot</button>
 </div>
 <div class="main" id="main"></div>
 <div class="mov" id="mov" onclick="fmov(event)"><div class="mo"><p class="mt2" id="mt"></p><div id="mb"></div><button class="bok" onclick="salvar()">✓ Salvar</button><button class="bcan" onclick="fmov()">Cancelar</button></div>
@@ -8557,6 +8557,37 @@ function buffetConfirmarSaida(dia,btn){
  if(window._renderBuffet)window._renderBuffet();
 }
 
+// ═══════════════════════════════════════════════════
+// ACESSO POR SETOR (link individual por papel)
+// ═══════════════════════════════════════════════════
+const PAPEL_TABS = {
+ dono: null, // null = ve tudo, sem filtro
+ caixa: ['pdv','caixa','cfg'],
+ cozinha: ['cozinha','pdv','cfg'],
+ estoque: ['cad','cfg'],
+};
+function getPapelAtual(){
+ const urlParams=new URLSearchParams(window.location.search);
+ const papelUrl=urlParams.get('papel');
+ if(papelUrl&&PAPEL_TABS.hasOwnProperty(papelUrl)){
+  localStorage.setItem('erp_papel',papelUrl);
+  return papelUrl;
+ }
+ return localStorage.getItem('erp_papel')||'dono';
+}
+function aplicarFiltroPapel(){
+ const papel=getPapelAtual();
+ const permitidos=PAPEL_TABS[papel];
+ document.querySelectorAll('.tnav .tb[data-tab]').forEach(btn=>{
+  const tab=btn.getAttribute('data-tab');
+  if(!permitidos||permitidos.includes(tab)){
+   btn.style.display='';
+  }else{
+   btn.style.display='none';
+  }
+ });
+}
+
 function render(){
  const el=document.getElementById("main");
  const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
@@ -8582,6 +8613,7 @@ function render(){
  console.error("Erro render",aba,e);
  }
  atualizarAlertas();
+ aplicarFiltroPapel();
 }
 
 function gFixos(){const d=ldb();if(!d.custosFixos)d.custosFixos=[];return d.custosFixos;}
