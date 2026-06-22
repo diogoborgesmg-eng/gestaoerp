@@ -1244,6 +1244,38 @@ async function reprocessarItem(id){
  setTimeout(()=>processarFila(),300);
 }
 
+// Extrai "unidades por caixa" direto do texto da descrição, via padrões conhecidos de embalagem.
+// Roda DEPOIS da IA, como camada de seguranca determinística - nao depende da IA acertar sempre.
+function extrairUpcDoTexto(descricao){
+ if(!descricao)return null;
+ const d=descricao.toUpperCase();
+
+ // Padrao "NxM" onde M pode ter unidade de peso/volume (192X7G, 24X350ML, 12X1, 6X1L, 1X5KG)
+ // Pega APENAS o N (primeiro numero antes do X) como upc
+ let m=d.match(/(\d+)\s*X\s*\d+[.,]?\d*\s*(KG|G|ML|L|UN|UND)?\b/);
+ if(m){
+  const n=parseInt(m[1]);
+  if(n>=1&&n<=999)return n;
+ }
+
+ // Padrao "CX C/24", "C/12 UN", "CAIXA COM 24"
+ m=d.match(/C\/\s*(\d+)|COM\s+(\d+)\s*(UN|UND)?/);
+ if(m){
+  const n=parseInt(m[1]||m[2]);
+  if(n>=1&&n<=999)return n;
+ }
+
+ // Padrao "PCT 12UN", "FARDO 6UN", "(12 UNIDADES)"
+ m=d.match(/(\d+)\s*(UNIDADES|UNID|UN)\b/);
+ if(m){
+  const n=parseInt(m[1]);
+  if(n>=2&&n<=999)return n; // >=2 pra nao confundir com "1 unidade" trivial
+ }
+
+ return null; // nao achou padrao claro - deixa o valor da IA ou o default
+}
+
+
 function lancarItemNoSistema(item){
  if(!item.valor||item.valor<=0)return;
  const db=ldb();
@@ -1333,7 +1365,8 @@ function lancarItemNoSistema(item){
   return;
  }
  if(!it.descricao||!it.quantidade)return;
- const upc=it.unidades_por_cx||1;const qtdCx=it.quantidade;
+ const upcDetectado=extrairUpcDoTexto(it.descricao);
+ const upc=upcDetectado||it.unidades_por_cx||1;const qtdCx=it.quantidade;
  const qtdUn=qtdCx*upc;const cuPorCx=it.valor_unitario||0;const cuPorUn=upc>1?cuPorCx/upc:cuPorCx;
  const ex=db.est.find(e=>e.n.toLowerCase()===it.descricao.toLowerCase());
  if(ex){
