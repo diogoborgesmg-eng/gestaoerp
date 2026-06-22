@@ -243,11 +243,11 @@ ${(()=>{
 })()}
 
 <label style="display:block;cursor:pointer;margin-bottom:8px;">
-<input type="file" accept="image/*" capture="environment" multiple style="position:absolute;width:1px;height:1px;opacity:0;" onchange="adicionarNaFila(this)"/>
+<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="adicionarNaFila(this)" id="input-cam-scanner"/>
 <div style="border:2px dashed rgba(0,255,136,0.4);background:rgba(0,255,136,0.05);border-radius:14px;padding:16px;text-align:center;">
 <div style="font-size:36px;margin-bottom:6px;">📷</div>
 <p style="font-size:14px;font-weight:800;color:var(--gr);margin-bottom:2px;">Escanear NF</p>
-<p style="font-size:11px;color:var(--mu);">Tire fotos seguidas — todas vão para a fila</p>
+<p style="font-size:11px;color:var(--mu);">Toque, tire 1 foto, confirme — e toque de novo pra próxima nota</p>
 </div></label><label style="display:block;cursor:pointer;margin-bottom:8px;">
 <input type="file" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;" onchange="adicionarNaFila(this)"/>
 <div style="border:1px solid var(--br);background:var(--sf);border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px;">
