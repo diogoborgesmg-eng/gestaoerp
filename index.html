@@ -477,7 +477,7 @@ async function adicionarPorTexto(){
  model:MODEL,max_tokens:2500,
  system:`Interprete texto de nota fiscal brasileira. REGRAS:
 1. Cada produto = item separado
-2. Formato NxM = unidades por caixa (12X1 → upc:12)
+2. Formato NxM na descricao = unidades por caixa: 12X1 -> upc:12. IMPORTANTE: se o segundo numero tiver unidade de peso/volume (G, KG, ML, L), tipo "192X7G" ou "24X350ML", o PRIMEIRO numero (192, 24) e o upc - NUNCA multiplique pelo peso. 192X7G = upc:192 (192 sachês de 7g cada), NAO upc:1344.
 3. Vencimento: campo FAT/FATURA. Se houver VARIAS parcelas/boletos (ex: formato "[1/N - data - valor] ; [2/N - data - valor]"), liste TODAS em "parcelas", uma por uma, cada uma com sua propria data e valor — NUNCA junte tudo em 1 so vencimento.
 4. Valor: VALOR A COBRAR
 5. Converta BR: vírgula=decimal, ponto=milhar
