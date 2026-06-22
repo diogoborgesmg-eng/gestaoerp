@@ -4879,7 +4879,8 @@ function confirmarBalanca(mesaId){
  const nome=nomes[_balancaTipoPrato]||'Produto (balança)';
  m.comanda.push({id:uid(),nome,val:total,qtd:1,
   obs:peso.toFixed(3)+'kg × '+brl(precoKg)+'/kg',
-  dt:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+  pesoKg:peso,precoKg:precoKg,tipoBalanca:_balancaTipoPrato,
+  dt:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),data:hj()});
  sMesas(mesas);
  const db=ldb();db['balancaPrecoKg_'+_balancaTipoPrato]=precoKg;sdb(db);
  const res=document.getElementById('balanca-resultado');
@@ -8206,6 +8207,7 @@ function abrirBuffet(){
     </div>`:''}
     <div style="display:flex;gap:8px;">
      <button onclick="buffetLancarSaidaEstoque('${diaAmanha}')" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;cursor:pointer;">📦 Saída Estoque</button>
+     <button onclick="verCustoVsVendaBuffet(hj())" style="flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,204,0,0.4);background:rgba(255,204,0,0.1);color:var(--ye);font-size:11px;font-weight:700;cursor:pointer;">⚖️ Custo vs Venda</button>
      <button onclick="enviarCardapioWpp()" style="flex:1;padding:10px;border-radius:9px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">📲 Enviar Cozinha</button>
     </div>
    </div>
@@ -8343,6 +8345,81 @@ REGRAS:
 }
 
 // Lança saída de estoque para o buffet
+function verCustoVsVendaBuffet(dia){
+ const b=gBuffetDia(dia);
+ const PESO_MEDIO_PRATO_EMPRESA=0.750; // kg, conforme informado
+
+ // Soma vendas do dia pela balança (kg real, pesado)
+ const mesas=gMesas();
+ let kgVendidoBalanca=0, receitaBalanca=0;
+ let qtdPratosEmpresa=0, receitaPratosEmpresa=0;
+ (mesas||[]).forEach(m=>{
+  (m.comandaHistorico||m.comanda||[]).forEach(it=>{
+   if(it.data===dia&&it.pesoKg){kgVendidoBalanca+=it.pesoKg;receitaBalanca+=it.val;}
+  });
+ });
+ // Pratos de empresa: busca lançamentos do dia com esse nome/categoria (ajustar conforme como você lança)
+ const db=ldb();
+ const diaData=db[dia]||{r:[]};
+ (diaData.r||[]).forEach(r=>{
+  if(/prato.*empresa|empresa.*prato/i.test(r.d||'')){
+   qtdPratosEmpresa+=Number(r.qtdPedidos||1);
+   receitaPratosEmpresa+=Number(r.v||0);
+  }
+ });
+ const kgPratosEmpresa=qtdPratosEmpresa*PESO_MEDIO_PRATO_EMPRESA;
+
+ const kgVendidoTotal=kgVendidoBalanca+kgPratosEmpresa;
+ const receitaTotal=receitaBalanca+receitaPratosEmpresa;
+ const custoReal=b.custoRealTotal||0;
+ const kgSaido=b.kgSaidoTotal||0;
+ const kgSobrou=b.kgSobrouTotal||0;
+ const cmvBuffet=receitaTotal>0?(custoReal/receitaTotal*100):0;
+ const pctSobra=kgSaido>0?(kgSobrou/kgSaido*100):0;
+ const kgConsumidoReal=kgSaido-kgSobrou; // o que realmente foi consumido (saiu - sobrou)
+ const diferKg=kgConsumidoReal-kgVendidoTotal; // positivo = produziu mais do que vendeu (perda nao contabilizada em "sobra")
+
+ const div=document.createElement('div');
+ div.id='modal-custo-buffet';
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;overflow-y:auto;';
+ div.innerHTML=`<div style="padding:14px;max-width:480px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+   <p style="font-size:15px;font-weight:900;">⚖️ Custo vs Venda — Buffet</p>
+   <button onclick="document.getElementById('modal-custo-buffet').remove()" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);">✕</button>
+  </div>
+  <p style="font-size:11px;color:var(--mu);margin-bottom:12px;">${dia}</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+   <div class="kpi"><p class="kl">CUSTO REAL (saída)</p><p class="kv" style="color:var(--re);">${brl(custoReal)}</p></div>
+   <div class="kpi"><p class="kl">RECEITA BUFFET</p><p class="kv" style="color:var(--gr);">${brl(receitaTotal)}</p></div>
+   <div class="kpi"><p class="kl">CMV BUFFET</p><p class="kv">${cmvBuffet.toFixed(1)}%</p></div>
+   <div class="kpi"><p class="kl">% SOBRA</p><p class="kv" style="color:${pctSobra>15?'var(--re)':'var(--gr)'};">${pctSobra.toFixed(1)}%</p></div>
+  </div>
+
+  <div class="card" style="margin-bottom:10px;">
+   <p class="lbl">Balanço de Quilos</p>
+   <div style="font-size:11px;line-height:1.8;">
+   <div style="display:flex;justify-content:space-between;"><span>Kg que saiu do estoque</span><b>${kgSaido.toFixed(2)} kg</b></div>
+   <div style="display:flex;justify-content:space-between;"><span>Kg sobrou (não vendido)</span><b style="color:var(--ye);">${kgSobrou.toFixed(2)} kg</b></div>
+   <div style="display:flex;justify-content:space-between;"><span>Kg vendido na balança</span><b>${kgVendidoBalanca.toFixed(2)} kg</b></div>
+   <div style="display:flex;justify-content:space-between;"><span>Kg equiv. pratos empresa (${qtdPratosEmpresa} × 750g)</span><b>${kgPratosEmpresa.toFixed(2)} kg</b></div>
+   <div style="display:flex;justify-content:space-between;border-top:1px solid var(--br);padding-top:4px;margin-top:4px;"><span>Diferença (produzido vs vendido+sobra)</span><b style="color:${Math.abs(diferKg)>kgSaido*0.05?'var(--re)':'var(--mu)'};">${diferKg>=0?'+':''}${diferKg.toFixed(2)} kg</b></div>
+   </div>
+   <p style="font-size:9px;color:var(--mu);margin-top:6px;">Diferença grande pode indicar porção maior que o pesado, erro de registro, ou consumo não lançado.</p>
+  </div>
+
+  <div class="card">
+   <p class="lbl">Por Ingrediente</p>
+   ${(b.itens||[]).filter(it=>it.qtdReal>0).sort((a,b2)=>(b2.custoTotal||0)-(a.custoTotal||0)).map(it=>`
+   <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+    <span>${it.nome} (${it.qtdReal}kg, sobrou ${it.qtdSobrou||0}kg)</span><b>${brl(it.custoTotal||0)}</b>
+   </div>`).join('')}
+  </div>
+ </div>`;
+ document.body.appendChild(div);
+}
+
+
 function buffetLancarSaidaEstoque(dia){
  const b=gBuffetDia(dia);
  if(!b.itens.length){alert('Nenhum item no cardápio.');return;}
@@ -8430,7 +8507,14 @@ function buffetConfirmarSaida(dia,btn){
   // Salva qtd real no cardápio
   b.itens[idx].qtdReal=qtdSaiu;
   b.itens[idx].qtdSobrou=qtdSobrou;
+  b.itens[idx].custoUnit=est[prodIdx]?.cu||0;
+  b.itens[idx].custoTotal=qtdSaiu*(est[prodIdx]?.cu||0);
  });
+ 
+ // Custo real total do dia (soma de todos os ingredientes que saíram)
+ b.custoRealTotal=b.itens.reduce((s,it)=>s+(it.custoTotal||0),0);
+ b.kgSaidoTotal=b.itens.reduce((s,it)=>s+(it.qtdReal||0),0);
+ b.kgSobrouTotal=b.itens.reduce((s,it)=>s+(it.qtdSobrou||0),0);
  
  // Salva tudo
  db.est=est;
@@ -8442,7 +8526,7 @@ function buffetConfirmarSaida(dia,btn){
  // Toast de confirmação
  const fb=document.createElement('div');
  fb.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,255,136,0.9);color:#000;padding:8px 20px;border-radius:20px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;';
- fb.textContent=`✅ ${saidasConfirmadas} saídas confirmadas${sobrasRegistradas?' · '+sobrasRegistradas+' sobra(s) registrada(s) para amanhã':''}`;
+ fb.textContent=`✅ ${saidasConfirmadas} saídas confirmadas${sobrasRegistradas?' · '+sobrasRegistradas+' sobra(s) registrada(s) para amanhã':''} · Custo: ${brl(b.custoRealTotal||0)}`;
  document.body.appendChild(fb);
  setTimeout(()=>fb.remove(),2500);
  
