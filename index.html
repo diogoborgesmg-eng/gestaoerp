@@ -10555,7 +10555,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
  const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
- const cmvGeral=cc["Insumos/Matéria-prima"]||0;
+ const cmvGeral=(cc["Insumos/Matéria-prima"]||0)+(cc["Embalagens"]||0);
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
 const _rhTotal=Object.entries(cc).reduce((s,[k,v])=>{
