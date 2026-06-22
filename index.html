@@ -1248,7 +1248,7 @@ async function reprocessarItem(id){
 // Roda DEPOIS da IA, como camada de seguranca determinística - nao depende da IA acertar sempre.
 function extrairUpcDoTexto(descricao){
  if(!descricao)return null;
- const d=descricao.toUpperCase();
+ const d=descricao.toUpperCase().trim();
 
  // Padrao "NxM" onde M pode ter unidade de peso/volume (192X7G, 24X350ML, 12X1, 6X1L, 1X5KG)
  // Pega APENAS o N (primeiro numero antes do X) como upc
@@ -1256,6 +1256,14 @@ function extrairUpcDoTexto(descricao){
  if(m){
   const n=parseInt(m[1]);
   if(n>=1&&n<=999)return n;
+ }
+
+ // Peso da caixa fechada no final, SEM multiplicador 'Nx' antes (ex: "...20KG" = caixa de 20kg -> upc:20, base=kg)
+ // Limite >=8kg pra nao confundir com peso de peça individual (ex: linguiça de 2,5kg nao é a caixa toda)
+ m=d.match(/(\d+[.,]?\d*)\s*KG\s*$/);
+ if(m){
+  const n=parseFloat(m[1].replace(',','.'));
+  if(n>=8&&n<=100)return n;
  }
 
  // Padrao "CX C/24", "C/12 UN", "CAIXA COM 24"
