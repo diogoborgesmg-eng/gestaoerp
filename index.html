@@ -24158,11 +24158,21 @@ setTimeout(sincronizarDreNuvem,8000);
 // Sincronizacao automatica silenciosa ao abrir o app (usa o mais recente entre dispositivos)
 async function autoSyncSupabaseInicial(){
  const cfg=getSupabaseCfg();
- if(!cfg.url||!cfg.key)return;
+ if(!cfg.url||!cfg.key){_syncBootReady=true;return;}
  const remote=await syncSupabaseLoad();
- if(!remote)return;
+ if(!remote){_syncBootReady=true;return;}
  const localUltimoSync=localStorage.getItem('erp_ultimo_sync_ts');
  const remoteTs=remote.time.getTime();
+ const localData0=ldb();
+ const localDias=Object.keys(localData0).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
+ const remoteDias=Object.keys(remote.data||{}).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
+ // PROTECAO CRITICA: nunca sobrescreve local com remoto se o remoto estiver suspeitosamente vazio
+ // (tem menos dias de lançamento que o local, mesmo que o timestamp seja "mais novo")
+ if(remoteDias<localDias){
+  _syncBootReady=true;
+  console.log('Sync ignorado: remoto tem menos dias ('+remoteDias+') que o local ('+localDias+') - protegendo dados locais.');
+  return;
+ }
  if(!localUltimoSync||remoteTs>Number(localUltimoSync)){
   sdb(remote.data);
   localStorage.setItem('erp_ultimo_sync_ts',String(remoteTs));
@@ -24173,6 +24183,7 @@ async function autoSyncSupabaseInicial(){
   n.textContent='☁️ Sincronizado automaticamente';
   document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
  }
+ _syncBootReady=true;
 }
 setTimeout(autoSyncSupabaseInicial,2500);
 
