@@ -160,6 +160,31 @@ async function salvarGitHub(lanc, reciboUrl) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
+    if (req.url && req.url.startsWith('/recuperar-backup')) {
+      const SB_URL2 = 'https://bxppiwshjyddiieazoqx.supabase.co';
+      const SB_KEY2 = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+      (async () => {
+        try {
+          const backup = await req2('GET', 'https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(), null, {});
+          if (!backup) throw new Error('Backup do GitHub nao encontrado');
+          const diasBackup = Object.keys(backup).filter(k=>/^\d{2}\/\d{2}\/\d{4}$/.test(k));
+          const payload = JSON.stringify({
+            device_id: 'recuperacao_backup_github',
+            data: JSON.stringify(backup),
+            updated_at: new Date().toISOString()
+          });
+          await req2('POST', SB_URL2+'/rest/v1/erp_sync', JSON.parse(payload), {
+            'apikey': SB_KEY2, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates'
+          });
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, diasRestaurados: diasBackup.length, dias: diasBackup}));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url && req.url.startsWith('/test-supabase')) {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
