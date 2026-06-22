@@ -1411,11 +1411,8 @@ function lancarFila(){
 function ldb(){return JSON.parse(localStorage.getItem("erp")||"{}");}
 function sdb(d){
  localStorage.setItem("erp",JSON.stringify(d));
- // Sync Supabase assíncrono (não bloqueia UI)
- const cfg=getSupabaseCfg();
- if(cfg.url&&cfg.key&&cfg.deviceId){
- syncSupabaseSave(d,cfg).catch(()=>{});
- }
+ // Sync automatico DESATIVADO (20/06/2026) - causou perda de dados ao sobrescrever silenciosamente.
+ // Agora SO sincroniza via botao explicito: forcarEnvioLocalParaNuvem() ou restaurarDaNuvemAgora()
 }
 
 // Usa os certificados digitais salvos em erp_cert_pfx_1 e erp_cert_pfx_2
@@ -24199,7 +24196,9 @@ async function autoSyncSupabaseInicial(){
  }
  _syncBootReady=true;
 }
-setTimeout(autoSyncSupabaseInicial,2500);
+// DESATIVADO (20/06/2026) a pedido do Diogo - sync automatico causou perda de dados real.
+// Agora 100% manual via botoes na tela de Config.
+// setTimeout(autoSyncSupabaseInicial,2500);
 
 render();
 setTimeout(checkBotPending,2000);
