@@ -579,7 +579,11 @@ ${item.avisovalor?`<div class="ial ay"><span>⚠️</span><span>${item.avisovalo
 <div id="rev-itens">
 ${(item.itens||[]).map((it,i)=>{
  const grp=it.grupo||detectarGrupo(it.descricao);
- return`<div style="background:var(--sf2);border-radius:8px;padding:8px;margin-bottom:6px;border:1px solid ${it._corrigido?'rgba(255,204,0,0.3)':it._memoria?'rgba(170,68,255,0.3)':'var(--br)'};">
+ const qtdNum=Number(it.quantidade)||0, vuNum=Number(it.valor_unitario)||0, vtNum=Number(it.valor_total)||0;
+ const calculado=qtdNum*vuNum;
+ const inconsistente=vtNum>0&&calculado>0&&Math.abs(calculado-vtNum)>Math.max(0.5,vtNum*0.05);
+ return`<div style="background:var(--sf2);border-radius:8px;padding:8px;margin-bottom:6px;border:1px solid ${inconsistente?'rgba(255,51,102,0.5)':it._corrigido?'rgba(255,204,0,0.3)':it._memoria?'rgba(170,68,255,0.3)':'var(--br)'};">
+${inconsistente?`<div style="background:rgba(255,51,102,0.12);border-radius:6px;padding:5px 7px;margin-bottom:6px;font-size:10px;color:#ff3366;">⚠️ Confira: ${qtdNum} × R$${vuNum.toFixed(2)} = R$${calculado.toFixed(2)}, mas o total da nota mostra R$${vtNum.toFixed(2)}. Algum número pode estar errado.</div>`:""}
 <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
 <span style="font-size:14px;">${grp.icone||"📋"}</span>
 ${it._corrigido?`<span style="font-size:9px;background:rgba(255,204,0,0.2);border:1px solid rgba(255,204,0,0.4);color:var(--ye);border-radius:4px;padding:1px 5px;">✏️ Nome corrigido</span>`:""}
