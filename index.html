@@ -1409,12 +1409,11 @@ function lancarFila(){
  render();
 }
 function ldb(){return JSON.parse(localStorage.getItem("erp")||"{}");}
-let _syncBootReady=false; // so permite EMPURRAR pra nuvem depois de tentar BAIXAR primeiro (evita sobrescrever dados de outros dispositivos com base vazia)
 function sdb(d){
  localStorage.setItem("erp",JSON.stringify(d));
  // Sync Supabase assíncrono (não bloqueia UI)
  const cfg=getSupabaseCfg();
- if(cfg.url&&cfg.key&&cfg.deviceId&&_syncBootReady){
+ if(cfg.url&&cfg.key&&cfg.deviceId){
  syncSupabaseSave(d,cfg).catch(()=>{});
  }
 }
@@ -1868,6 +1867,20 @@ async function testarConexaoSupabase(){
  }
  }catch(e){
  if(el)el.textContent="❌ "+e.message;
+ }
+}
+
+async function forcarEnvioLocalParaNuvem(){
+ _syncBootReady=true;
+ const cfg=getSupabaseCfg();
+ const localData=ldb();
+ const localDias=Object.keys(localData).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
+ if(!confirm(`Isso vai ENVIAR os dados deste celular (${localDias} dias) para a nuvem, substituindo o que estiver lá.\n\nContinuar?`))return;
+ try{
+  await syncSupabaseSave(localData,cfg);
+  alert(`✅ Enviado! ${localDias} dias deste celular agora estão na nuvem.`);
+ }catch(e){
+  alert('❌ Erro ao enviar: '+e.message);
  }
 }
 
@@ -9052,6 +9065,7 @@ ${(()=>{
  if(cfg.url&&cfg.key){
  return`<div class="ial ag" style="margin-bottom:6px;"><span>☁️</span><span>Supabase configurado${ultimoSync?" · Último sync: "+ultimoSync:""}</span></div>
 <button id="sb-sync-btn" onclick="sincronizarAgora()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(62,207,142,0.8);color:#000;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Sincronizar Agora</button>
+<button onclick="forcarEnvioLocalParaNuvem()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,153,0,0.4);background:rgba(255,153,0,0.1);color:#ff9900;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📤 Forçar Envio Deste Celular pra Nuvem</button>
 <button onclick="testarConexaoSupabase()" style="width:100%;padding:8px;border-radius:9px;border:1px solid rgba(62,207,142,0.3);background:transparent;color:#3ecf8e;font-size:11px;cursor:pointer;">🔍 Testar conexão</button>`;
  }
  return`<div class="campo"><label>URL do Supabase</label>
@@ -24144,13 +24158,12 @@ setTimeout(sincronizarDreNuvem,8000);
 // Sincronizacao automatica silenciosa ao abrir o app (usa o mais recente entre dispositivos)
 async function autoSyncSupabaseInicial(){
  const cfg=getSupabaseCfg();
- if(!cfg.url||!cfg.key){_syncBootReady=true;return;}
+ if(!cfg.url||!cfg.key)return;
  const remote=await syncSupabaseLoad();
- if(!remote){_syncBootReady=true;return;}
+ if(!remote)return;
  const localUltimoSync=localStorage.getItem('erp_ultimo_sync_ts');
  const remoteTs=remote.time.getTime();
  if(!localUltimoSync||remoteTs>Number(localUltimoSync)){
-  _syncBootReady=true;
   sdb(remote.data);
   localStorage.setItem('erp_ultimo_sync_ts',String(remoteTs));
   localStorage.setItem('erp_ultimo_sync',new Date().toLocaleString('pt-BR'));
@@ -24160,7 +24173,6 @@ async function autoSyncSupabaseInicial(){
   n.textContent='☁️ Sincronizado automaticamente';
   document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
  }
- _syncBootReady=true;
 }
 setTimeout(autoSyncSupabaseInicial,2500);
 
