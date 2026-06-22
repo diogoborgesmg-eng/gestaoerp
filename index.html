@@ -1870,6 +1870,19 @@ async function testarConexaoSupabase(){
  }
 }
 
+async function restaurarDaNuvemAgora(){
+ const remote=await syncSupabaseLoad();
+ if(!remote){alert('❌ Não consegui buscar dados da nuvem.');return;}
+ const remoteDias=Object.keys(remote.data||{}).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
+ if(!confirm(`Isso vai SUBSTITUIR os dados deste celular pelos ${remoteDias} dias que estão na nuvem.\n\nContinuar?`))return;
+ _syncBootReady=true;
+ sdb(remote.data);
+ localStorage.setItem('erp_ultimo_sync_ts',String(remote.time.getTime()));
+ localStorage.setItem('erp_ultimo_sync',new Date().toLocaleString('pt-BR'));
+ render();
+ alert(`✅ Restaurado! ${remoteDias} dias carregados da nuvem.`);
+}
+
 async function forcarEnvioLocalParaNuvem(){
  _syncBootReady=true;
  const cfg=getSupabaseCfg();
@@ -9066,6 +9079,7 @@ ${(()=>{
  return`<div class="ial ag" style="margin-bottom:6px;"><span>☁️</span><span>Supabase configurado${ultimoSync?" · Último sync: "+ultimoSync:""}</span></div>
 <button id="sb-sync-btn" onclick="sincronizarAgora()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(62,207,142,0.8);color:#000;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Sincronizar Agora</button>
 <button onclick="forcarEnvioLocalParaNuvem()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,153,0,0.4);background:rgba(255,153,0,0.1);color:#ff9900;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📤 Forçar Envio Deste Celular pra Nuvem</button>
+<button onclick="restaurarDaNuvemAgora()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(62,207,142,0.5);background:rgba(62,207,142,0.15);color:#3ecf8e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📥 Restaurar da Nuvem Agora</button>
 <button onclick="testarConexaoSupabase()" style="width:100%;padding:8px;border-radius:9px;border:1px solid rgba(62,207,142,0.3);background:transparent;color:#3ecf8e;font-size:11px;cursor:pointer;">🔍 Testar conexão</button>`;
  }
  return`<div class="campo"><label>URL do Supabase</label>
