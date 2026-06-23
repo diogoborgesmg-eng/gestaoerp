@@ -10469,7 +10469,7 @@ function exportarRelatorioPDF(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const hoje=new Date();
  const mesNome=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -10654,7 +10654,7 @@ async function gerarRelatorioMensalIA(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const mesNome=new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'});
@@ -10820,7 +10820,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const cor=res>0?"#00ff88":res<0?"#ff3366":"#ffcc00";
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const cmvGeral=(cc["🥩 Matéria Prima"]||0)+(cc["📦 Embalagem"]||0);
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
@@ -13491,7 +13491,7 @@ function editarQtdCompra(id,novaQtd){
  if(item){item.min=parseFloat(novaQtd)||item.min;sdb(db);}
 }
 
-function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+function rIA(){const{r,c,res,m,cus}=cDRE();const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
 const temChave=getApiKey().length>10;
 const db=ldb();
 const estPreparo=db.estPreparo||[];
@@ -13656,7 +13656,7 @@ async function analisarMes(){
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
  const c=cus.reduce((a,x)=>a+Number(x.v),0);
  const res=r-c;const m=r>0?((r-c)/r)*100:0;
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const dias=mes.resumoDias||[];
  const melhor=dias.reduce((a,d)=>d.res>a.res?d:a,{res:-Infinity,dia:""});
  const pior=dias.reduce((a,d)=>d.res<a.res?d:a,{res:Infinity,dia:""});
@@ -13692,7 +13692,7 @@ async function aIA(){
  const el=document.getElementById("iat");
  btn.disabled=true;btn.innerHTML=`<span class="sp">⟳</span> Analisando...`;
  el.innerHTML=`<p style="color:var(--mu);font-size:11px;text-align:center;padding:8px;" class="pu">Consultando...</p>`;
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const est=gest();
  const db=ldb();
  const estPreparo=db.estPreparo||[];
