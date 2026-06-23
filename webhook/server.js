@@ -207,6 +207,11 @@ const server = http.createServer((req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/ultimo-grupo')) {
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({ultimoGrupoId: global._ultimoGrupoId||null}));
+      return;
+    }
     if (req.url && req.url.startsWith('/test-supabase')) {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
@@ -264,6 +269,7 @@ const server = http.createServer((req, res) => {
       const msg = ev.data;
       if (!msg || !msg.key || !msg.key.remoteJid || !msg.key.remoteJid.includes('@g.us')) return;
       const num = msg.key.remoteJid;
+      global._ultimoGrupoId = num; // pra descobrir o ID de grupos novos via /ultimo-grupo
       const tipo = msg.messageType || Object.keys(msg.message||{})[0] || '';
       console.log('MSG:', tipo);
       if (['textMessage','extendedTextMessage','conversation'].includes(tipo)) {
