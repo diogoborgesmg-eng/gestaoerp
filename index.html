@@ -7424,7 +7424,21 @@ ${(receitas.length>0||custos.length>0)?`<div class="card" style="margin-bottom:8
   <p style="font-size:11px;font-weight:700;">📋 Todos os Lançamentos</p>
   <button onclick="lancExportar('${mesAtual}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--mu);font-size:10px;cursor:pointer;">📤 Exportar</button>
  </div>
- ${[...receitas.map(x=>({...x,_tipo:'R'})),...custos.map(x=>({...x,_tipo:'C'}))]
+ ${(()=>{
+  // Agrupa itens da MESMA NF (nfOrigem) numa linha so - facilita conferir o total contra o papel
+  const todosItens=[...receitas.map(x=>({...x,_tipo:'R'})),...custos.map(x=>({...x,_tipo:'C'}))];
+  const grupos={}, semGrupo=[];
+  todosItens.forEach(x=>{
+   if(x.nfOrigem){
+    if(!grupos[x.nfOrigem])grupos[x.nfOrigem]={...x,v:0,_categorias:new Set(),_qtdItens:0};
+    grupos[x.nfOrigem].v+=Number(x.v||0);
+    grupos[x.nfOrigem]._categorias.add((x.cat||'').split(' (')[0].trim());
+    grupos[x.nfOrigem]._qtdItens++;
+   }else semGrupo.push(x);
+  });
+  const agrupados=Object.values(grupos).map(g=>({...g,d:g.d.replace(/^.*?\(NF /,'NF ').replace(/\)$/,''),cat:`${g._qtdItens} itens: `+[...g._categorias].join(', ')}));
+  return [...semGrupo,...agrupados];
+})()
   .sort((a,b)=>{const[da,ma,ya]=a._dia.split('/');const[db2,mb,yb]=b._dia.split('/');return new Date(ya,ma-1,da)-new Date(yb,mb-1,db2);})
   .slice(0,50)
   .map(x=>`
