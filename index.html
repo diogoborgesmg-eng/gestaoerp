@@ -511,12 +511,20 @@ async function adicionarNaFila(inp){
  const files=Array.from(inp?.files||[]);
  if(!files.length)return;
  inp.value="";
- const fila=gFila();
  let falhas=0;
+ const totalFiles=files.length;
+ let processadas=0;
+ const progDiv=document.createElement('div');
+ progDiv.id='progresso-fila';
+ progDiv.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--sf);border:1px solid var(--br);border-radius:14px;padding:18px 24px;z-index:999;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+ progDiv.innerHTML=`<div style="font-size:24px;margin-bottom:6px;">📷</div><div style="font-size:13px;font-weight:700;">Processando foto 0/${totalFiles}...</div>`;
+ if(totalFiles>1)document.body.appendChild(progDiv);
+
  for(const f of files){
  try{
  const b64=await comprimirImagem(f,2400,2400,0.95);
  if(!b64){falhas++;continue;}
+ const fila=gFila();
  fila.push({
  id:uid(),
  imagem:b64,
@@ -524,14 +532,19 @@ async function adicionarNaFila(inp){
  horario:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),
  fornecedor:null,valor:null,numero:null,data:null,itens:[],erro:null
  });
+ sFila(fila);
  }catch(eComp){
  falhas++;
  console.error("Falha ao comprimir uma foto, continuando com as demais:",eComp.message);
  }
+ processadas++;
+ const pd=document.getElementById('progresso-fila');
+ if(pd)pd.querySelector('div:last-child').textContent=`Processando foto ${processadas}/${totalFiles}...`;
  }
- sFila(fila);render();
+ document.getElementById('progresso-fila')?.remove();
+ render();
  if(falhas>0){
- alert(`⚠️ ${falhas} de ${files.length} foto(s) falharam ao processar e foram ignoradas. As demais (${files.length-falhas}) entraram na fila normalmente.`);
+ alert(`⚠️ ${falhas} de ${totalFiles} foto(s) falharam ao processar e foram ignoradas. As demais (${totalFiles-falhas}) entraram na fila normalmente.`);
  }
  setTimeout(()=>processarFila(),300);
 }
