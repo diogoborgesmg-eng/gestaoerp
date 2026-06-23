@@ -540,6 +540,7 @@ async function adicionarNaFila(inp){
  processadas++;
  const pd=document.getElementById('progresso-fila');
  if(pd)pd.querySelector('div:last-child').textContent=`Processando foto ${processadas}/${totalFiles}...`;
+ if(totalFiles>3)await new Promise(r=>setTimeout(r,250)); // pausa curta entre fotos, alivia memoria em lotes grandes
  }
  document.getElementById('progresso-fila')?.remove();
  render();
@@ -11969,6 +11970,8 @@ function filtrarEst(tipo,valor){
 }
 async function comprimirImagem(fileOrB64, mimeOrW, maxW2, qual){
  return new Promise((res,rej)=>{
+  const timeoutId=setTimeout(()=>res(null),20000); // 20s max, evita travar pra sempre numa foto problematica
+  const resOriginal=res; res=(v)=>{clearTimeout(timeoutId);resOriginal(v);};
   try{
    // Aceita File object OU string base64
    if(fileOrB64 instanceof File||fileOrB64 instanceof Blob){
