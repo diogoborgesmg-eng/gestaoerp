@@ -270,6 +270,7 @@ const server = http.createServer((req, res) => {
       if (!msg || !msg.key || !msg.key.remoteJid || !msg.key.remoteJid.includes('@g.us')) return;
       const num = msg.key.remoteJid;
       global._ultimoGrupoId = num; // pra descobrir o ID de grupos novos via /ultimo-grupo
+      const NF_GROUP_ID = '120363429855996118@g.us';
       const tipo = msg.messageType || Object.keys(msg.message||{})[0] || '';
       console.log('MSG:', tipo);
       if (['textMessage','extendedTextMessage','conversation'].includes(tipo)) {
@@ -337,6 +338,58 @@ const server = http.createServer((req, res) => {
           if (lancJuros) msgOk += '\n+ Juros: R$ '+lancJuros.valor.toFixed(2)+' - '+lancJuros.categoria;
           await wpp(num, msgOk);
         } catch(e) { await wpp(num, 'Erro ao salvar: '+e.message); }
+        return;
+      }
+if (num === NF_GROUP_ID && ['imageMessage','documentMessage'].includes(tipo)) {
+        const b64nf = await getMidia(msg);
+        if (!b64nf) { await wpp(num, 'Nao consegui baixar a imagem.'); return; }
+        try {
+          const e1nf = await claude([{ role:'user', content:[
+            tipo === 'documentMessage' ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data:b64nf } } : { type:'image', source:{ type:'base64', media_type: b64nf.startsWith('/9j/')||b64nf.startsWith('/9J/')?'image/jpeg':b64nf.startsWith('iVBORw')?'image/png':'image/jpeg', data:b64nf } },
+            { type:'text', text:'Transcreva TODO o texto desta nota fiscal brasileira.\nFOQUE EM:\n1."VALOR A COBRAR" - canto superior direito\n2."FAT" ou "FATURA" - vencimento abaixo do municipio - SE HOUVER MAIS DE UM VENCIMENTO/BOLETO/PARCELA, transcreva TODOS com data e valor\n3. Tabela de produtos - CADA LINHA COMPLETA com: descricao, qtd, unidade, V.UNIT, V.TOTAL\n4. Emitente (fornecedor) - bloco superior direito\n5. Numero da NF e serie\nTranscreva linha por linha da tabela de produtos sem omitir nada.' }
+          ]}], 3000);
+          const textoNf = (e1nf.content||[]).map(b=>b.text||'').join('').trim();
+          if (!textoNf || textoNf.length < 20) { await wpp(num, 'Nao consegui ler essa NF. Tenta foto mais nitida.'); return; }
+
+          const e3nf = await claude([{ role:'user', content: 'Interprete o texto de nota fiscal brasileira abaixo. REGRAS: 1. Cada produto = item separado. 2. Formato NxM na descricao = unidades por caixa (12X1->upc:12). Se o segundo numero tiver peso/volume (192X7G,24X350ML), o PRIMEIRO numero e o upc, nunca multiplique pelo peso. 3. Vencimento: campo FAT/FATURA, nao use emissao. Se houver VARIAS parcelas, liste todas em "parcelas". 4. Valor: VALOR A COBRAR. 5. Converta BR: virgula=decimal, ponto=milhar.\nJSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"DD/MM/AAAA","parcelas":[{"vencimento":"DD/MM/AAAA","valor":0.00}],"valor_total":0.00,"itens":[{"descricao":"","quantidade":0,"unidade":"cx","unidades_por_cx":1,"valor_unitario":0.00,"valor_total":0.00}]}\nRetorne APENAS o JSON, sem markdown.\nTEXTO:\n' + textoNf }], 3000);
+          const txtJsonNf = (e3nf.content||[]).map(b=>b.text||'').join('').trim();
+          const matchNf = txtJsonNf.match(/\{[\s\S]*\}/);
+          if (!matchNf) { await wpp(num, 'Nao consegui estruturar essa NF.'); return; }
+          const dadosNf = JSON.parse(matchNf[0]);
+          if (!dadosNf.valor_total || dadosNf.valor_total <= 0) { await wpp(num, 'Valor nao identificado nessa NF.'); return; }
+
+          const reciboUrlNf = await salvarReciboGitHub(b64nf, tipo, new Date());
+          const somaItensNf = (dadosNf.itens||[]).reduce((s,it)=>s+(Number(it.valor_total)||Number(it.quantidade)*Number(it.valor_unitario)||0),0);
+
+          await salvarGitHubBatch([{
+            tipo: 'nf',
+            fornecedor: dadosNf.fornecedor || 'Fornecedor',
+            numero: dadosNf.numero || '',
+            data: dadosNf.data || '',
+            vencimento: dadosNf.vencimento || '',
+            parcelas: dadosNf.parcelas || [],
+            valor: dadosNf.valor_total,
+            itens: dadosNf.itens || [],
+            destinatario: dadosNf.fornecedor || 'Fornecedor',
+            categoria: '🥩 Matéria Prima',
+            origem: 'whatsapp_nf'
+          }], reciboUrlNf);
+
+          let respNf = `📄 *NF ${dadosNf.numero||''} — ${dadosNf.fornecedor||'Fornecedor'}*\n`;
+          respNf += `Data: ${dadosNf.data||'?'} · Venc: ${dadosNf.vencimento||'?'}\n`;
+          respNf += `${(dadosNf.itens||[]).length} item(ns) · Total: R$ ${Number(dadosNf.valor_total).toFixed(2)}\n`;
+          if (Math.abs(somaItensNf - dadosNf.valor_total) > Math.max(0.5, dadosNf.valor_total*0.05)) {
+            respNf += `\n⚠️ Soma dos itens (R$${somaItensNf.toFixed(2)}) difere do total — confira no site antes de lançar.`;
+          }
+          if ((dadosNf.parcelas||[]).length > 1) {
+            respNf += `\n💳 ${dadosNf.parcelas.length} parcelas detectadas.`;
+          }
+          respNf += `\n\n_Fica pendente pra você confirmar no site (Fila de Digitalização)._`;
+          await wpp(num, respNf);
+        } catch (eNf) {
+          console.error('Erro NF bot:', eNf.message);
+          await wpp(num, 'Erro ao processar essa NF: ' + eNf.message);
+        }
         return;
       }
       if (['imageMessage','documentMessage'].includes(tipo)) {
