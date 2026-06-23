@@ -336,7 +336,7 @@ ${item.valor?`<p style="font-family:'Space Mono',monospace;font-size:13px;color:
 ${item.numero?`<p style="font-size:10px;color:var(--mu);">NF ${item.numero} · ${item.data||""}</p>`:""}
 ${item.itens?.length?`<p style="font-size:10px;color:var(--mu);">${item.itens.length} itens</p>`:""}
 ${item._aviso?`<p style="font-size:10px;color:${item._baixas>0?'var(--gr)':'var(--ye)'};">${item._aviso}</p>`:""}
-${item.erro?`<p style="font-size:10px;color:var(--re);">${item.erro}</p>${item.certConfigurado?'<p style="font-size:10px;color:#00ff88;">🔐 Certificado OK — aguardando backend SEFAZ</p>':`<button onclick="ir('cfg')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(255,204,0,0.3);background:transparent;color:var(--ye);font-size:9px;cursor:pointer;margin-top:3px;">⚙️ Configurar certificado</button>`}`:""}
+${item.erro?`<p style="font-size:10px;color:var(--re);">${item.erro}</p><button onclick="copiarErroFila('${item.id}')" style="margin-top:2px;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,51,102,0.3);background:rgba(255,51,102,0.08);color:var(--re);font-size:9px;cursor:pointer;">📋 Copiar erro</button>${item.certConfigurado?'<p style="font-size:10px;color:#00ff88;">🔐 Certificado OK — aguardando backend SEFAZ</p>':`<button onclick="ir('cfg')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(255,204,0,0.3);background:transparent;color:var(--ye);font-size:9px;cursor:pointer;margin-top:3px;">⚙️ Configurar certificado</button>`}`:""}
 ${item.status==="aguardando_entrega"?`<div class="ial ay" style="margin-top:6px;margin-bottom:4px;"><span>📦</span><span style="font-size:10px;">NF recebida do SEFAZ — aguardando entrega física</span></div>
 <button onclick="validarEntregaNF('${item.id}')" style="width:100%;margin-top:4px;padding:9px;border-radius:8px;border:none;background:#ff6a00;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✅ Confirmar Entrega</button>`:""}
 ${item.status==="revisao"?`<button onclick="abrirRevisao('${item.id}')" style="margin-top:6px;padding:5px 12px;border-radius:6px;border:none;background:var(--pu);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">✏️ Revisar e Confirmar</button>`:""}
@@ -507,6 +507,41 @@ JSON: {"fornecedor":"","cnpj":"","numero":"","data":"DD/MM/AAAA","vencimento":"D
  }
  sFila(fila);render();
 }
+function copiarErroFila(id){
+ const item=gFila().find(f=>f.id===id);
+ if(!item||!item.erro)return;
+ navigator.clipboard.writeText(item.erro).then(()=>{
+  const n=document.createElement('div');
+  n.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#3ecf8e;color:#000;padding:8px 16px;border-radius:10px;z-index:999;font-size:12px;font-weight:800;';
+  n.textContent='✅ Erro copiado!';
+  document.body.appendChild(n);setTimeout(()=>n.remove(),2000);
+ }).catch(()=>alert(item.erro));
+}
+
+function abrirLimparDia(){
+ const ontem=new Date(Date.now()-86400000);
+ const ontemBR=ontem.toLocaleDateString('pt-BR');
+ const diaInput=prompt('Limpar lançamentos de qual dia? (formato DD/MM/AAAA)',ontemBR);
+ if(!diaInput)return;
+ const db=ldb();
+ const dia=db[diaInput];
+ if(!dia||((dia.r||[]).length===0&&(dia.c||[]).length===0)){
+  alert(`Nenhum lançamento encontrado em ${diaInput}.`);
+  return;
+ }
+ const totalR=(dia.r||[]).length, totalC=(dia.c||[]).length;
+ const somaR=(dia.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
+ const somaC=(dia.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
+ const msg=`Apagar TUDO de ${diaInput}?\n\n${totalR} receita(s) — ${brl(somaR)}\n${totalC} custo(s) — ${brl(somaC)}\n\nIsso NÃO pode ser desfeito.`;
+ if(!confirm(msg))return;
+ if(!confirm('Tem certeza mesmo? Essa ação é definitiva.'))return;
+ delete db[diaInput];
+ sdb(db);
+ alert(`✅ Lançamentos de ${diaInput} apagados.`);
+ render();
+}
+
+
 async function adicionarNaFila(inp){
  const files=Array.from(inp?.files||[]);
  if(!files.length)return;
@@ -1310,6 +1345,14 @@ function extrairUpcDoTexto(descricao){
 }
 
 
+// Mapeia grupo detectado -> categoria de custo (embalagem separada de limpeza/higiene) - GLOBAL, usado em varios lugares
+function catCustoPorItem(descricao){
+ const g=detectarGrupo(descricao);
+ if(g.grupo==="Embalagens")return"Embalagens";
+ if(g.grupo==="Limpeza"||g.grupo==="EPI")return"Limpeza/Higiene";
+ return"Insumos/Matéria-prima";
+}
+
 function lancarItemNoSistema(item){
  if(!item.valor||item.valor<=0)return;
  const db=ldb();
@@ -1318,14 +1361,6 @@ function lancarItemNoSistema(item){
  const desc=item.fornecedor?`NF ${item.fornecedor}${item.numero?" nº"+item.numero:""}`:"NF Digitalizada";
  const catLanc=item.categoria||"🥩 Matéria Prima";
  const lancId=uid();
-
- // Mapeia grupo detectado -> categoria de custo (embalagem separada de limpeza/higiene)
- function catCustoPorItem(descricao){
-  const g=detectarGrupo(descricao);
-  if(g.grupo==="Embalagens")return"Embalagens";
-  if(g.grupo==="Limpeza"||g.grupo==="EPI")return"Limpeza/Higiene";
-  return"Insumos/Matéria-prima";
- }
 
  // Usa a DATA DA NOTA (emissao), nao a data de hoje - importante pro periodo contabil certo
  const diaLancamento=item.data||hj();
@@ -9280,6 +9315,7 @@ ${(()=>{
  if(cfg.url&&cfg.key){
  return`<div class="ial ag" style="margin-bottom:6px;"><span>☁️</span><span>Supabase configurado${ultimoSync?" · Último sync: "+ultimoSync:""}</span></div>
 <button id="sb-sync-btn" onclick="sincronizarAgora()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(62,207,142,0.8);color:#000;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Sincronizar Agora</button>
+<button onclick="abrirLimparDia()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);color:var(--re);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;margin-top:10px;">🗑️ Limpar Lançamentos de um Dia</button>
 <button onclick="forcarEnvioLocalParaNuvem()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,153,0,0.4);background:rgba(255,153,0,0.1);color:#ff9900;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📤 Forçar Envio Deste Celular pra Nuvem</button>
 <button onclick="restaurarDaNuvemAgora()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(62,207,142,0.5);background:rgba(62,207,142,0.15);color:#3ecf8e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📥 Restaurar da Nuvem Agora</button>
 <button onclick="testarConexaoSupabase()" style="width:100%;padding:8px;border-radius:9px;border:1px solid rgba(62,207,142,0.3);background:transparent;color:#3ecf8e;font-size:11px;cursor:pointer;">🔍 Testar conexão</button>`;
