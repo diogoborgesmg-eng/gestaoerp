@@ -20393,6 +20393,36 @@ async function sincronizarBotLancamentos(){
    if(!db[dl])db[dl]={r:[],c:[]};
    if(!db[dl].c)db[dl].c=[];
    if(db[dl].c.some(x=>x._botId===l.id))return;
+
+   if(l.tipo==='nf'&&Array.isArray(l.itens)&&l.itens.length){
+    // NF com itens detalhados (vinda do grupo de NF) - 1 custo por item, categoria certa
+    let somaItens=0;
+    l.itens.forEach(it=>{
+     const valorItem=(it.valor_total>0)?Number(it.valor_total):Number(it.quantidade||0)*Number(it.valor_unitario||0);
+     somaItens+=valorItem;
+     db[dl].c.push({id:uid(),d:`${it.descricao} (NF ${l.fornecedor||''}${l.numero?' nº'+l.numero:''})`,
+      cat:catCustoPorItem(it.descricao),seg:'',v:valorItem,dt:dl,_botId:l.id,_origem:'whatsapp_nf',reciboUrl:l.reciboUrl||null});
+    });
+    const diferenca=Number(l.valor||0)-somaItens;
+    if(Math.abs(diferenca)>0.05){
+     db[dl].c.push({id:uid(),d:`NF ${l.fornecedor||''} (ajuste/taxas)`,cat:'Insumos/Matéria-prima',seg:'',v:diferenca,dt:dl,_botId:l.id+'_adj',_origem:'whatsapp_nf'});
+    }
+    // Contas a pagar - 1 por parcela, ou 1 unica se nao houver parcelas
+    if(!db.contasPagar)db.contasPagar=[];
+    if(Array.isArray(l.parcelas)&&l.parcelas.length>1){
+     l.parcelas.forEach((p,idx)=>{
+      db.contasPagar.push({id:uid(),forn:l.fornecedor||'Fornecedor',val:Number(p.valor)||0,
+       venc:converterDataParaInput(p.vencimento)||dl,pag:'boleto',pago:false,
+       nf:(l.numero||'')+` (${idx+1}/${l.parcelas.length})`,semana:semana(),dt:dl});
+     });
+    }else{
+     db.contasPagar.push({id:uid(),forn:l.fornecedor||'Fornecedor',val:Number(l.valor||0),
+      venc:converterDataParaInput(l.vencimento)||dl,pag:'boleto',pago:false,nf:l.numero||'',semana:semana(),dt:dl});
+    }
+    count++;
+    return;
+   }
+
    const dest=(l.destinatario||'').trim();
    const nome=dest&&!['Di Casa Gastronomia','DI CASA GASTRONOMIA','Di Casa','DI CASA'].includes(dest)?dest:(l.descricao&&l.descricao!=='SEM_DESCRICAO'?l.descricao:(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim());
    const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
