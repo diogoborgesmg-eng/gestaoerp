@@ -3401,6 +3401,7 @@ ${f.wpp?`<a href="https://wa.me/55${f.wpp}" target="_blank" style="font-size:10p
 <p style="font-size:10px;color:var(--mu);">+enc: ${brl(f.salario*0.36)}</p>
 <div style="display:flex;gap:3px;margin-top:4px;">
 <button onclick="gerarHolerite('${f.id}')" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:10px;cursor:pointer;">📄 Holerite</button>
+<button onclick="abrirFeriasDecimo('${f.id}')" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.08);color:var(--gr);font-size:10px;cursor:pointer;">🏖️ Férias/13º</button>
 <button onclick="editarFuncionario('${f.id}')" style="padding:3px 7px;border-radius:5px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:10px;cursor:pointer;">✏️</button>
 <button onclick="(()=>{const fs=gFuncs();const idx=fs.findIndex(x=>x.id==='${f.id}');if(idx>=0){fs[idx].ativo=false;sFuncs(fs);render();}})()" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(255,204,0,0.3);background:transparent;color:var(--ye);font-size:10px;cursor:pointer;">⏸️</button>
 <button onclick="if(confirm('Excluir?')){const fs=gFuncs();sFuncs(fs.filter(x=>x.id!=='${f.id}'));render();}" style="padding:3px 7px;border-radius:5px;border:1px solid rgba(255,51,102,0.3);background:transparent;color:var(--re);font-size:10px;cursor:pointer;">✕</button>
@@ -8893,6 +8894,84 @@ function lancarFixosMes(){
  alert(`✅ ${fixos.length} custo(s) fixo(s) lançado(s)!\nTotal: ${brl(total)}\nData: ${dia}`);
  render();
 }
+function abrirFeriasDecimo(funcId){
+ const fs=gFuncs();
+ const f=fs.find(x=>x.id===funcId);
+ if(!f)return;
+ const hoje=new Date();
+ const admissao=f.admissao?new Date(f.admissao.split('/').reverse().join('-')):null;
+ const diasAdm=admissao?Math.floor((hoje-admissao)/(1000*60*60*24)):0;
+
+ // Ferias proporcionais: 30 dias por ano completo, proporcional aos meses trabalhados desde a ultima ferias (ou admissao)
+ const ultimaFerias=f.ultimaFerias?new Date(f.ultimaFerias.split('/').reverse().join('-')):admissao;
+ const diasDesdeUltima=ultimaFerias?Math.floor((hoje-ultimaFerias)/(1000*60*60*24)):0;
+ const mesesFerias=Math.min(12,Math.floor(diasDesdeUltima/30));
+ const diasFeriasProp=Math.round((mesesFerias/12)*30);
+ const valorFeriasBase=f.salario>0?(f.salario/30)*diasFeriasProp:0;
+ const valorFerias=valorFeriasBase*(4/3); // +1/3 constitucional
+
+ // 13o proporcional: meses trabalhados NO ANO ATUAL (Jan-Dez), mes com 15+ dias trabalhados conta como mes completo
+ const anoAtual=hoje.getFullYear();
+ const inicioAno=new Date(anoAtual,0,1);
+ const inicioContagem=admissao&&admissao>inicioAno?admissao:inicioAno;
+ const diasNoAno=Math.floor((hoje-inicioContagem)/(1000*60*60*24));
+ let mesesAno=Math.floor(diasNoAno/30);
+ if(diasNoAno%30>=15)mesesAno++;
+ mesesAno=Math.min(12,mesesAno);
+ const valor13=f.salario>0?(f.salario/12)*mesesAno:0;
+
+ const div=document.createElement('div');
+ div.id='modal-ferias-decimo';
+ div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:700;display:flex;align-items:center;justify-content:center;padding:14px;';
+ div.innerHTML=`<div style="background:var(--sf);border-radius:14px;padding:16px;max-width:380px;width:100%;max-height:85vh;overflow-y:auto;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+  <p style="font-size:14px;font-weight:900;">🏖️ Férias / 13º — ${f.nome}</p>
+  <button onclick="document.getElementById('modal-ferias-decimo').remove()" style="padding:5px 10px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);">✕</button>
+ </div>
+ <p style="font-size:10px;color:var(--mu);margin-bottom:12px;">Salário base: ${brl(f.salario)} · ${diasAdm} dias na empresa</p>
+
+ <div class="card" style="margin-bottom:10px;">
+  <p class="lbl">🏖️ Férias Proporcionais</p>
+  <p style="font-size:10px;color:var(--mu);margin-bottom:6px;">${mesesFerias} meses desde ${ultimaFerias?ultimaFerias.toLocaleDateString('pt-BR'):'admissão'} → ${diasFeriasProp} dias de direito</p>
+  <p style="font-family:'Space Mono',monospace;font-size:18px;font-weight:800;color:var(--gr);">${brl(valorFerias)}</p>
+  <p style="font-size:9px;color:var(--mu);">(${diasFeriasProp} dias ÷30 × salário) + 1/3 constitucional</p>
+  <button onclick="lancarFeriasDecimo('${f.id}','ferias',${valorFerias},${diasFeriasProp})" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">💾 Lançar Férias</button>
+ </div>
+
+ <div class="card">
+  <p class="lbl">🎁 13º Proporcional (${anoAtual})</p>
+  <p style="font-size:10px;color:var(--mu);margin-bottom:6px;">${mesesAno} meses trabalhados no ano</p>
+  <p style="font-family:'Space Mono',monospace;font-size:18px;font-weight:800;color:var(--bl);">${brl(valor13)}</p>
+  <p style="font-size:9px;color:var(--mu);">(salário ÷12 × ${mesesAno} meses)</p>
+  <button onclick="lancarFeriasDecimo('${f.id}','decimo',${valor13},0)" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Lançar 13º</button>
+ </div>
+ </div>`;
+ document.body.appendChild(div);
+}
+
+function lancarFeriasDecimo(funcId,tipo,valor,diasFerias){
+ const fs=gFuncs();
+ const f=fs.find(x=>x.id===funcId);
+ if(!f||!valor||valor<=0)return;
+ const db=ldb();const dia=hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ const label=tipo==='ferias'?'Férias':'13º Salário';
+ db[dia].c.push({id:uid(),d:`${label} — ${f.nome}`,cat:'👥 RH / Mão de Obra',s:'',v:valor,dt:dia});
+ if(!db.contasPagar)db.contasPagar=[];
+ db.contasPagar.push({id:uid(),forn:`${f.nome} (${label})`,val:valor,
+  venc:dia.split('/').reverse().join('-'),pag:'pix',pago:false,nf:'',semana:semana(),dt:dia});
+ if(tipo==='ferias'){
+  const idx=fs.findIndex(x=>x.id===funcId);
+  if(idx>=0)fs[idx].ultimaFerias=hj();
+  sFuncs(fs);
+ }
+ sdb(db);
+ document.getElementById('modal-ferias-decimo')?.remove();
+ alert(`✅ ${label} de ${f.nome} lançado: ${brl(valor)}`);
+ render();
+}
+
+
 function gFuncs(){const d=ldb();if(!d.funcionarios)d.funcionarios=[];return d.funcionarios;}
 function sFuncs(f){const d=ldb();d.funcionarios=f;sdb(d);}
 
