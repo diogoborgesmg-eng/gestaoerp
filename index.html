@@ -1313,7 +1313,6 @@ function extrairUpcDoTexto(descricao){
 function lancarItemNoSistema(item){
  if(!item.valor||item.valor<=0)return;
  const db=ldb();
- if(!db[hj()])db[hj()]={r:[],c:[]};
  if(!db.est)db.est=[];
  if(!db.contasPagar)db.contasPagar=[];
  const desc=item.fornecedor?`NF ${item.fornecedor}${item.numero?" nº"+item.numero:""}`:"NF Digitalizada";
@@ -1328,25 +1327,29 @@ function lancarItemNoSistema(item){
   return"Insumos/Matéria-prima";
  }
 
+ // Usa a DATA DA NOTA (emissao), nao a data de hoje - importante pro periodo contabil certo
+ const diaLancamento=item.data||hj();
+ if(!db[diaLancamento])db[diaLancamento]={r:[],c:[]};
+
  // Itens com schema formal (tem valor_unitario) -> lanca 1 custo por item, na categoria certa
- const itensFormais=(item.itens||[]).filter(it=>it.descricao&&it.quantidade&&it.valor_unitario!==undefined);
+ const itensFormais=(item.itens||[]).filter(it=>it.descricao&&it.quantidade&&(it.valor_total!==undefined||it.valor_unitario!==undefined));
  if(itensFormais.length){
   let somaItens=0;
   itensFormais.forEach(it=>{
-   const upc=it.unidades_por_cx||1;
-   const valorItem=Number(it.quantidade)*Number(it.valor_unitario)*(it.unidades_por_cx?1:1);
+   // Confia no valor_total que a IA ja calculou (qtd x preco, considerando cx/unidades corretamente)
+   const valorItem=(it.valor_total!==undefined&&it.valor_total>0)?Number(it.valor_total):Number(it.quantidade)*Number(it.valor_unitario||0);
    somaItens+=valorItem;
-   db[hj()].c.push({id:uid(),d:`${it.descricao} (NF ${item.fornecedor||""}${item.numero?" nº"+item.numero:""})`,
-    cat:catCustoPorItem(it.descricao),s:"",v:valorItem,dt:hj(),nfOrigem:lancId});
+   db[diaLancamento].c.push({id:uid(),d:`${it.descricao} (NF ${item.fornecedor||""}${item.numero?" nº"+item.numero:""})`,
+    cat:catCustoPorItem(it.descricao),s:"",v:valorItem,dt:diaLancamento,nfOrigem:lancId});
   });
   // Diferenca de arredondamento ou frete/taxas embutidas na nota -> lanca o residual como Matéria-prima
   const diferenca=item.valor-somaItens;
   if(Math.abs(diferenca)>0.05){
-   db[hj()].c.push({id:uid(),d:`${desc} (ajuste/taxas)`,cat:"Insumos/Matéria-prima",s:"",v:diferenca,dt:hj(),nfOrigem:lancId});
+   db[diaLancamento].c.push({id:uid(),d:`${desc} (ajuste/taxas)`,cat:"Insumos/Matéria-prima",s:"",v:diferenca,dt:diaLancamento,nfOrigem:lancId});
   }
  }else{
   // Sem itens detalhados (NF resumo) -> mantem 1 custo so, como antes
-  db[hj()].c.push({id:lancId,d:desc,cat:catLanc,s:"",v:item.valor,dt:hj()});
+  db[diaLancamento].c.push({id:lancId,d:desc,cat:catLanc,s:"",v:item.valor,dt:diaLancamento});
  }
 
  // ═══ NOTA INFORMAL + CHEQUE: não cria conta a pagar direta — fica pendente p/ agrupar ═══
@@ -1406,7 +1409,7 @@ function lancarItemNoSistema(item){
  if(ex){
  ex.q+=qtdCx;ex.qi+=qtdCx;ex.qun=(ex.qun||0)+qtdUn;ex.upc=upc;
  if(!ex.lotes)ex.lotes=[];const cuAnterior=ex.cu||0;
- ex.lotes.push({qtdCx,qtdUn,cuPorCx,cuPorUn,dt:hj(),nf:item.numero||""});
+ ex.lotes.push({qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""});
  ex.cuAnterior=cuAnterior;ex.cu=cuPorUn;
  if(it.categoria&&!ex.grupo)ex.grupo=detectarGrupo(it.descricao);
  }else{
@@ -1415,7 +1418,7 @@ function lancarItemNoSistema(item){
  detectarGrupo(it.descricao);
  db.est.push({id:uid(),n:it.descricao,u:(it.unidade||"cx"),q:qtdCx,qi:qtdCx,qun:qtdUn,upc,
  cu:cuPorUn,cuAnterior:cuPorUn,grupo:grp,
- lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:hj(),nf:item.numero||""}],min:0,s:[],perdas:[]});
+ lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""}],min:0,s:[],perdas:[]});
  }
  });
  if(item.itens&&item.fornecedor){
@@ -1467,7 +1470,7 @@ function lancarFila(){
  ex.upc=upc;
  if(!ex.lotes)ex.lotes=[];
  const cuAnterior=ex.cu||0;
- ex.lotes.push({qtdCx,qtdUn,cuPorCx,cuPorUn,dt:hj(),nf:item.numero||""});
+ ex.lotes.push({qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""});
  ex.cuAnterior=cuAnterior;
  ex.cu=cuPorUn;
  if(it.categoria&&!ex.grupo){
@@ -1484,7 +1487,7 @@ function lancarFila(){
  q:qtdCx,qi:qtdCx,qun:qtdUn,upc,
  cu:cuPorUn,cuAnterior:cuPorUn,
  grupo:grpDetectado,
- lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:hj(),nf:item.numero||""}],
+ lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""}],
  min:0,s:[],perdas:[]
  });
  }
