@@ -334,10 +334,8 @@ const server = http.createServer((req, res) => {
         return;
       }
       if (['imageMessage','documentMessage'].includes(tipo)) {
-        await wpp(num, 'Recebi! Buscando imagem...');
         const b64 = await getMidia(msg);
-        if (!b64) { await wpp(num, 'Nao consegui baixar.'); return; }
-        await wpp(num, 'Analisando...');
+        if (!b64) { await wpp(num, 'Nao consegui baixar a imagem.'); return; }
         const r1 = await claude([{ role:'user', content:[
           tipo === 'documentMessage' ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data:b64 } } : { type:'image', source:{ type:'base64', media_type: b64.startsWith('/9j/')||b64.startsWith('/9J/')?'image/jpeg':b64.startsWith('iVBORw')?'image/png':'image/jpeg', data:b64 } },
           { type:'text', text:'Leia este(s) comprovante(s) de pagamento. IGNORE COMPLETAMENTE quem e o pagador/remetente/origem - o pagador pode ser qualquer conta ou nome, isso NAO importa. Foque APENAS no campo de DESTINO do pagamento, que aparece estruturalmente como: "Favorecido", "Beneficiario", "Para", "Destino", "Recebedor", "Dados de destino > Nome", ou o estabelecimento/CNPJ cobrado em maquininha de cartao. ATENCAO CRITICA: o nome do destinatario NUNCA pode ser "Di Casa Gastronomia", "Di Casa Laranjinha" ou "Diogo Jose dos Santos Borges" - essa e a empresa que esta PAGANDO, nunca quem recebe. Se voce ler esse nome no campo de destino, procure de novo no documento ate achar o nome de quem REALMENTE recebeu (pode ser pessoa fisica, funcionario, fornecedor). Pode haver MAIS DE UM comprovante na mesma imagem/arquivo (ex: varios boletos enviados juntos pelo banco) - analise CADA UM separadamente. Para CADA comprovante encontrado, identifique: (1) VALOR: campo "Valor" ou "Total"; (2) NOME DE QUEM RECEBEU: o nome no campo de DESTINO (NAO o campo de origem/pagador/remetente, esse e irrelevante); (3) DATA E HORA (a hora exata, ex: 23:20); (4) TIPO: pix, credito, debito, boleto ou dinheiro; (5) OBSERVACAO se houver; (6) JUROS/MULTA: valor de juros ou multa SEPARADO do valor principal, se houver (comum em boleto pago com atraso - procure campos como "Juros", "Multa", "Encargos", ou "Valor pago" maior que "Valor do documento"). Liste CADA comprovante numerado (Comprovante 1, Comprovante 2...) com todos os campos em portugues.' }
