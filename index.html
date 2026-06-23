@@ -6466,7 +6466,7 @@ function gerarContextoCFO(){
  const rMes=rec.reduce((a,x)=>a+Number(x.v),0);
  const cMes=cus.reduce((a,x)=>a+Number(x.v),0);
  const mMes=rMes>0?((rMes-cMes)/rMes)*100:0;
- const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
+ const cc={};cus.forEach(x=>{const _ck=normalizarCategoria((x.cat||'').replace(/ \(.*\)/,'').trim());cc[_ck]=(cc[_ck]||0)+Number(x.v);});
  const db=ldb();const hoje=new Date();
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
  const cp=db.contasPagar||[];
@@ -7274,7 +7274,7 @@ function rLancMensal(){
  // Agrupa custos por categoria
  const porCat={};
  custos.forEach(x=>{
-  const cat=x.cat||'Outros';
+  const cat=normalizarCategoria(x.cat);
   if(!porCat[cat])porCat[cat]={total:0,itens:[]};
   porCat[cat].total+=Number(x.v);
   porCat[cat].itens.push(x);
@@ -7982,7 +7982,7 @@ function rDashContas(){
  // Agrupa custos por conta (cat)
  const cusByCat={};
  mes.c.forEach(x=>{
-  const cat=x.cat||'Outros';
+  const cat=normalizarCategoria(x.cat);
   cusByCat[cat]=(cusByCat[cat]||0)+Number(x.v);
  });
 
@@ -10760,6 +10760,25 @@ function getDREData(){
  return gdia();
 }
 
+function normalizarCategoria(catRaw){
+ const c=(catRaw||'').toLowerCase();
+ if(c.includes('matéria')||c.includes('materia')||c.includes('insumo'))return '🥩 Matéria Prima';
+ if(c.includes('embalagem'))return '📦 Embalagem';
+ if(c.includes('limpeza')||c.includes('higiene'))return '🧹 Limpeza / Higiene';
+ if(c.includes('rh')||c.includes('mão de obra')||c.includes('mao de obra')||c.includes('funcionári')||c.includes('funcionario'))return '👥 RH / Mão de Obra';
+ if(c.includes('energia')||c.includes('água')||c.includes('agua')||c.includes('gás')||c.includes('gas')||c.includes('utilidades'))return '💡 Energia / Utilidades';
+ if(c.includes('manutenç')||c.includes('manutenc'))return '🔧 Manutenção';
+ if(c.includes('frete')||c.includes('entregador'))return '🚚 Frete / Entregador';
+ if(c.includes('aluguel')||c.includes('fixo'))return '🏢 Aluguel / Fixos';
+ if(c.includes('bebida')||c.includes(' bar'))return '🍺 Bebidas / Bar';
+ if(c.includes('taxa')||c.includes('imposto')||c.includes('financeir')||c.includes('juros')||c.includes('cheque especial'))return '💳 Taxas / Impostos';
+ if(c.includes('telecom')||c.includes('internet')||c.includes('telefone'))return '📱 Telecom / Internet';
+ if(c.includes('show')||c.includes('evento')||c.includes('cantor')||c.includes('música')||c.includes('musica')||c.includes('banda')||c.includes(' dj'))return '🎤 Shows / Eventos';
+ if(c.includes('marketing')||c.includes('publicidade'))return '📣 Marketing';
+ if(c.includes('extravio')||c.includes('perda'))return '⚠️ Extravio / Perda';
+ return catRaw||'🔄 Outros';
+}
+
 function rDRE(){
  if(!getApiKey()&&!gest().length&&!ldb().contasPagar?.length){
  const empresa=JSON.parse(localStorage.getItem("erp_empresa")||"{}");
@@ -10802,7 +10821,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  const bc=res>0?"bg":res<0?"br2":"by";
  const st=res>0?"✅ Lucro":res<0?"🚨 Prejuízo":"⚠️ Neutro";
  const cc={};cus.forEach(x=>{const _ck=(x.cat||'').replace(/ \(.*\)/,'').trim();cc[_ck]=(cc[_ck]||0)+Number(x.v);});
- const cmvGeral=(cc["Insumos/Matéria-prima"]||0)+(cc["Embalagens"]||0);
+ const cmvGeral=(cc["🥩 Matéria Prima"]||0)+(cc["📦 Embalagem"]||0);
  const cmvPct=r>0?(cmvGeral/r*100):0;
  // RH inclui todas as categorias relacionadas a pessoal
 const _rhTotal=Object.entries(cc).reduce((s,[k,v])=>{
