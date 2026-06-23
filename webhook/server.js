@@ -372,15 +372,12 @@ const server = http.createServer((req, res) => {
             resultadoSalvo = await salvarGitHubBatch(lancamentosFeitos, reciboUrl2);
           } catch(ep) { console.error('parse err:', ep.message); }
         }
-        let resp = 'Analise:\n' + analise + '\n\n_Di Casa Laranjinha_';
-        if (lancamentosFeitos.length) {
-          const ignorados = resultadoSalvo?.ignorados || 0;
-          resp += '\n\n✅ ' + (resultadoSalvo?.salvos ?? lancamentosFeitos.length) + ' lancamento(s):';
-          lancamentosFeitos.forEach(l => { resp += '\nR$ ' + l.valor.toFixed(2) + ' - ' + l.destinatario + ' - ' + l.categoria; });
-          if (ignorados > 0) resp += '\n\n⏭️ ' + ignorados + ' ignorado(s) - mesmo valor+destinatario ja lancado antes (duplicado).';
-        } else {
+        let resp = analise;
+        if (!lancamentosFeitos.length) {
           resp += '\n\n⚠️ Nenhum valor identificado pra lancar.';
         }
+        const ignorados = resultadoSalvo?.ignorados || 0;
+        if (ignorados > 0) resp += '\n\n⏭️ ' + ignorados + ' ja lancado antes (ignorado).';
         await wpp(num, resp);
       }
     } catch(e) { console.error('Erro:', e.message); }
