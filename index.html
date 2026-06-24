@@ -283,7 +283,12 @@ oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{4})(?=\d)/g,'$1 ')
 </div><!-- COLAR TEXTO -->
 <div style="border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.05);border-radius:10px;padding:12px;margin-bottom:12px;">
 <p style="font-weight:700;font-size:12px;color:var(--pu);margin-bottom:4px;">📋 Colar texto (CamScanner)</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:8px;">CamScanner → Extrair Texto → cole aqui</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:8px;">CamScanner → Extrair Texto → cole aqui — ou use o OCR grátis abaixo:</p>
+<label style="display:block;cursor:pointer;margin-bottom:8px;">
+<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="extrairTextoOCR(this)"/>
+<div style="border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);border-radius:8px;padding:9px;text-align:center;color:var(--pu);font-size:12px;font-weight:700;">🔍 OCR Grátis (sem IA) — tira foto e extrai texto</div>
+</label>
+<p id="ocr-status" style="font-size:10px;color:var(--mu);margin-bottom:6px;"></p>
 <textarea id="txt-fila" placeholder="Cole o texto extraído aqui..." 
 style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:9px;color:var(--tx);font-size:11px;min-height:60px;font-family:'Space Mono',monospace;resize:vertical;"></textarea>
 <button onclick="adicionarPorTexto()" style="width:100%;margin-top:6px;padding:10px;border-radius:8px;border:none;background:var(--pu);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Adicionar à Fila</button>
@@ -461,6 +466,41 @@ async function lerCodigoBarras(inp){
   }
  }catch(e){inp2.value="";alert("Erro: "+e.message);}
 }
+async function extrairTextoOCR(inp){
+ const f=inp?.files?.[0]; if(!f)return; inp.value="";
+ const status=document.getElementById('ocr-status');
+ const txtArea=document.getElementById('txt-fila');
+ if(status){status.innerHTML='⟳ Carregando OCR (primeira vez pode levar uns segundos)...';status.style.color='var(--mu)';}
+ try{
+  if(!window.Tesseract){
+   await new Promise((ok,err)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+    s.onload=ok; s.onerror=err;
+    document.head.appendChild(s);
+   });
+  }
+  if(status){status.innerHTML='⟳ Lendo imagem (gratuito, sem IA)...';}
+  const result=await window.Tesseract.recognize(f,'por',{
+   logger:m=>{
+    if(status&&m.status==='recognizing text'){
+     status.innerHTML=`⟳ Lendo... ${Math.round((m.progress||0)*100)}%`;
+    }
+   }
+  });
+  const texto=result?.data?.text?.trim()||'';
+  if(!texto){
+   if(status){status.innerHTML='⚠️ Não consegui extrair texto dessa imagem.';status.style.color='var(--ye);'}
+   return;
+  }
+  if(txtArea)txtArea.value=texto;
+  if(status){status.innerHTML=`✅ Texto extraído (${texto.length} caracteres)! Confira abaixo antes de adicionar à fila.`;status.style.color='var(--gr);'}
+ }catch(e){
+  if(status){status.innerHTML='❌ Erro no OCR: '+e.message;status.style.color='var(--re);'}
+ }
+}
+
+
 async function adicionarPorTexto(){
  const texto=document.getElementById("txt-fila")?.value?.trim();
  if(!texto||texto.length<20){alert("Cole o texto da NF primeiro!");return;}
