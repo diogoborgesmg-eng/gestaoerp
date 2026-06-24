@@ -15891,7 +15891,7 @@ function novaContaPagar(){
  sdb(db);render();
 }
 
-function pagarContaSimples(id){
+function pagarConta(id){
  if(!confirm('Marcar como paga?'))return;
  const db=ldb();
  const idx=(db.contasPagar||[]).findIndex(c=>c.id===id);
@@ -19890,28 +19890,6 @@ function exportarContagem(){
 }
 
 // ═══ INVENTÁRIO POR FOTO DA PRATELEIRA ═══════════════════════
-function abrirInventarioFoto(){
- const div=document.createElement('div');
- div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
- div.innerHTML=`<div style="text-align:center;max-width:400px;width:100%;">
-  <p style="font-size:18px;font-weight:900;color:#fff;margin-bottom:6px;">📸 Inventário por Foto</p>
-  <p style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:16px;">Tire foto da prateleira — IA lê todas as etiquetas e atualiza o estoque automaticamente</p>
-  <input type="file" id="inv-foto-input" accept="image/*" capture="environment" style="display:none" onchange="processarFotoInventario(this)"/>
-  <input type="file" id="inv-foto-galeria" accept="image/*" style="display:none" onchange="processarFotoInventario(this)"/>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-   <button onclick="document.getElementById('inv-foto-input').click()" style="padding:16px;border-radius:12px;border:2px solid rgba(0,255,136,0.5);background:rgba(0,255,136,0.1);color:#00ff88;font-size:15px;font-weight:800;cursor:pointer;">📷 Fotografar prateleira</button>
-   <button onclick="document.getElementById('inv-foto-galeria').click()" style="padding:14px;border-radius:12px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:14px;font-weight:700;cursor:pointer;">🖼️ Da galeria</button>
-  </div>
-  <div style="background:rgba(68,136,255,0.1);border:1px solid rgba(68,136,255,0.3);border-radius:10px;padding:10px;margin-bottom:12px;text-align:left;">
-   <p style="font-size:11px;color:#4488ff;font-weight:700;margin-bottom:4px;">💡 Como funciona:</p>
-   <p style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.6;">1. Tire foto da prateleira/câmara<br>2. IA lê todas as etiquetas visíveis<br>3. Mostra lista com produtos e quantidades<br>4. Você confirma para atualizar o estoque</p>
-  </div>
-  <button onclick="this.closest('[style*=inset]').remove()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Cancelar</button>
- </div>`;
- div.onclick=e=>{if(e.target===div)div.remove();};
- document.body.appendChild(div);
-}
-
 async function processarFotoInventario(input){
  const file=input.files[0];if(!file)return;
  input.closest('[style*=inset]')?.remove();
