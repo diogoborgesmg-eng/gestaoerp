@@ -4259,6 +4259,87 @@ async function gerarFotosPendentes(){
 function gCardapioPDV(){const d=ldb();if(!d.cardapioPDV)d.cardapioPDV=[];return d.cardapioPDV;}
 function sCardapioPDV(c){const d=ldb();d.cardapioPDV=c;sdb(d);}
 
+// ═══════════════════════════════════════════════════
+// SISTEMA DE CAIXA (Supabase - sessoes_caixa)
+// ═══════════════════════════════════════════════════
+function verificarPinCaixa(){
+ const pinSalvo=localStorage.getItem('erp_pin_caixa')||'1234';
+ const digitado=prompt('PIN (Dono/Gerente/Caixa):');
+ if(digitado===null)return false;
+ if(digitado!==pinSalvo){alert('❌ PIN incorreto.');return false;}
+ return true;
+}
+
+async function buscarCaixaAtual(){
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return null;
+ try{
+  const resp=await fetch(`${cfg.url}/rest/v1/sessoes_caixa?status=eq.aberto&order=abertura_em.desc&limit=1`,{
+   headers:{'apikey':cfg.key}
+  });
+  if(!resp.ok)return null;
+  const rows=await resp.json();
+  return rows&&rows.length?rows[0]:null;
+ }catch(e){console.error('Erro buscarCaixaAtual:',e.message);return null;}
+}
+
+async function abrirCaixaSupabase(){
+ if(!verificarPinCaixa())return;
+ const atual=await buscarCaixaAtual();
+ if(atual){alert(`⚠️ Já existe um caixa aberto (${atual.dia_comercial}, desde ${new Date(atual.abertura_em).toLocaleString('pt-BR')}).\nFeche-o antes de abrir outro.`);return;}
+ const cfg=getSupabaseCfg();
+ const agora=new Date();
+ const diaComercial=hj();
+ const novoId='caixa_'+Date.now().toString(36);
+ try{
+  await fetch(`${cfg.url}/rest/v1/sessoes_caixa`,{
+   method:'POST',
+   headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+   body:JSON.stringify({id:novoId,dia_comercial:diaComercial,abertura_em:agora.toISOString(),status:'aberto',aberto_por:cfg.deviceId,device_id:cfg.deviceId})
+  });
+  localStorage.setItem('erp_caixa_atual',novoId);
+  alert(`✅ Caixa aberto! Dia comercial: ${diaComercial}`);
+  render();
+ }catch(e){alert('❌ Erro ao abrir caixa: '+e.message);}
+}
+
+async function fecharCaixaSupabase(){
+ if(!verificarPinCaixa())return;
+ const atual=await buscarCaixaAtual();
+ if(!atual){alert('Nenhum caixa aberto.');return;}
+ if(!confirm(`Fechar o caixa de ${atual.dia_comercial}?`))return;
+ const cfg=getSupabaseCfg();
+ try{
+  await fetch(`${cfg.url}/rest/v1/sessoes_caixa?id=eq.${atual.id}`,{
+   method:'PATCH',
+   headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+   body:JSON.stringify({status:'fechado',fechamento_em:new Date().toISOString()})
+  });
+  localStorage.removeItem('erp_caixa_atual');
+  alert('✅ Caixa fechado.');
+  render();
+ }catch(e){alert('❌ Erro ao fechar caixa: '+e.message);}
+}
+
+async function renderStatusCaixa(){
+ const el=document.getElementById('status-caixa-area');
+ if(!el)return;
+ const atual=await buscarCaixaAtual();
+ if(atual){
+  const horasAberto=((Date.now()-new Date(atual.abertura_em).getTime())/3600000).toFixed(1);
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <div><p style="font-size:11px;font-weight:800;color:var(--gr);">🟢 Caixa Aberto — ${atual.dia_comercial}</p><p style="font-size:10px;color:var(--mu);">Há ${horasAberto}h</p></div>
+   <button onclick="fecharCaixaSupabase()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--re);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">Fechar Caixa</button>
+  </div>`;
+ }else{
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,51,102,0.08);border:1px solid rgba(255,51,102,0.3);border-radius:10px;padding:10px;margin-bottom:10px;">
+   <p style="font-size:11px;font-weight:800;color:var(--re);">🔴 Nenhum caixa aberto</p>
+   <button onclick="abrirCaixaSupabase()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">Abrir Caixa</button>
+  </div>`;
+ }
+}
+
+
 function rPDV(){
  const mesas=gMesas();
  const livres=mesas.filter(m=>m.status==='livre').length;
@@ -4267,6 +4348,7 @@ function rPDV(){
  const vendHoje=(()=>{const d=new Date();const k=String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();const dia=ldb()[k]||{r:[],c:[]};return(dia.r||[]).reduce((a,x)=>a+Number(x.v||0),0);})();
 
  return`<div style="background:var(--sf);min-height:100vh;">
+<div id="status-caixa-area" style="padding:10px 12px 0;"><p style="font-size:10px;color:var(--mu);">Carregando status do caixa...</p></div>
 
  <!-- HEADER PDV -->
  <div style="background:#1a1a2e;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid rgba(255,51,102,0.3);">
@@ -8791,7 +8873,7 @@ function render(){
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
     if(_grupoAbas.length){_subNav='<div style="display:flex;gap:5px;overflow-x:auto;padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;">'+_grupoAbas.map(k=>'<button onclick="ir(\''+k+'\')" style="padding:5px 12px;border-radius:15px;border:none;background:'+(k===aba?'var(--bl)':'rgba(255,255,255,0.06)')+';color:'+(k===aba?'#fff':'var(--mu)')+';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+(_grupoLabel[k]||k)+'</button>').join('')+'</div>';}
-    el.innerHTML=_subNav+(m[aba]||rDRE)();const _vf=document.getElementById("pdv-voz-flutuante");if(_vf)_vf.style.display=aba==="pdv"?"block":"none";
+    el.innerHTML=_subNav+(m[aba]||rDRE)();const _vf=document.getElementById("pdv-voz-flutuante");if(_vf)_vf.style.display=aba==="pdv"?"block":"none";if(aba==="pdv")setTimeout(renderStatusCaixa,50);
  }catch(e){
  el.innerHTML=`<div class="si"><div class="ial ar"><span>❌</span><span>Erro: ${e.message}</span></div><button onclick="ir('dre')" class="bok" style="margin-top:10px;">← DRE</button></div>`;
  console.error("Erro render",aba,e);
