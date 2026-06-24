@@ -253,13 +253,11 @@ ${(()=>{
  return"";
 })()}
 
-<label style="display:block;cursor:pointer;margin-bottom:8px;">
-<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="adicionarNaFila(this)" id="input-cam-scanner"/>
-<div style="border:2px dashed rgba(0,255,136,0.4);background:rgba(0,255,136,0.05);border-radius:14px;padding:16px;text-align:center;">
+<button onclick="abrirScannerVivo()" style="display:block;width:100%;cursor:pointer;margin-bottom:8px;border:2px dashed rgba(0,255,136,0.4);background:rgba(0,255,136,0.05);border-radius:14px;padding:16px;text-align:center;">
 <div style="font-size:36px;margin-bottom:6px;">📷</div>
 <p style="font-size:14px;font-weight:800;color:var(--gr);margin-bottom:2px;">Escanear NF</p>
-<p style="font-size:11px;color:var(--mu);">Toque, tire 1 foto, confirme — e toque de novo pra próxima nota</p>
-</div></label><label style="display:block;cursor:pointer;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);">Endireita e corrige a foto automaticamente — toque pra próxima nota</p>
+</button><label style="display:block;cursor:pointer;margin-bottom:8px;">
 <input type="file" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;" onchange="adicionarNaFila(this)"/>
 <div style="border:1px solid var(--br);background:var(--sf);border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px;">
 <span style="font-size:22px;">🖼️</span>
@@ -12274,8 +12272,7 @@ function rNF(){
 <textarea id="txt-nf" placeholder="Cole o texto extraído do CamScanner aqui..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;color:var(--tx);font-size:11px;min-height:80px;font-family:'Space Mono',monospace;resize:vertical;"></textarea>
 <button onclick="processarTextoNF()" style="width:100%;margin-top:6px;padding:11px;border-radius:9px;border:none;background:var(--pu);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">🤖 Interpretar Texto</button>
 </div>
-<button onclick="abrirScannerVivo()" style="width:100%;padding:18px;border-radius:14px;border:2px solid rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);color:var(--gr);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;"><span style="font-size:28px;">📷</span><div style="text-align:left;"><div>Scanner ao Vivo</div><div style="font-size:10px;color:rgba(0,255,136,0.6);font-weight:400;">Detecta bordas automaticamente</div></div>
-</button><label style="display:block;cursor:pointer;margin-bottom:12px;">
+<label style="display:block;cursor:pointer;margin-bottom:12px;">
 <input type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="pNF(this)"/>
 <div style="border:1px solid var(--br);background:var(--sf);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;">
 <span style="font-size:22px;">🖼️</span>
