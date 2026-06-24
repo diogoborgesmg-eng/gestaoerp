@@ -15806,22 +15806,32 @@ function rFluxoCaixa(){
 
 
 // ── CONTAS A PAGAR ───────────────────────────────────────
+function _vencDate(c){
+ const v=c.venc||c.vencimento||'';
+ if(!v)return null;
+ if(v.includes('-')){const[y,m,d]=v.split('-').map(Number);return new Date(y,m-1,d);}
+ const[d,m,y]=v.split('/').map(Number);
+ if(!d||!m||!y)return null;
+ return new Date(y,m-1,d);
+}
 function rContasPagar(){
  const db=ldb();
  const contas=db.contasPagar||[];
  const hoje=new Date();hoje.setHours(0,0,0,0);
 
  // Agrupa por status
- const vencidas=contas.filter(c=>!c.pago&&new Date(c.vencimento)<hoje);
+ const vencidas=contas.filter(c=>{if(c.pago)return false;const d=_vencDate(c);return d&&d<hoje;});
  const hoje30=contas.filter(c=>{
   if(c.pago)return false;
-  const d=new Date(c.vencimento);
+  const d=_vencDate(c);
+  if(!d)return false;
   const diff=(d-hoje)/(1000*60*60*24);
   return diff>=0&&diff<=7;
  });
  const futuras=contas.filter(c=>{
   if(c.pago)return false;
-  const d=new Date(c.vencimento);
+  const d=_vencDate(c);
+  if(!d)return false;
   return(d-hoje)/(1000*60*60*24)>7;
  });
  const pagas=contas.filter(c=>c.pago).slice(-10);
@@ -15831,7 +15841,7 @@ function rContasPagar(){
  const total7dias=hoje30.reduce((a,c)=>a+Number(c.valor||0),0);
 
  function cardConta(c){
-  const d=new Date(c.vencimento);
+  const d=_vencDate(c)||new Date();
   const diff=Math.round((d-hoje)/(1000*60*60*24));
   const cor=diff<0?'var(--re)':diff<=3?'var(--ye)':'var(--mu)';
   return`<div style="display:flex;gap:6px;margin-bottom:10px;">
