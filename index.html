@@ -4542,9 +4542,9 @@ autofocus/>
 <p id="pdv-sel-info" style="font-size:10px;color:var(--mu);"></p>
 </div>
 <div style="display:flex;gap:6px;align-items:center;">
-<button onclick="alterarQtdSelecaoPDV(-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">−</button>
+<button onclick="alterarQtdPDV(-1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">−</button>
 <span id="pdv-sel-qtd" style="font-size:14px;font-weight:700;min-width:24px;text-align:center;">1</span>
-<button onclick="alterarQtdSelecaoPDV(1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">+</button>
+<button onclick="alterarQtdPDV(1)" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--br);background:var(--sf2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;">+</button>
 <button onclick="confirmarItemPDV(${id})" style="padding:6px 14px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">✓</button>
 </div>
 </div>
@@ -4850,7 +4850,7 @@ function selecionarItemPDV(item){
  if(busca)busca.value="";
 }
 
-function alterarQtdSelecaoPDV(delta){
+function alterarQtdPDV(delta){
  _pdvItemQtd=Math.max(1,(_pdvItemQtd||1)+delta);
  const el=document.getElementById("pdv-sel-qtd");
  if(el)el.textContent=_pdvItemQtd;
@@ -15891,7 +15891,7 @@ function novaContaPagar(){
  sdb(db);render();
 }
 
-function pagarConta(id){
+function pagarContaSimples(id){
  if(!confirm('Marcar como paga?'))return;
  const db=ldb();
  const idx=(db.contasPagar||[]).findIndex(c=>c.id===id);
