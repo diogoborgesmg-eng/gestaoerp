@@ -18805,7 +18805,12 @@ function selecionarPagamento(tipo,cor,total,comandaId){
  document.querySelector('[style*="z-index:700"]')?.remove();
 }
 
-function confirmarPagamentoPDV(comandaId,tipo,total,obs){
+async function confirmarPagamentoPDV(comandaId,tipo,total,obs){
+ const _caixaCheck=await buscarCaixaAtual();
+ if(!_caixaCheck){
+  alert('🔴 Nenhum caixa aberto! Abra o caixa no topo do PDV antes de finalizar vendas.');
+  return;
+ }
  const db=ldb();
  if(!db.mesas)db.mesas=gMesas();
  const mIdx=db.mesas.findIndex(x=>x.id===comandaId);
