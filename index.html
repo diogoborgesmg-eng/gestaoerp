@@ -22944,9 +22944,6 @@ function _confirmarManual(){
  if(window._scannerCallback)window._scannerCallback(val);
 }
 
-// Mantém compatibilidade
-function confirmarScannerManual(){_confirmarManual();}
-
 async function processarFotoScanner(input){
  const file=input?.files?.[0];if(!file)return;
  const div=document.createElement('div');
@@ -22970,34 +22967,19 @@ async function processarFotoScanner(input){
  }catch(e){div.remove();alert('Erro: '+e.message);}
 }
 
-function fecharScanner(){
- try{
-  if(window._html5QrCode){
-   window._html5QrCode.stop().catch(()=>{});
-   window._html5QrCode=null;
-  }
- }catch(e){}
- document.getElementById('scanner-overlay')?.remove();
-}
-
 
 
 
 
 function fecharScanner(){
+ // Limpa qualquer recurso que possa estar ativo (defensivo, cobre as 2 abordagens historicas)
+ try{ if(window._html5QrCode){ window._html5QrCode.stop().catch(()=>{}); window._html5QrCode=null; } }catch(e){}
  if(window._scannerStream){
   window._scannerStream.getTracks().forEach(t=>t.stop());
   window._scannerStream=null;
  }
  if(window._scannerInterval)clearInterval(window._scannerInterval);
  document.getElementById('scanner-overlay')?.remove();
-}
-
-function confirmarScannerManual(){
- const val=document.getElementById('scanner-manual')?.value?.trim();
- if(!val)return;
- fecharScanner();
- if(window._scannerCallback)window._scannerCallback(val);
 }
 
 function iniciarDeteccaoBarcode(video, callback){
