@@ -18710,7 +18710,7 @@ function abrirCheckoutPDV(comandaId,m,itens,total){
    <button onclick="selecionarPagamento('${id}','${cor}',${total},${comandaId})"
     style="padding:14px;border-radius:10px;border:2px solid ${cor}40;background:${cor}15;color:${cor};font-size:13px;font-weight:800;cursor:pointer;">${lbl}</button>`).join('')}
   </div>
-  <button onclick="dividirConta(${comandaId},${total})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">👥 Dividir conta</button>
+  <button onclick="calcularDivisaoSimples(${comandaId},${total})" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;">👥 Dividir conta</button>
  </div>`;
  div.onclick=e=>{if(e.target===div)div.remove();};
  document.body.appendChild(div);
@@ -18738,7 +18738,7 @@ function confirmarPagamentoPDV(comandaId,tipo,total,obs){
  render();
 }
 
-function dividirConta(comandaId,total){
+function calcularDivisaoSimples(comandaId,total){
  const n=parseInt(prompt('Dividir em quantas pessoas?','2')||'0');
  if(!n||n<2)return;
  alert(n+' pessoas\nR$ '+((total/n).toFixed(2).replace('.',','))+' por pessoa');
