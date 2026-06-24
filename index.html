@@ -572,10 +572,12 @@ function abrirLimparDia(){
  const totalR=(dia.r||[]).length, totalC=(dia.c||[]).length;
  const somaR=(dia.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
  const somaC=(dia.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
- const msg=`Apagar TUDO de ${diaInput}?\n\n${totalR} receita(s) — ${brl(somaR)}\n${totalC} custo(s) — ${brl(somaC)}\n\nIsso NÃO pode ser desfeito.`;
+ const contasDoDia=(db.contasPagar||[]).filter(c=>c.dt===diaInput);
+ const msg=`Apagar TUDO de ${diaInput}?\n\n${totalR} receita(s) — ${brl(somaR)}\n${totalC} custo(s) — ${brl(somaC)}\n${contasDoDia.length} conta(s) a pagar vinculada(s)\n\nIsso NÃO pode ser desfeito.`;
  if(!confirm(msg))return;
  if(!confirm('Tem certeza mesmo? Essa ação é definitiva.'))return;
  delete db[diaInput];
+ if(db.contasPagar)db.contasPagar=db.contasPagar.filter(c=>c.dt!==diaInput);
  sdb(db);
  alert(`✅ Lançamentos de ${diaInput} apagados.`);
  render();
