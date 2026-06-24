@@ -14921,17 +14921,60 @@ function iniciarDeteccaoBordas(){
  video.onloadedmetadata=()=>setTimeout(check,500);
 }
 
-function capturarScanner(){
+async function carregarJscanify(){
+ if(window.jscanify)return true;
+ try{
+  if(!window.cv){
+   await new Promise((ok,err)=>{
+    const s=document.createElement('script');
+    s.src='https://docs.opencv.org/4.7.0/opencv.js';
+    s.onload=ok; s.onerror=err;
+    document.head.appendChild(s);
+   });
+   await new Promise(r=>{
+    const check=()=>window.cv&&window.cv.Mat?r():setTimeout(check,200);
+    check();
+   });
+  }
+  if(!window.jscanify){
+   await new Promise((ok,err)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/gh/ColonelParrot/jscanify@master/src/jscanify.min.js';
+    s.onload=ok; s.onerror=err;
+    document.head.appendChild(s);
+   });
+  }
+  return true;
+ }catch(e){console.error('Erro ao carregar jscanify:',e.message);return false;}
+}
+
+async function capturarScanner(){
  const video=document.getElementById("scan-video");
  if(!video||!scanStream)return;
+ const dica=document.getElementById("scan-dica");
+ if(dica){dica.textContent="⟳ Corrigindo perspectiva...";dica.style.background="rgba(68,136,255,0.85)";}
+
  const c=document.createElement("canvas");
  c.width=video.videoWidth||1280;
  c.height=video.videoHeight||720;
  const ctx=c.getContext("2d");
  ctx.filter="contrast(1.2) brightness(1.05) saturate(0.8)";
  ctx.drawImage(video,0,0,c.width,c.height);
+
+ let canvasFinal=c;
+ try{
+  const ok=await carregarJscanify();
+  if(ok&&window.jscanify){
+   const scanner=new window.jscanify();
+   const larguraSaida=Math.round(c.width*1.1);
+   const alturaSaida=Math.round(c.height*1.1);
+   const extraido=scanner.extractPaper(c,larguraSaida,alturaSaida);
+   if(extraido&&extraido.width>50&&extraido.height>50)canvasFinal=extraido;
+  }
+ }catch(eJs){console.error('jscanify falhou, usando foto original:',eJs.message);}
+
  fecharScannerVivo();
- c.toBlob(blob=>{
+ canvasFinal.toBlob(blob=>{
  const file=new File([blob],"scan.jpg",{type:"image/jpeg"});
  processarArquivoNF(file);
  },"image/jpeg",0.92);
