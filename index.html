@@ -278,16 +278,7 @@ oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{4})(?=\d)/g,'$1 ')
 <div style="padding:10px;border-radius:8px;border:1px solid rgba(68,136,255,0.4);background:rgba(68,136,255,0.1);color:var(--bl);font-size:11px;font-weight:700;text-align:center;">📷 Barras</div>
 </label>
 </div>
-</div><!-- IMPORTAR VENDAS STI3 -->
-<div style="border:1px solid rgba(255,170,0,0.3);background:rgba(255,170,0,0.05);border-radius:10px;padding:12px;margin-bottom:12px;">
-<p style="font-weight:700;font-size:12px;color:#ffaa00;margin-bottom:4px;">🏭 Importar Vendas do STI3 (histórico)</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Cole o texto do relatório de vendas do STI3 abaixo (sem IA, leitura direta)</p>
-<textarea id="sti3-texto" placeholder="Cole aqui o texto do relatório STI3 (Venda/Cliente/Hora/Data/Valor)..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;font-size:11px;min-height:90px;color:#fff;margin-bottom:8px;"></textarea>
-<button onclick="processarImportSTI3()" style="width:100%;padding:9px;border-radius:8px;border:none;background:#ffaa00;color:#000;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:8px;">📊 Processar Texto</button>
-<div id="sti3-resultado"></div>
-</div>
-
-<!-- COLAR TEXTO -->
+</div><!-- COLAR TEXTO -->
 <div style="border:1px solid rgba(170,68,255,0.3);background:rgba(170,68,255,0.05);border-radius:10px;padding:12px;margin-bottom:12px;">
 <p style="font-weight:700;font-size:12px;color:var(--pu);margin-bottom:4px;">📋 Colar texto (CamScanner)</p>
 <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">CamScanner → Extrair Texto → cole aqui — ou use o OCR grátis abaixo:</p>
@@ -591,58 +582,6 @@ function abrirLimparDia(){
 }
 
 
-function parseTextoSTI3(texto){
- const regex=/^\s*([\d.]+)\s+([\d.]+)\s*-\s*(.+?)\s+(\d{2}:\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+)\s+(\w+)/;
- const vendas=[];
- texto.split('\n').forEach(l=>{
-  const m=l.match(regex);
-  if(m){
-   vendas.push({venda:m[1],cliente:m[3].trim(),hora:m[4],data:m[5],valor:parseFloat(m[6].replace(',','.'))});
-  }
- });
- return vendas;
-}
-
-function processarImportSTI3(){
- const texto=document.getElementById('sti3-texto')?.value||'';
- const vendas=parseTextoSTI3(texto);
- const resDiv=document.getElementById('sti3-resultado');
- if(!vendas.length){
-  if(resDiv)resDiv.innerHTML='<p style="color:var(--re);font-size:11px;">Nenhuma venda reconhecida. Confere se colou o texto certo (com as colunas Venda/Cliente/Hora/Data/Valor).</p>';
-  return;
- }
- const porDia={};
- vendas.forEach(v=>{
-  if(!porDia[v.data])porDia[v.data]={total:0,qtd:0};
-  porDia[v.data].total+=v.valor;
-  porDia[v.data].qtd++;
- });
- let html=`<p style="font-size:11px;font-weight:700;margin-bottom:6px;">${vendas.length} venda(s) em ${Object.keys(porDia).length} dia(s):</p>`;
- Object.entries(porDia).sort().forEach(([dia,info])=>{
-  html+=`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--br);font-size:11px;"><span>${dia} (${info.qtd} vendas)</span><span style="font-weight:700;color:var(--gr);">${brl(info.total)}</span></div>`;
- });
- html+=`<button onclick="confirmarImportSTI3()" style="width:100%;margin-top:10px;padding:10px;border-radius:8px;border:none;background:var(--gr);color:#000;font-weight:800;font-size:12px;cursor:pointer;">💾 Lançar ${Object.keys(porDia).length} dia(s) no Sistema</button>`;
- window._sti3PorDia=porDia;
- if(resDiv)resDiv.innerHTML=html;
-}
-
-function confirmarImportSTI3(){
- const porDia=window._sti3PorDia;
- if(!porDia)return;
- const db=ldb();
- let count=0;
- Object.entries(porDia).forEach(([dia,info])=>{
-  if(!db[dia])db[dia]={r:[],c:[]};
-  if(!db[dia].r)db[dia].r=[];
-  const jaTem=db[dia].r.some(x=>x._sti3Import);
-  if(jaTem)return; // evita duplicar se importar 2x o mesmo dia
-  db[dia].r.push({id:uid(),d:`Vendas STI3 (${info.qtd} vendas)`,v:info.total,seg:'🏭 Histórico STI3',_sti3Import:true,dt:dia});
-  count++;
- });
- sdb(db);
- alert(`✅ ${count} dia(s) lançado(s)! (dias já importados antes foram ignorados, sem duplicar)`);
- render();
-}
 
 
 async function adicionarNaFila(inp){
@@ -9383,7 +9322,7 @@ ${t==="compras"?"🛒 Compras":t==="contas"?"💳 Contas a Pagar":t==="preparo"?
  ${anotaaiCfg.token?`<div class="ial ag" style="margin-bottom:8px;"><span>✅</span><span>Conectado</span></div>`:`<div class="ial ay" style="margin-bottom:8px;"><span>⚠️</span><span>Não configurado</span></div>`}
  <div class="campo"><label>Token API</label><input type="password" id="cfg-anotaai-token" placeholder="Token do painel Anota Aí" value="${anotaaiCfg.token||''}" autocomplete="off"/></div><button onclick="salvarAnotaai()" style="width:100%;padding:10px;border-radius:9px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar Anota Aí</button><div id="cfg-anotaai-res" style="margin-top:8px;"></div>
 </div><!-- STI3 -->
-<div class="cfg-panel" style="border-color:rgba(170,68,255,0.3);margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">🖥️ STi3</p><div class="ial ay"><span>💡</span><span>STi3: Relatórios → Vendas → Exportar Excel</span></div><label style="display:block;cursor:pointer;margin-top:8px;"><input type="file" accept=".xlsx,.xls,.csv" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"/><div style="padding:10px;border-radius:9px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;text-align:center;">📂 Importar Relatório STi3</div></label><div id="cfg-sti3-res" style="margin-top:8px;"></div>
+<div class="cfg-panel" style="border-color:rgba(170,68,255,0.3);margin-bottom:10px;"><p style="font-weight:700;font-size:13px;margin-bottom:4px;">🖥️ STi3</p><div class="ial ay"><span>💡</span><span>STi3: Relatórios → Vendas → Exportar Excel</span></div><label style="display:block;cursor:pointer;margin-top:8px;"><input type="file" accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"/><div style="padding:10px;border-radius:9px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:12px;font-weight:700;text-align:center;">📂 Importar Relatório STi3</div></label><div id="cfg-sti3-res" style="margin-top:8px;"></div>
 </div><!-- CERTIFICADO DIGITAL -->
 <div id="cfg-cert" class="card" style="margin-bottom:10px;border-color:rgba(99,102,241,0.4);">
 <p style="font-weight:700;font-size:12px;margin-bottom:4px;">🔐 Certificados Digitais A1</p>
@@ -10036,6 +9975,25 @@ async function importarSTi3(inp){
  }else{
  throw new Error("Biblioteca Excel não disponível. Use o arquivo .txt ou .csv do STi3");
  }
+ }else if(f.name.match(/\.pdf$/i)||f.type==="application/pdf"){
+ if(!window.pdfjsLib){
+ await new Promise((ok,err)=>{
+ const s=document.createElement("script");
+ s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+ s.onload=ok; s.onerror=err;
+ document.head.appendChild(s);
+ });
+ window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+ }
+ const buf=await f.arrayBuffer();
+ const pdfDoc=await window.pdfjsLib.getDocument({data:buf}).promise;
+ let textoCompleto="";
+ for(let p=1;p<=pdfDoc.numPages;p++){
+ const page=await pdfDoc.getPage(p);
+ const conteudo=await page.getTextContent();
+ textoCompleto+=conteudo.items.map(it=>it.str).join(" ")+"\n";
+ }
+ texto=textoCompleto;
  }else{
  texto=await f.text();
  }
@@ -10370,7 +10328,7 @@ ${Math.abs(totalFechamento-totalGeral)>1?
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
 <p style="font-weight:700;font-size:13px;">🖥️ STi3 (PDV)</p>
 <label style="cursor:pointer;">
-<input type="file" accept=".xlsx,.xls,.csv" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"/>
+<input type="file" accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"/>
 <span style="padding:5px 10px;border-radius:6px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">📂 Importar</span>
 </label>
 </div>
