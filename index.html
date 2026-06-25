@@ -15732,8 +15732,12 @@ function rFluxoCaixa(){
   const recReal=dd?(dd.r||[]).reduce((a,l)=>a+Number(l.v||0),0):null;
   const custoReal=dd?(dd.c||[]).reduce((a,l)=>a+Number(l.v||0),0):null;
   
-  // Contas vencendo neste dia
-  const contasDia=contasPagar.filter(c=>c.vencimento===dISO);
+  // Contas vencendo neste dia (usa _vencDate pra aceitar venc/vencimento e formatos BR/ISO)
+  const contasDia=contasPagar.filter(c=>{
+   const dv=_vencDate(c);
+   if(!dv)return false;
+   return dv.getFullYear()===d.getFullYear()&&dv.getMonth()===d.getMonth()&&dv.getDate()===d.getDate();
+  });
   const valorContasDia=contasDia.reduce((a,c)=>a+Number(c.valor||0),0);
   
   const rec=recReal!==null?recReal:mediaRec;
