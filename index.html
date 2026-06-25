@@ -9997,25 +9997,60 @@ async function importarSTi3(inp){
  }else{
  texto=await f.text();
  }
+
+ // Tenta primeiro o parser de texto (sem IA, le venda por venda, sem limite de tamanho)
+ const regexVenda=/(\d[\d.]*)\s+([\d.]+)\s*-\s*(.+?)\s+(\d{2}:\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+)\s+\w+/g;
+ const vendasDetectadas=[];
+ let mv;
+ while((mv=regexVenda.exec(texto))!==null){
+ vendasDetectadas.push({venda:mv[1],cliente:mv[3].trim(),hora:mv[4],data:mv[5],valor:parseFloat(mv[6].replace(',','.'))});
+ }
+
+ const db=ldb();
+ let totalLancado=0;
+ let resumoHtml="";
+
+ if(vendasDetectadas.length>=3){
+ // Caminho sem IA: agrupa por dia, calcula ticket medio
+ const porDia={};
+ vendasDetectadas.forEach(v=>{
+ if(!porDia[v.data])porDia[v.data]={total:0,qtd:0};
+ porDia[v.data].total+=v.valor;
+ porDia[v.data].qtd++;
+ });
+ Object.entries(porDia).forEach(([dia,info])=>{
+ if(!db[dia])db[dia]={r:[],c:[]};
+ if(!db[dia].r)db[dia].r=[];
+ db[dia].r=db[dia].r.filter(x=>!(x.fonte==="sti3"));
+ const ticketMedio=info.qtd>0?info.total/info.qtd:0;
+ db[dia].r.push({id:uid(),d:`STi3 Balcão (${info.qtd} vendas, ticket médio ${brl(ticketMedio)})`,s:"restaurante",v:info.total,fonte:"sti3"});
+ totalLancado+=info.total;
+ });
+ sdb(db);
+ const dias=Object.keys(porDia).sort();
+ resumoHtml=`${vendasDetectadas.length} vendas em ${dias.length} dia(s) (${dias[0]} a ${dias[dias.length-1]})`;
+ if(res)res.innerHTML=`<div class="ial ag"><span>✅</span><span>STi3 importado sem IA!<br/>${resumoHtml}<br/><strong>Total: ${brl(totalLancado)}</strong></span></div>`;
+ render();
+ return;
+ }
+
+ // Fallback: formato nao reconhecido pelo parser, tenta IA (so primeiros 12000 caracteres)
  const data=await claudeAPI({
  model:MODEL,max_tokens:2000,
  system:`Leia este relatório de vendas do STi3 (PDV brasileiro).
 Retorne SOMENTE JSON válido:
 {"data":"DD/MM/AAAA","lojas":[{"nome":"","segmento":"restaurante","vendas_total":0.00,"vendas_dinheiro":0.00,"vendas_cartao":0.00,"vendas_pix":0.00,"cancelamentos":0.00,"num_vendas":0}],"total_geral":0.00}
 Segmento: identifique se é restaurante, pizzaria, espetaria ou bar pelo nome da loja.`,
- messages:[{role:"user",content:`Extraia os dados deste relatório STi3:\n\n${texto.slice(0,5000)}`}]
+ messages:[{role:"user",content:`Extraia os dados deste relatório STi3:\n\n${texto.slice(0,12000)}`}]
  });
  const txt=(data.content||[]).map(b=>b.text||"").join("").trim();
  const jsonM=txt.match(/\{[\s\S]*\}/);
  if(!jsonM)throw new Error("Não consegui ler o relatório STi3");
  const dados=JSON.parse(jsonM[0]);
- const db=ldb();
  const dia=dados.data||hj();
  if(!db[dia])db[dia]={r:[],c:[]};
- let totalLancado=0;
  dados.lojas?.forEach(loja=>{
  if(loja.vendas_total>0){
- // Remove lançamento anterior do STi3 do mesmo dia/loja para não duplicar
  db[dia].r=db[dia].r.filter(x=>!(x.fonte==="sti3"&&x.d.includes(loja.nome)));
  db[dia].r.push({id:uid(),d:`STi3 ${loja.nome}${loja.num_vendas?` (${loja.num_vendas} vd.)`:""}` ,s:loja.segmento||"restaurante",v:loja.vendas_total,fonte:"sti3"});
  totalLancado+=loja.vendas_total;
