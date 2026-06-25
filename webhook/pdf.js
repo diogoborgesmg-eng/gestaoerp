@@ -104,6 +104,19 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
         doc.fontSize(9).fillColor(corCinza).font('Helvetica').text('Nenhum dado.', { italics: true });
       } else {
         linhas.forEach((linha, li) => {
+          // Se a linha nao cabe mais na pagina, quebra ANTES de desenhar (evita corromper o layout)
+          if (doc.y > doc.page.height - 60) {
+            doc.addPage();
+            // Reimprime o cabecalho da tabela na pagina nova
+            let xH = 36; const yH = doc.y;
+            colunas.forEach((c, i) => {
+              doc.fontSize(8).fillColor(corCinza).font('Helvetica-Bold').text(c.nome.toUpperCase(), xH, yH, { width: larguras[i], align: c.align || 'left' });
+              xH += larguras[i];
+            });
+            doc.moveDown(0.4);
+            doc.moveTo(36, doc.y).lineTo(36 + larguraPagina, doc.y).strokeColor(corLinha).stroke();
+            doc.moveDown(0.2);
+          }
           const yLinha = doc.y;
           x = 36;
           colunas.forEach((c, i) => {
