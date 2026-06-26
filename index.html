@@ -4352,6 +4352,30 @@ async function fecharCaixaSupabase(){
  }catch(e){alert('❌ Erro ao fechar caixa: '+e.message);}
 }
 
+let _realtimeCaixaConectado=false;
+async function conectarRealtimeCaixa(){
+ if(_realtimeCaixaConectado)return;
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return;
+ try{
+  if(!window.supabase){
+   await new Promise((ok,err)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    s.onload=ok; s.onerror=err;
+    document.head.appendChild(s);
+   });
+  }
+  const client=window.supabase.createClient(cfg.url,cfg.key);
+  client.channel('caixa-status-changes')
+   .on('postgres_changes',{event:'*',schema:'public',table:'sessoes_caixa'},()=>{
+    renderStatusCaixa();
+   })
+   .subscribe();
+  _realtimeCaixaConectado=true;
+ }catch(e){console.error('Erro ao conectar Realtime:',e.message);}
+}
+
 async function renderStatusCaixa(){
  const el=document.getElementById('status-caixa-area');
  if(!el)return;
@@ -9041,7 +9065,7 @@ function render(){
     const _grupoAbas=_grupoMap[aba]||[];
     let _subNav='';
     if(_grupoAbas.length){_subNav='<div style="display:flex;gap:5px;overflow-x:auto;padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--br);scrollbar-width:none;">'+_grupoAbas.map(k=>'<button onclick="ir(\''+k+'\')" style="padding:5px 12px;border-radius:15px;border:none;background:'+(k===aba?'var(--bl)':'rgba(255,255,255,0.06)')+';color:'+(k===aba?'#fff':'var(--mu)')+';font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+(_grupoLabel[k]||k)+'</button>').join('')+'</div>';}
-    el.innerHTML=_subNav+(m[aba]||rDRE)();const _vf=document.getElementById("pdv-voz-flutuante");if(_vf)_vf.style.display=aba==="pdv"?"block":"none";if(aba==="pdv")setTimeout(renderStatusCaixa,50);
+    el.innerHTML=_subNav+(m[aba]||rDRE)();const _vf=document.getElementById("pdv-voz-flutuante");if(_vf)_vf.style.display=aba==="pdv"?"block":"none";if(aba==="pdv"){setTimeout(renderStatusCaixa,50);conectarRealtimeCaixa();}
  }catch(e){
  el.innerHTML=`<div class="si"><div class="ial ar"><span>❌</span><span>Erro: ${e.message}</span></div><button onclick="ir('dre')" class="bok" style="margin-top:10px;">← DRE</button></div>`;
  console.error("Erro render",aba,e);
