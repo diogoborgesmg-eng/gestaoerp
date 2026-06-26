@@ -10,7 +10,7 @@ function limparEmoji(txt) {
   return String(txt||'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, '').trim();
 }
 
-function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTotais, contasPagar, evolucaoMes, cmvPct, rhPct, metaCmv, metaRh, melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes }) {
+function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTotais, contasPagar, evolucaoMes, cmvPct, rhPct, metaCmv, metaRh, melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes, canaisVenda }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 36 });
     const chunks = [];
@@ -139,6 +139,22 @@ function gerarPdfFechamento({ diaBR, receita, custo, resultado, segTotais, catTo
       { nome: 'Valor', w: larguraPagina * 0.3, align: 'right' },
       { nome: '%', w: larguraPagina * 0.2, align: 'right' }
     ], segLinhas);
+
+    // Canais de Venda (STi3/iFood) - comparacao por loja
+    if (canaisVenda && canaisVenda.length) {
+      doc.fontSize(11).fillColor('#111').font('Helvetica-Bold').text('Canais de Venda');
+      doc.moveDown(0.3);
+      canaisVenda.forEach(ch => {
+        const nomeExibir = ch.loja ? `${ch.nome} - ${ch.loja}` : ch.nome;
+        doc.fontSize(9).fillColor('#333').font('Helvetica-Bold').text(nomeExibir);
+        let linha = `  Vendas: ${brlFmt(ch.vendas)}`;
+        if (ch.qtd > 0) linha += `  |  Pedidos: ${ch.qtd}  |  Ticket Medio: ${brlFmt(ch.ticketMedio)}`;
+        if (ch.investimentoIfood > 0) linha += `  |  Investimento iFood: ${brlFmt(ch.investimentoIfood)}`;
+        doc.fontSize(9).fillColor(corCinza).font('Helvetica').text(linha);
+        doc.moveDown(0.2);
+      });
+      doc.moveDown(0.5);
+    }
 
     // Custos por Categoria
     const catLinhas = Object.entries(catTotais || {}).sort((a, b) => b[1] - a[1]).map(([cat, v]) => [limparEmoji(cat), 'R$ ' + brlFmt(v)]);
