@@ -669,12 +669,15 @@ ${item.avisovalor?`<div class="ial ay"><span>⚠️</span><span>${item.avisovalo
 </div><p style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;">Itens (${item.itens?.length||0}) — toque para editar</p>
 <div id="rev-itens">
 ${(item.itens||[]).map((it,i)=>{
- const grp=it.grupo||detectarGrupo(it.descricao);
+ const categoriaSalva=buscarCategoriaGlobal(it.descricao);
+ const grp=it.grupo||categoriaSalva||detectarGrupo(it.descricao);
+ const categoriaNaoConfirmada=!categoriaSalva&&!it._categoriaConfirmada&&!it.grupo;
  const qtdNum=Number(it.quantidade)||0, vuNum=Number(it.valor_unitario)||0, vtNum=Number(it.valor_total)||0;
  const calculado=qtdNum*vuNum;
  const inconsistente=vtNum>0&&calculado>0&&Math.abs(calculado-vtNum)>Math.max(0.5,vtNum*0.05);
- return`<div style="background:var(--sf2);border-radius:8px;padding:8px;margin-bottom:6px;border:1px solid ${inconsistente?'rgba(255,51,102,0.5)':it._corrigido?'rgba(255,204,0,0.3)':it._memoria?'rgba(170,68,255,0.3)':'var(--br)'};">
+ return`<div style="background:var(--sf2);border-radius:8px;padding:8px;margin-bottom:6px;border:1px solid ${inconsistente?'rgba(255,51,102,0.5)':categoriaNaoConfirmada?'rgba(255,170,0,0.4)':it._corrigido?'rgba(255,204,0,0.3)':it._memoria?'rgba(170,68,255,0.3)':'var(--br)'};">
 ${inconsistente?`<div style="background:rgba(255,51,102,0.12);border-radius:6px;padding:5px 7px;margin-bottom:6px;font-size:10px;color:#ff3366;">⚠️ Confira: ${qtdNum} × R$${vuNum.toFixed(2)} = R$${calculado.toFixed(2)}, mas o total da nota mostra R$${vtNum.toFixed(2)}. Algum número pode estar errado.</div>`:""}
+${categoriaNaoConfirmada?`<div style="background:rgba(255,170,0,0.1);border-radius:6px;padding:4px 7px;margin-bottom:6px;font-size:10px;color:#ffaa00;">❓ Categoria sugerida automaticamente — confirme abaixo (só precisa fazer 1 vez por produto)</div>`:""}
 <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
 <span style="font-size:14px;">${grp.icone||"📋"}</span>
 ${it._corrigido?`<span style="font-size:9px;background:rgba(255,204,0,0.2);border:1px solid rgba(255,204,0,0.4);color:var(--ye);border-radius:4px;padding:1px 5px;">✏️ Nome corrigido</span>`:""}
@@ -740,13 +743,38 @@ ${item.textoOriginal?`
  modal.style.display="block";
 }
 
+function buscarCategoriaGlobal(descricao){
+ const db=ldb();
+ const mapa=db.categoriaConfirmada||{};
+ const prod=(descricao||"").toLowerCase().trim();
+ if(!prod)return null;
+ if(mapa[prod])return mapa[prod];
+ const prodLimpo=prod.replace(/\s+/g,"");
+ const chave=Object.keys(mapa).find(k=>{
+  const kLimpo=k.replace(/\s+/g,"");
+  if(kLimpo.length<6||prodLimpo.length<6)return false;
+  return prodLimpo.includes(kLimpo)||kLimpo.includes(prodLimpo);
+ });
+ return chave?mapa[chave]:null;
+}
+
+function salvarCategoriaGlobal(descricao,grupo){
+ const db=ldb();
+ if(!db.categoriaConfirmada)db.categoriaConfirmada={};
+ db.categoriaConfirmada[(descricao||"").toLowerCase().trim()]=grupo;
+ sdb(db);
+}
+
 function revEditGrupo(i,valor){
  const fila=gFila();
  const item=fila.find(f=>f.status==="revisao");
  if(!item||!item.itens[i])return;
  const [cat,grupo,icone]=valor.split("|");
- item.itens[i].grupo={cat,grupo,icone};
+ const grupoObj={cat,grupo,icone};
+ item.itens[i].grupo=grupoObj;
+ item.itens[i]._categoriaConfirmada=true;
  sFila(fila);
+ salvarCategoriaGlobal(item.itens[i].descricao,grupoObj);
 }
 
 function revEditItem(i,campo,valor){
@@ -1389,7 +1417,8 @@ function extrairUpcDoTexto(descricao){
 
 // Mapeia grupo detectado -> categoria de custo (embalagem separada de limpeza/higiene) - GLOBAL, usado em varios lugares
 function catCustoPorItem(descricao){
- const g=detectarGrupo(descricao);
+ const confirmada=buscarCategoriaGlobal(descricao);
+ const g=confirmada||detectarGrupo(descricao);
  if(g.grupo==="Embalagens")return"Embalagens";
  if(g.grupo==="Limpeza"||g.grupo==="EPI")return"Limpeza/Higiene";
  return"Insumos/Matéria-prima";
