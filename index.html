@@ -10044,15 +10044,31 @@ async function importarSTi3(inp){
   const valorRaw=linha[7];
   if(!dataHoraRaw||valorRaw===""||valorRaw===undefined)continue;
   let dataFmt=null;
-  if(dataHoraRaw instanceof Date){
+  if(dataHoraRaw instanceof Date&&!isNaN(dataHoraRaw.getTime())){
    dataFmt=`${String(dataHoraRaw.getDate()).padStart(2,"0")}/${String(dataHoraRaw.getMonth()+1).padStart(2,"0")}/${dataHoraRaw.getFullYear()}`;
+  }else if(typeof dataHoraRaw==="number"){
+   const dEx=new Date(Math.round((dataHoraRaw-25569)*86400*1000));
+   if(!isNaN(dEx.getTime())&&dEx.getUTCFullYear()>2000&&dEx.getUTCFullYear()<2100){
+    dataFmt=`${String(dEx.getUTCDate()).padStart(2,"0")}/${String(dEx.getUTCMonth()+1).padStart(2,"0")}/${dEx.getUTCFullYear()}`;
+   }
   }else{
    const s=String(dataHoraRaw);
    const m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
    if(m)dataFmt=`${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}/${m[3]}`;
+   else if(/^\d+(\.\d+)?$/.test(s.trim())){
+    const num=parseFloat(s);
+    const dEx=new Date(Math.round((num-25569)*86400*1000));
+    if(!isNaN(dEx.getTime())&&dEx.getUTCFullYear()>2000&&dEx.getUTCFullYear()<2100){
+     dataFmt=`${String(dEx.getUTCDate()).padStart(2,"0")}/${String(dEx.getUTCMonth()+1).padStart(2,"0")}/${dEx.getUTCFullYear()}`;
+    }
+   }
   }
   if(!dataFmt)continue;
-  const valor=parseFloat(String(valorRaw).replace(/\./g,"").replace(",","."))||parseFloat(valorRaw)||0;
+  let valorNum=valorRaw;
+  if(typeof valorNum!=="number"){
+   valorNum=parseFloat(String(valorRaw).replace(/[^\d,.-]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."));
+  }
+  const valor=Number(valorNum)||0;
   if(!valor||valor<=0||valor>50000)continue; // protecao extra: ignora valores absurdos (provavel erro de leitura)
   vendasDetectadas.push({venda:String(vendaId),cliente:String(linha[1]||""),data:dataFmt,valor});
  }
