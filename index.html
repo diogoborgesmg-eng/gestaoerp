@@ -4342,6 +4342,65 @@ async function renderStatusCaixa(){
 }
 
 
+function rFachada(){
+ const db=ldb();
+ const salvas=db.fachadaImagens||[];
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">🏠 Gerador de Fachada</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Descreva como você imagina a nova fachada — a IA gera 3 opções pra comparar</p>
+
+<textarea id="fachada-desc" placeholder="Ex: fachada moderna, tons de laranja e branco, letreiro grande iluminado, vidro na entrada, estilo restaurante familiar..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;font-size:12px;min-height:80px;color:#fff;margin-bottom:8px;"></textarea>
+
+<button onclick="gerarFachadas()" style="width:100%;padding:11px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:12px;">🎨 Gerar 3 Opções</button>
+
+<div id="fachada-resultado"></div>
+
+${salvas.length?`<p style="font-weight:700;font-size:12px;margin:14px 0 8px;">⭐ Salvas (${salvas.length})</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+${salvas.map((f,i)=>`<div style="position:relative;border-radius:10px;overflow:hidden;">
+<img src="${f.url}" style="width:100%;display:block;border-radius:10px;"/>
+<button onclick="removerFachadaSalva(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);border:none;color:#fff;border-radius:6px;padding:3px 7px;font-size:10px;cursor:pointer;">🗑️</button>
+</div>`).join('')}
+</div>`:''}
+</div>`;
+}
+
+function gerarFachadas(){
+ const desc=document.getElementById('fachada-desc')?.value?.trim();
+ if(!desc){alert('Descreve como você imagina a fachada primeiro.');return;}
+ const promptBase=encodeURIComponent(`${desc}, architectural exterior render, restaurant facade, photorealistic, daytime, high quality, professional photography`);
+ const res=document.getElementById('fachada-resultado');
+ let html='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">';
+ for(let i=0;i<3;i++){
+  const seed=Math.floor(Math.random()*99999);
+  const url=`https://image.pollinations.ai/prompt/${promptBase}?width=512&height=512&seed=${seed}&nologo=true&enhance=true&model=flux`;
+  html+=`<div style="position:relative;border-radius:8px;overflow:hidden;background:#111;">
+  <img src="${url}" style="width:100%;display:block;opacity:0;transition:opacity 0.5s;" onload="this.style.opacity=1;" data-url="${url}"/>
+  <button onclick="salvarFachada('${url.replace(/'/g,"\\'")}')" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:none;color:#ffcc00;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">⭐</button>
+  </div>`;
+ }
+ html+='</div><p style="font-size:10px;color:var(--mu);">Toque na ⭐ pra salvar a que mais gostar. Pode gerar de novo quantas vezes quiser.</p>';
+ if(res)res.innerHTML=html;
+}
+
+function salvarFachada(url){
+ const db=ldb();
+ if(!db.fachadaImagens)db.fachadaImagens=[];
+ db.fachadaImagens.push({url,dt:new Date().toISOString()});
+ sdb(db);
+ alert('✅ Salva! Role pra baixo pra ver na galeria.');
+ render();
+}
+
+function removerFachadaSalva(idx){
+ const db=ldb();
+ if(!confirm('Remover essa imagem salva?'))return;
+ (db.fachadaImagens||[]).splice(idx,1);
+ sdb(db);
+ render();
+}
+
+
 function rPDV(){
  const mesas=gMesas();
  const livres=mesas.filter(m=>m.status==='livre').length;
@@ -8858,7 +8917,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -9453,6 +9512,7 @@ ${(()=>{
  if(cfg.url&&cfg.key){
  return`<div class="ial ag" style="margin-bottom:6px;"><span>☁️</span><span>Supabase configurado${ultimoSync?" · Último sync: "+ultimoSync:""}</span></div>
 <button id="sb-sync-btn" onclick="sincronizarAgora()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(62,207,142,0.8);color:#000;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Sincronizar Agora</button>
+<button onclick="ir('fachada')" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,170,0,0.4);background:rgba(255,170,0,0.08);color:#ffaa00;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🏠 Gerador de Fachada</button>
 <button onclick="abrirLimparDia()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);color:var(--re);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;margin-top:10px;">🗑️ Limpar Lançamentos de um Dia</button>
 <button onclick="forcarEnvioLocalParaNuvem()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,153,0,0.4);background:rgba(255,153,0,0.1);color:#ff9900;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📤 Forçar Envio Deste Celular pra Nuvem</button>
 <button onclick="restaurarDaNuvemAgora()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(62,207,142,0.5);background:rgba(62,207,142,0.15);color:#3ecf8e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📥 Restaurar da Nuvem Agora</button>
