@@ -492,6 +492,14 @@ async function executarDispatch(diaForcado){
   const destinos = ['5534996853258','5534997692282']; // Diogo, Herielly
 
   const diaOntem = r[ontemBR] || { r: [], c: [] };
+
+  // Canais de venda (STi3/iFood) com ticket medio e investimento por loja, pra comparacao
+  const canaisVenda = [];
+  const sti3Entry = (diaOntem.r||[]).find(x=>x.fonte==='sti3');
+  if (sti3Entry) canaisVenda.push({ nome: 'STi3/Balcao', vendas: sti3Entry.v||0, qtd: sti3Entry.qtdVendas||0, ticketMedio: sti3Entry.ticketMedio||0, loja: null });
+  (diaOntem.r||[]).filter(x=>x.fonte==='ifood').forEach(x=>{
+    canaisVenda.push({ nome: 'iFood', vendas: x.v||0, qtd: x.qtdVendas||0, ticketMedio: x.ticketMedio||0, loja: x._lojaIfood||null, investimentoIfood: (diaOntem._ifoodIncentivo&&x._lojaIfood)?(diaOntem._ifoodIncentivo[x._lojaIfood]||0):0 });
+  });
   const receitaOntem = (diaOntem.r||[]).reduce((s,x)=>s+Number(x.v||0),0);
   const custoOntem = (diaOntem.c||[]).reduce((s,x)=>s+Number(x.v||0),0);
   const lucroOntem = receitaOntem - custoOntem;
@@ -553,7 +561,7 @@ async function executarDispatch(diaForcado){
       segTotais: segTotaisOntem, catTotais: catTotaisOntem,
       contasPagar: contasPdf, evolucaoMes: diasDoMes,
       cmvPct, rhPct, metaCmv: 35, metaRh: 30,
-      melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes, mesNome: mesOntem, anoMes: anoOntem
+      melhorDia, piorDia, diaMaiorCusto, mediaResultadoMes, mesNome: mesOntem, anoMes: anoOntem, canaisVenda
     });
     pdfBase64 = pdfBuffer.toString('base64');
   } catch(ePdf) { erroPdf = ePdf.message; console.log('Erro gerar PDF dispatch:', ePdf.message); }
