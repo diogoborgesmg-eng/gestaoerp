@@ -19146,6 +19146,22 @@ function selecionarPagamento(tipo,cor,total,comandaId){
  document.querySelector('[style*="z-index:700"]')?.remove();
 }
 
+async function gravarLancamentoSupabase(tipo,diaComercial,descricao,categoria,segmento,valor,caixaId,localId){
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return;
+ try{
+  await fetch(`${cfg.url}/rest/v1/lancamentos`,{
+   method:'POST',
+   headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+   body:JSON.stringify({
+    id:localId||uid(), tipo, dia_comercial:diaComercial, descricao,
+    categoria:categoria||null, segmento:segmento||null, caixa_id:caixaId||null,
+    valor, device_id:cfg.deviceId
+   })
+  });
+ }catch(e){console.error('Erro ao gravar lancamento no Supabase (mantido local):',e.message);}
+}
+
 async function confirmarPagamentoPDV(comandaId,tipo,total,obs){
  const _caixaCheck=await buscarCaixaAtual();
  if(!_caixaCheck){
@@ -19156,14 +19172,18 @@ async function confirmarPagamentoPDV(comandaId,tipo,total,obs){
  if(!db.mesas)db.mesas=gMesas();
  const mIdx=db.mesas.findIndex(x=>x.id===comandaId);
  if(mIdx<0)return;
- const dia=hj();
+ const dia=_caixaCheck.dia_comercial||hj();
  if(!db[dia])db[dia]={r:[],c:[]};
- const _gc=garcomAtual();logGarcom('fechou_mesa','Comanda '+comandaId+' R$'+total.toFixed(2));db[dia].r.push({id:uid(),d:'Comanda '+comandaId+(obs?' — '+obs:''),v:total,cat:'Vendas PDV',seg:tipo,_comanda:comandaId,_pgto:tipo,_garcom:_gc.nome,_garcomId:_gc.id,_hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+ const _gc=garcomAtual();logGarcom('fechou_mesa','Comanda '+comandaId+' R$'+total.toFixed(2));
+ const _lancId=uid();
+ db[dia].r.push({id:_lancId,d:'Comanda '+comandaId+(obs?' — '+obs:''),v:total,cat:'Vendas PDV',seg:tipo,_comanda:comandaId,_pgto:tipo,_garcom:_gc.nome,_garcomId:_gc.id,_hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
  const m=db.mesas[mIdx];
  m.status='livre';m.comanda=[];m.abertura=null;m.mesa='';
  sdb(db);
  window._pdvModo=null;window._pdvComanda=null;
  render();
+ // Grava tambem no Supabase, linha por linha, no mesmo instante (nao bloqueia a tela)
+ gravarLancamentoSupabase('receita',dia,'Comanda '+comandaId+(obs?' — '+obs:''),'Vendas PDV',tipo,total,_caixaCheck.id,_lancId);
 }
 
 function calcularDivisaoSimples(comandaId,total){
