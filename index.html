@@ -9994,10 +9994,10 @@ async function importarSTi3(inp){
  });
  }
  if(window.XLSX){
- const wb=window.XLSX.read(buf,{type:"array"});
+ const wb=window.XLSX.read(buf,{type:"array",cellDates:true});
  const ws=wb.Sheets[wb.SheetNames[0]];
  // Le como linhas/colunas de verdade (igual o importador do iFood que ja funciona), nao como texto solto
- linhasExcel=window.XLSX.utils.sheet_to_json(ws,{defval:"",header:1});
+ linhasExcel=window.XLSX.utils.sheet_to_json(ws,{defval:"",header:1,raw:false});
  }else{
  throw new Error("Biblioteca Excel não disponível. Use o arquivo .txt ou .csv do STi3");
  }
@@ -10032,36 +10032,29 @@ async function importarSTi3(inp){
  const vendasDetectadas=[];
 
  if(linhasExcel&&linhasExcel.length>1){
- // Acha a linha de cabecalho (a que tem "Data" e "Valor") e a posicao de cada coluna
- let idxHeader=-1, colData=-1, colValor=-1, colCliente=-1, colVenda=-1;
- for(let li=0;li<Math.min(10,linhasExcel.length);li++){
-  const linha=linhasExcel[li].map(c=>String(c||"").trim().toLowerCase());
-  const cd=linha.findIndex(c=>c.includes("data"));
-  const cv=linha.findIndex(c=>c.includes("valor")||c.includes("preço")||c.includes("preco"));
-  if(cd>=0&&cv>=0){idxHeader=li;colData=cd;colValor=cv;colCliente=linha.findIndex(c=>c.includes("cliente"));colVenda=linha.findIndex(c=>c.includes("venda"));break;}
- }
- if(idxHeader>=0){
-  for(let li=idxHeader+1;li<linhasExcel.length;li++){
-   const linha=linhasExcel[li];
-   if(!linha||!linha.length)continue;
-   const dataRaw=String(linha[colData]||"").trim();
-   const valorRaw=String(linha[colValor]||"").trim();
-   if(!dataRaw||!valorRaw)continue;
-   const valor=parseFloat(valorRaw.replace(/\./g,"").replace(",","."))||parseFloat(valorRaw)||0;
-   // Data pode vir como DD/MM/AAAA texto ou numero serial do Excel
-   let dataFmt=dataRaw;
-   if(/^\d+(\.\d+)?$/.test(dataRaw)){
-    const dEx=new Date(Math.round((parseFloat(dataRaw)-25569)*86400*1000));
-    dataFmt=`${String(dEx.getDate()).padStart(2,"0")}/${String(dEx.getMonth()+1).padStart(2,"0")}/${dEx.getFullYear()}`;
-   }
-   if(!dataFmt.match(/\d{2}\/\d{2}\/\d{4}/)||!valor)continue;
-   vendasDetectadas.push({
-    venda:colVenda>=0?String(linha[colVenda]||""):"",
-    cliente:colCliente>=0?String(linha[colCliente]||""):"",
-    data:dataFmt,
-    valor
-   });
+ // Formato STi3 confirmado: col0=Venda(numero), col1=Cliente, col5=Data+Hora, col7=Valor real
+ // (os rotulos do cabecalho do STi3 ficam desalinhados da posicao real - usa posicao fixa, nao o nome)
+ for(let li=0;li<linhasExcel.length;li++){
+  const linha=linhasExcel[li];
+  if(!linha||linha.length<8)continue;
+  const vendaId=linha[0];
+  // So processa linha se a 1a coluna for um numero de venda valido (pula cabecalho/rodape/totais)
+  if(!vendaId||!/^\d+$/.test(String(vendaId).trim()))continue;
+  const dataHoraRaw=linha[5];
+  const valorRaw=linha[7];
+  if(!dataHoraRaw||valorRaw===""||valorRaw===undefined)continue;
+  let dataFmt=null;
+  if(dataHoraRaw instanceof Date){
+   dataFmt=`${String(dataHoraRaw.getDate()).padStart(2,"0")}/${String(dataHoraRaw.getMonth()+1).padStart(2,"0")}/${dataHoraRaw.getFullYear()}`;
+  }else{
+   const s=String(dataHoraRaw);
+   const m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+   if(m)dataFmt=`${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}/${m[3]}`;
   }
+  if(!dataFmt)continue;
+  const valor=parseFloat(String(valorRaw).replace(/\./g,"").replace(",","."))||parseFloat(valorRaw)||0;
+  if(!valor||valor<=0||valor>50000)continue; // protecao extra: ignora valores absurdos (provavel erro de leitura)
+  vendasDetectadas.push({venda:String(vendaId),cliente:String(linha[1]||""),data:dataFmt,valor});
  }
  }
 
