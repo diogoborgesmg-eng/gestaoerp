@@ -9959,12 +9959,30 @@ function detectarSegmentoLoja(nome){
  if(n.includes("bar"))return"bar";
  return"restaurante";
 }
+function limparImportSTI3(){
+ const db=ldb();
+ let count=0, total=0;
+ Object.keys(db).forEach(dia=>{
+  if(!db[dia]||!db[dia].r)return;
+  const antes=db[dia].r.length;
+  db[dia].r.forEach(x=>{if(x.fonte==='sti3'){count++;total+=Number(x.v||0);}});
+  db[dia].r=db[dia].r.filter(x=>x.fonte!=='sti3');
+ });
+ if(count===0){alert('Nenhum lançamento do STi3 encontrado pra apagar.');return;}
+ if(!confirm(`Apagar ${count} lançamento(s) do STi3 (total ${brl(total)})?\n\nIsso NÃO afeta outros lançamentos (PDV, NF, etc).`))return;
+ sdb(db);
+ alert(`✅ ${count} lançamento(s) do STi3 removido(s).`);
+ render();
+}
+
+
 async function importarSTi3(inp){
  const f=inp?.files?.[0]; if(!f)return; inp.value="";
  const res=document.getElementById("cfg-sti3-res");
  if(res)res.innerHTML=`<div class="ial ay"><span>⟳</span><span>Lendo relatório STi3...</span></div>`;
  try{
  let texto="";
+ let linhasExcel=null;
  if(f.name.match(/\.xlsx?$/i)){
  const buf=await f.arrayBuffer();
  if(!window.XLSX){
@@ -9978,7 +9996,8 @@ async function importarSTi3(inp){
  if(window.XLSX){
  const wb=window.XLSX.read(buf,{type:"array"});
  const ws=wb.Sheets[wb.SheetNames[0]];
- texto=window.XLSX.utils.sheet_to_csv(ws);
+ // Le como linhas/colunas de verdade (igual o importador do iFood que ja funciona), nao como texto solto
+ linhasExcel=window.XLSX.utils.sheet_to_json(ws,{defval:"",header:1});
  }else{
  throw new Error("Biblioteca Excel não disponível. Use o arquivo .txt ou .csv do STi3");
  }
@@ -10005,12 +10024,49 @@ async function importarSTi3(inp){
  texto=await f.text();
  }
 
- // Tenta primeiro o parser de texto (sem IA, le venda por venda, sem limite de tamanho)
- const regexVenda=/(\d[\d.]*)\s+([\d.]+)\s*-\s*(.+?)\s+(\d{2}:\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+)\s+\w+/g;
  const vendasDetectadas=[];
+
+ if(linhasExcel&&linhasExcel.length>1){
+ // Acha a linha de cabecalho (a que tem "Data" e "Valor") e a posicao de cada coluna
+ let idxHeader=-1, colData=-1, colValor=-1, colCliente=-1, colVenda=-1;
+ for(let li=0;li<Math.min(10,linhasExcel.length);li++){
+  const linha=linhasExcel[li].map(c=>String(c||"").trim().toLowerCase());
+  const cd=linha.findIndex(c=>c==="data");
+  const cv=linha.findIndex(c=>c==="valor");
+  if(cd>=0&&cv>=0){idxHeader=li;colData=cd;colValor=cv;colCliente=linha.findIndex(c=>c==="cliente");colVenda=linha.findIndex(c=>c==="venda");break;}
+ }
+ if(idxHeader>=0){
+  for(let li=idxHeader+1;li<linhasExcel.length;li++){
+   const linha=linhasExcel[li];
+   if(!linha||!linha.length)continue;
+   const dataRaw=String(linha[colData]||"").trim();
+   const valorRaw=String(linha[colValor]||"").trim();
+   if(!dataRaw||!valorRaw)continue;
+   const valor=parseFloat(valorRaw.replace(/\./g,"").replace(",","."))||parseFloat(valorRaw)||0;
+   // Data pode vir como DD/MM/AAAA texto ou numero serial do Excel
+   let dataFmt=dataRaw;
+   if(/^\d+(\.\d+)?$/.test(dataRaw)){
+    const dEx=new Date(Math.round((parseFloat(dataRaw)-25569)*86400*1000));
+    dataFmt=`${String(dEx.getDate()).padStart(2,"0")}/${String(dEx.getMonth()+1).padStart(2,"0")}/${dEx.getFullYear()}`;
+   }
+   if(!dataFmt.match(/\d{2}\/\d{2}\/\d{4}/)||!valor)continue;
+   vendasDetectadas.push({
+    venda:colVenda>=0?String(linha[colVenda]||""):"",
+    cliente:colCliente>=0?String(linha[colCliente]||""):"",
+    data:dataFmt,
+    valor
+   });
+  }
+ }
+ }
+
+ if(!vendasDetectadas.length&&texto){
+ // Fallback: tenta o parser de texto (formato PDF copiado, espacos como separador)
+ const regexVenda=/(\d[\d.]*)\s+([\d.]+)\s*-\s*(.+?)\s+(\d{2}:\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+)\s+\w+/g;
  let mv;
  while((mv=regexVenda.exec(texto))!==null){
- vendasDetectadas.push({venda:mv[1],cliente:mv[3].trim(),hora:mv[4],data:mv[5],valor:parseFloat(mv[6].replace(',','.'))});
+ vendasDetectadas.push({venda:mv[1],cliente:mv[3].trim(),hora:mv[4],data:mv[5],valor:parseFloat(mv[6].replace(",","."))});
+ }
  }
 
  const db=ldb();
@@ -10373,6 +10429,7 @@ ${Math.abs(totalFechamento-totalGeral)>1?
 <input type="file" accept=".xlsx,.xls,.csv,.pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="importarSTi3(this)"/>
 <span style="padding:5px 10px;border-radius:6px;border:1px solid rgba(170,68,255,0.4);background:rgba(170,68,255,0.1);color:var(--pu);font-size:11px;font-weight:700;cursor:pointer;">📂 Importar</span>
 </label>
+<button onclick="limparImportSTI3()" style="margin-left:6px;padding:5px 8px;border-radius:6px;border:1px solid rgba(255,51,102,0.3);background:rgba(255,51,102,0.08);color:var(--re);font-size:11px;cursor:pointer;">🗑️</button>
 </div>
 ${totalSti3>0?`<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><span>Total</span><span style="color:#00ff88;">${brl(totalSti3)}</span></div>`:`<p style="font-size:11px;color:var(--mu);">Importe o relatório do STi3</p>`}
 </div><!-- ANÁLISE DE CANAIS -->
