@@ -4347,9 +4347,15 @@ function rFachada(){
  const salvas=db.fachadaImagens||[];
  return`<div style="padding:12px;">
 <p style="font-weight:800;font-size:14px;margin-bottom:4px;">🏠 Gerador de Fachada</p>
-<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Descreva como você imagina a nova fachada — a IA gera 3 opções pra comparar</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Descreva o que quer mudar — a IA gera 3 opções pra comparar</p>
 
-<textarea id="fachada-desc" placeholder="Ex: fachada moderna, tons de laranja e branco, letreiro grande iluminado, vidro na entrada, estilo restaurante familiar..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;font-size:12px;min-height:80px;color:#fff;margin-bottom:8px;"></textarea>
+<label style="display:block;cursor:pointer;margin-bottom:8px;">
+<input type="file" id="fachada-foto-input" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="analisarFachadaAtual(this)"/>
+<div style="border:1px dashed rgba(255,170,0,0.4);background:rgba(255,170,0,0.05);border-radius:10px;padding:10px;text-align:center;color:#ffaa00;font-size:12px;font-weight:700;">📷 Mandar foto da fachada atual (opcional, ajuda a IA a entender a base)</div>
+</label>
+<p id="fachada-analise-status" style="font-size:10px;color:var(--mu);margin-bottom:8px;"></p>
+
+<textarea id="fachada-desc" placeholder="Ex: quero trocar a cor pra laranja e branco, letreiro maior iluminado, manter o formato do telhado..." style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:8px;padding:10px;font-size:12px;min-height:80px;color:#fff;margin-bottom:8px;"></textarea>
 
 <button onclick="gerarFachadas()" style="width:100%;padding:11px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff6a00,#ffcc00);color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:12px;">🎨 Gerar 3 Opções</button>
 
@@ -4365,22 +4371,63 @@ ${salvas.map((f,i)=>`<div style="position:relative;border-radius:10px;overflow:h
 </div>`;
 }
 
-function gerarFachadas(){
+async function analisarFachadaAtual(inp){
+ const f=inp?.files?.[0]; if(!f)return;
+ const status=document.getElementById('fachada-analise-status');
+ if(status){status.textContent='⟳ Analisando a foto da fachada atual...';status.style.color='var(--mu)';}
+ try{
+  const b64=await comprimirImagem(f,1200,1200,0.85);
+  const resp=await claudeAPI({
+   model:MODEL,max_tokens:400,
+   messages:[{role:"user",content:[
+    {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},
+    {type:"text",text:"Descreva em ingles, de forma objetiva e detalhada, a fachada deste restaurante na foto: formato do predio, cores atuais, materiais (tijolo, vidro, etc), posicao do letreiro, telhado, entrada. Maximo 60 palavras, direto, sem introducao."}
+   ]}]
+  });
+  const descricao=(resp.content||[]).map(b=>b.text||"").join("").trim();
+  window._fachadaAtualDescricao=descricao;
+  if(status){status.innerHTML=`✅ Foto analisada! A IA vai usar essa base.`;status.style.color='var(--gr)';}
+ }catch(e){
+  if(status){status.textContent='⚠️ Não consegui analisar a foto, mas pode continuar sem ela.';status.style.color='var(--ye)';}
+ }
+}
+
+function gerarFachadas(retryIdx){
  const desc=document.getElementById('fachada-desc')?.value?.trim();
- if(!desc){alert('Descreve como você imagina a fachada primeiro.');return;}
- const promptBase=encodeURIComponent(`${desc}, architectural exterior render, restaurant facade, photorealistic, daytime, high quality, professional photography`);
+ if(!desc){alert('Descreve o que você quer mudar primeiro.');return;}
+ const baseAtual=window._fachadaAtualDescricao?`Current building: ${window._fachadaAtualDescricao}. Changes requested: `:"";
+ const promptBase=encodeURIComponent(`${baseAtual}${desc}, architectural exterior render, restaurant facade, photorealistic, daytime, high quality, professional photography`);
  const res=document.getElementById('fachada-resultado');
+
+ if(typeof retryIdx==='number'){
+  const slot=document.getElementById(`fachada-slot-${retryIdx}`);
+  if(slot){
+   const seed=Math.floor(Math.random()*99999);
+   const url=`https://image.pollinations.ai/prompt/${promptBase}?width=512&height=512&seed=${seed}&nologo=true&enhance=true&model=flux`;
+   slot.innerHTML=montarSlotFachada(url,retryIdx);
+  }
+  return;
+ }
+
  let html='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">';
  for(let i=0;i<3;i++){
-  const seed=Math.floor(Math.random()*99999);
+  const seed=Math.floor(Math.random()*99999)+i;
   const url=`https://image.pollinations.ai/prompt/${promptBase}?width=512&height=512&seed=${seed}&nologo=true&enhance=true&model=flux`;
-  html+=`<div style="position:relative;border-radius:8px;overflow:hidden;background:#111;">
-  <img src="${url}" style="width:100%;display:block;opacity:0;transition:opacity 0.5s;" onload="this.style.opacity=1;" data-url="${url}"/>
-  <button onclick="salvarFachada('${url.replace(/'/g,"\\'")}')" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:none;color:#ffcc00;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">⭐</button>
-  </div>`;
+  html+=`<div id="fachada-slot-${i}">${montarSlotFachada(url,i)}</div>`;
  }
- html+='</div><p style="font-size:10px;color:var(--mu);">Toque na ⭐ pra salvar a que mais gostar. Pode gerar de novo quantas vezes quiser.</p>';
+ html+='</div><p style="font-size:10px;color:var(--mu);">Toque na ⭐ pra salvar. Se alguma não carregar, toque em "🔄 Tentar de novo" só naquela.</p>';
  if(res)res.innerHTML=html;
+}
+
+function montarSlotFachada(url,idx){
+ return`<div style="position:relative;border-radius:8px;overflow:hidden;background:#1a1a1a;min-height:120px;display:flex;align-items:center;justify-content:center;">
+ <div id="fachada-loading-${idx}" style="position:absolute;color:var(--mu);font-size:10px;text-align:center;">⟳<br/>Gerando...</div>
+ <img src="${url}" style="width:100%;display:block;opacity:0;transition:opacity 0.5s;position:relative;z-index:1;"
+  onload="this.style.opacity=1;document.getElementById('fachada-loading-${idx}').style.display='none';"
+  onerror="document.getElementById('fachada-loading-${idx}').innerHTML='⚠️ Falhou';this.style.display='none';"/>
+ <button onclick="gerarFachadas(${idx})" style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.7);border:none;color:#fff;border-radius:6px;padding:3px 6px;font-size:9px;cursor:pointer;z-index:2;">🔄</button>
+ <button onclick="salvarFachada('${url.replace(/'/g,"\\'")}')" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:none;color:#ffcc00;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;z-index:2;">⭐</button>
+ </div>`;
 }
 
 function salvarFachada(url){
