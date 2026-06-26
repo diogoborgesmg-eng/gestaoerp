@@ -1445,8 +1445,12 @@ function lancarItemNoSistema(item){
    // Confia no valor_total que a IA ja calculou (qtd x preco, considerando cx/unidades corretamente)
    const valorItem=(it.valor_total!==undefined&&it.valor_total>0)?Number(it.valor_total):Number(it.quantidade)*Number(it.valor_unitario||0);
    somaItens+=valorItem;
-   db[diaLancamento].c.push({id:uid(),d:`${it.descricao} (NF ${item.fornecedor||""}${item.numero?" nº"+item.numero:""})`,
-    cat:catCustoPorItem(it.descricao),s:"",v:valorItem,dt:diaLancamento,nfOrigem:lancId});
+   const _descItem=`${it.descricao} (NF ${item.fornecedor||""}${item.numero?" nº"+item.numero:""})`;
+   const _catItem=catCustoPorItem(it.descricao);
+   const _idItem=uid();
+   db[diaLancamento].c.push({id:_idItem,d:_descItem,
+    cat:_catItem,s:"",v:valorItem,dt:diaLancamento,nfOrigem:lancId});
+   gravarLancamentoSupabase('custo',diaLancamento,_descItem,_catItem,null,valorItem,null,_idItem);
   });
   // Diferenca de arredondamento ou frete/taxas embutidas na nota -> lanca o residual como Matéria-prima
   const diferenca=item.valor-somaItens;
@@ -20988,7 +20992,9 @@ async function sincronizarBotLancamentos(){
    const dest=(l.destinatario||'').trim();
    const nome=dest&&!['Di Casa Gastronomia','DI CASA GASTRONOMIA','Di Casa','DI CASA'].includes(dest)?dest:(l.descricao&&l.descricao!=='SEM_DESCRICAO'?l.descricao:(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim());
    const cat=(l.categoria||'🔄 Outros').replace(/ \(.*\)/,'').trim();
-   db[dl].c.push({id:uid(),d:nome,v:Number(l.valor||0),cat,seg:'',_botId:l.id,_origem:'whatsapp',reciboUrl:l.reciboUrl||null,dt:dl});
+   const _idBotItem=uid();
+   db[dl].c.push({id:_idBotItem,d:nome,v:Number(l.valor||0),cat,seg:'',_botId:l.id,_origem:'whatsapp',reciboUrl:l.reciboUrl||null,dt:dl});
+   gravarLancamentoSupabase('custo',dl,nome,cat,null,Number(l.valor||0),null,_idBotItem);
    count++;
   });
   sdb(db);
