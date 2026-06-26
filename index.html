@@ -10024,6 +10024,11 @@ async function importarSTi3(inp){
  texto=await f.text();
  }
 
+ // Se for Excel, gera tambem uma versao em texto (fallback de seguranca - NUNCA manda vazio pra IA)
+ if(linhasExcel&&!texto){
+ texto=linhasExcel.map(l=>l.join(" | ")).join("\n");
+ }
+
  const vendasDetectadas=[];
 
  if(linhasExcel&&linhasExcel.length>1){
@@ -10031,9 +10036,9 @@ async function importarSTi3(inp){
  let idxHeader=-1, colData=-1, colValor=-1, colCliente=-1, colVenda=-1;
  for(let li=0;li<Math.min(10,linhasExcel.length);li++){
   const linha=linhasExcel[li].map(c=>String(c||"").trim().toLowerCase());
-  const cd=linha.findIndex(c=>c==="data");
-  const cv=linha.findIndex(c=>c==="valor");
-  if(cd>=0&&cv>=0){idxHeader=li;colData=cd;colValor=cv;colCliente=linha.findIndex(c=>c==="cliente");colVenda=linha.findIndex(c=>c==="venda");break;}
+  const cd=linha.findIndex(c=>c.includes("data"));
+  const cv=linha.findIndex(c=>c.includes("valor")||c.includes("preço")||c.includes("preco"));
+  if(cd>=0&&cv>=0){idxHeader=li;colData=cd;colValor=cv;colCliente=linha.findIndex(c=>c.includes("cliente"));colVenda=linha.findIndex(c=>c.includes("venda"));break;}
  }
  if(idxHeader>=0){
   for(let li=idxHeader+1;li<linhasExcel.length;li++){
@@ -10098,6 +10103,9 @@ async function importarSTi3(inp){
  }
 
  // Fallback: formato nao reconhecido pelo parser, tenta IA (so primeiros 12000 caracteres)
+ if(!texto||texto.trim().length<20){
+ throw new Error("Não consegui identificar as colunas do arquivo (Data/Valor). Confere se o arquivo tem essas colunas com esses nomes.");
+ }
  const data=await claudeAPI({
  model:MODEL,max_tokens:2000,
  system:`Leia este relatório de vendas do STi3 (PDV brasileiro).
