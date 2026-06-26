@@ -1492,14 +1492,21 @@ function lancarItemNoSistema(item){
  if(item.parcelas&&item.parcelas.length>1){
   // Multiplos boletos/parcelas — uma conta a pagar POR parcela, com seu proprio vencimento e valor
   item.parcelas.forEach((p,idx)=>{
-   db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:Number(p.valor)||0,
-    venc:converterDataParaInput(p.vencimento||item.data),pag:item.formaPagamento||"boleto",pago:false,
-    nf:(item.numero||"")+(item.parcelas.length>1?` (${idx+1}/${item.parcelas.length})`:""),semana:semana(),dt:hj()});
+   const _idParc=uid();
+   const _vencParc=converterDataParaInput(p.vencimento||item.data);
+   const _nfParc=(item.numero||"")+(item.parcelas.length>1?` (${idx+1}/${item.parcelas.length})`:"");
+   db.contasPagar.push({id:_idParc,forn:item.fornecedor||"Fornecedor",val:Number(p.valor)||0,
+    venc:_vencParc,pag:item.formaPagamento||"boleto",pago:false,
+    nf:_nfParc,semana:semana(),dt:hj()});
+   gravarContaPagarSupabase(_idParc,item.fornecedor,Number(p.valor)||0,_vencParc,_nfParc);
   });
  }else{
-  db.contasPagar.push({id:uid(),forn:item.fornecedor||"Fornecedor",val:item.valor,
-   venc:converterDataParaInput(item.vencimento||item.data),pag:item.formaPagamento||"boleto",pago:false,
+  const _idConta=uid();
+  const _vencConta=converterDataParaInput(item.vencimento||item.data);
+  db.contasPagar.push({id:_idConta,forn:item.fornecedor||"Fornecedor",val:item.valor,
+   venc:_vencConta,pag:item.formaPagamento||"boleto",pago:false,
    nf:item.numero||"",semana:semana(),dt:hj()});
+  gravarContaPagarSupabase(_idConta,item.fornecedor,item.valor,_vencConta,item.numero);
  }
  (item.itens||[]).forEach(it=>{
  if(!it.descricao&&it.nome){
@@ -1520,6 +1527,7 @@ function lancarItemNoSistema(item){
  ex.q+=qtdCx;ex.qi+=qtdCx;ex.qun=(ex.qun||0)+qtdUn;ex.upc=upc;
  if(!ex.lotes)ex.lotes=[];const cuAnterior=ex.cu||0;
  ex.lotes.push({qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""});
+ gravarMovimentoEstoqueSupabase(it.descricao,'entrada',qtdUn,`NF ${item.numero||''}`);
  ex.cuAnterior=cuAnterior;ex.cu=cuPorUn;
  if(it.categoria&&!ex.grupo)ex.grupo=detectarGrupo(it.descricao);
  }else{
@@ -1529,6 +1537,7 @@ function lancarItemNoSistema(item){
  db.est.push({id:uid(),n:it.descricao,u:(it.unidade||"cx"),q:qtdCx,qi:qtdCx,qun:qtdUn,upc,
  cu:cuPorUn,cuAnterior:cuPorUn,grupo:grp,
  lotes:[{qtdCx,qtdUn,cuPorCx,cuPorUn,dt:item.data||hj(),nf:item.numero||""}],min:0,s:[],perdas:[]});
+ gravarMovimentoEstoqueSupabase(it.descricao,'entrada',qtdUn,`NF ${item.numero||''}`);
  }
  });
  if(item.itens&&item.fornecedor){
@@ -16268,15 +16277,18 @@ function adicionarContaPagar(){
  if(!desc||!valor||!venc){alert('Preencha descrição, valor e vencimento');return;}
  const db=ldb();
  if(!db.contasPagar)db.contasPagar=[];
+ const _idManual=uid();
+ const _fornManual=document.getElementById('cp-forn')?.value?.trim()||desc;
  db.contasPagar.push({
-  id:uid(),desc,valor,
+  id:_idManual,desc,valor,
   vencimento:venc,
   cat:document.getElementById('cp-cat')?.value||'Outros',
-  fornecedor:document.getElementById('cp-forn')?.value?.trim()||'',
+  fornecedor:_fornManual,
   recorrente:document.getElementById('cp-recorr')?.checked||false,
   pago:false,criadoEm:new Date().toISOString()
  });
  sdb(db);render();
+ gravarContaPagarSupabase(_idManual,_fornManual,valor,venc,'');
 }
 
 function pagarConta(id){
@@ -19148,6 +19160,30 @@ function selecionarPagamento(tipo,cor,total,comandaId){
  if(!confirm('Confirmar pagamento?\n'+tipo.toUpperCase()+'\nR$ '+total.toFixed(2).replace('.',',')))return;
  confirmarPagamentoPDV(comandaId,tipo,total);
  document.querySelector('[style*="z-index:700"]')?.remove();
+}
+
+async function gravarContaPagarSupabase(id,fornecedor,valor,vencimento,nf){
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return;
+ try{
+  await fetch(`${cfg.url}/rest/v1/contas_pagar_v2`,{
+   method:'POST',
+   headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+   body:JSON.stringify({id,fornecedor:fornecedor||'Fornecedor',valor:valor||0,vencimento:vencimento||null,nf:nf||'',pago:false,device_id:cfg.deviceId})
+  });
+ }catch(e){console.error('Erro ao gravar conta a pagar no Supabase (mantido local):',e.message);}
+}
+
+async function gravarMovimentoEstoqueSupabase(produto,tipo,quantidade,origem){
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return;
+ try{
+  await fetch(`${cfg.url}/rest/v1/movimentos_estoque`,{
+   method:'POST',
+   headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+   body:JSON.stringify({id:uid(),produto,tipo,quantidade,origem:origem||'',device_id:cfg.deviceId})
+  });
+ }catch(e){console.error('Erro ao gravar movimento de estoque no Supabase (mantido local):',e.message);}
 }
 
 async function gravarLancamentoSupabase(tipo,diaComercial,descricao,categoria,segmento,valor,caixaId,localId){
