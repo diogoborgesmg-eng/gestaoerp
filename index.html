@@ -9935,7 +9935,7 @@ async function importarIfoodExcel(inp){
  db[dia].r=db[dia].r.filter(x=>x.fonte!=="ifood"||x._lojaIfood!==r.loja);
  db[dia].c=db[dia].c.filter(x=>(x.fonte!=="ifood_taxa"&&x.fonte!=="ifood_promo")||x._lojaIfood!==r.loja);
  if(!db[dia]._ifoodIncentivo)db[dia]._ifoodIncentivo={};
- if(r.vendas>0)db[dia].r.push({id:uid(),d:`iFood ${r.loja} (${r.pedidos} ped.)`,s:detectarSegmentoLoja(r.loja),v:r.vendas,fonte:"ifood",_lojaIfood:r.loja});
+ if(r.vendas>0)db[dia].r.push({id:uid(),d:`iFood ${r.loja} (${r.pedidos} ped.)`,s:detectarSegmentoLoja(r.loja),v:r.vendas,fonte:"ifood",_lojaIfood:r.loja,qtdVendas:r.pedidos,ticketMedio:r.pedidos>0?r.vendas/r.pedidos:0});
  if(r.taxas>0)db[dia].c.push({id:uid(),d:`Taxa iFood ${r.loja}`,cat:"🚚 Frete / Entregador",s:detectarSegmentoLoja(r.loja),v:r.taxas,fonte:"ifood_taxa",_lojaIfood:r.loja});
  if(r.promoLoja>0)db[dia].c.push({id:uid(),d:`Promoção iFood ${r.loja}`,cat:"📱 Telecom / Internet",s:detectarSegmentoLoja(r.loja),v:r.promoLoja,fonte:"ifood_promo",_lojaIfood:r.loja});
  if(r.incentivoIfood>0)db[dia]._ifoodIncentivo[r.loja]=(db[dia]._ifoodIncentivo[r.loja]||0)+r.incentivoIfood;
@@ -10100,7 +10100,7 @@ async function importarSTi3(inp){
  if(!db[dia].r)db[dia].r=[];
  db[dia].r=db[dia].r.filter(x=>!(x.fonte==="sti3"));
  const ticketMedio=info.qtd>0?info.total/info.qtd:0;
- db[dia].r.push({id:uid(),d:`STi3 Balcão (${info.qtd} vendas, ticket médio ${brl(ticketMedio)})`,s:"restaurante",v:info.total,fonte:"sti3"});
+ db[dia].r.push({id:uid(),d:`STi3 Balcão (${info.qtd} vendas, ticket médio ${brl(ticketMedio)})`,s:"restaurante",v:info.total,fonte:"sti3",qtdVendas:info.qtd,ticketMedio:ticketMedio});
  totalLancado+=info.total;
  });
  sdb(db);
