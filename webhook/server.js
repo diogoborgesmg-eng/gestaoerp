@@ -575,6 +575,25 @@ async function executarDispatch(diaForcado){
   return { ok: !!pdfBase64, ontemBR, hojeBR: brDataStr(hojeP.ano,hojeP.mes,hojeP.dia), receitaOntem, custoOntem, lucroOntem, diasComDados: diasDoMes.filter(d=>d.receita>0||d.custo>0).length, erroPdf };
 }
 
+let _ultimoCaixaAlertado = null;
+async function checarCaixaAberto6h(){
+  try{
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const rows = await req2('GET', SB_URL+'/rest/v1/sessoes_caixa?status=eq.aberto&order=abertura_em.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rows) || !rows.length) return;
+    const caixa = rows[0];
+    const horasAberto = (Date.now() - new Date(caixa.abertura_em).getTime()) / 3600000;
+    if (horasAberto < 6) return;
+    if (_ultimoCaixaAlertado === caixa.id) return; // ja avisou desse caixa, nao repete
+    _ultimoCaixaAlertado = caixa.id;
+    const destinos = ['5534996853258','5534997692282'];
+    const msg = `⚠️ Caixa aberto há ${horasAberto.toFixed(1)}h (desde ${new Date(caixa.abertura_em).toLocaleString('pt-BR')}). Esqueceu de fechar?`;
+    for (const num of destinos) await wpp(num, msg);
+  }catch(e){ console.error('Erro checarCaixaAberto6h:', e.message); }
+}
+setInterval(checarCaixaAberto6h, 600000); // checa a cada 10 minutos
+
 async function checarDispatchDiario(){
   try{
     const agora = new Date();
