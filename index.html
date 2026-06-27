@@ -10482,13 +10482,13 @@ ${getDia()!==hj()?`<button onclick="irParaHoje();render();" style="padding:4px 8
 ${isPeriodo?`<div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;">
 <div style="flex:1;">
 <p style="font-size:9px;color:var(--mu);margin-bottom:3px;">De</p>
-<input type="text" placeholder="DD/MM/AAAA" value="${vendaPeriodo.de}" maxlength="10"
-onchange="vendaPeriodo.de=this.value;render();"
+<input type="date" value="${converterDataParaInput(vendaPeriodo.de)}"
+onchange="vendaPeriodo.de=this.value.split('-').reverse().join('/');render();"
 style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:7px;color:var(--tx);font-size:11px;font-family:'Space Mono',monospace;"/></div>
 <div style="flex:1;">
 <p style="font-size:9px;color:var(--mu);margin-bottom:3px;">Até</p>
-<input type="text" placeholder="DD/MM/AAAA" value="${vendaPeriodo.ate}" maxlength="10"
-onchange="vendaPeriodo.ate=this.value;render();"
+<input type="date" value="${converterDataParaInput(vendaPeriodo.ate)}"
+onchange="vendaPeriodo.ate=this.value.split('-').reverse().join('/');render();"
 style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:7px;color:var(--tx);font-size:11px;font-family:'Space Mono',monospace;"/></div>
 </div>`:""}
 
