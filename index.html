@@ -2177,6 +2177,13 @@ function navegarDia(delta){
 }
 function irParaHoje(){diaAtual=null;render();}
 
+function irParaDataEspecifica(valorInput){
+ if(!valorInput)return;
+ const[y,m,d]=valorInput.split('-');
+ diaAtual=`${d}/${m}/${y}`;
+ render();
+}
+
 function rMkt(){
  const db=ldb();
  const mes=calcDREMes();
@@ -10466,6 +10473,7 @@ function rVendas(){
 ${isDiario?`<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
 <button onclick="navegarDia(-1);render();" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">◀</button>
 <span style="flex:1;text-align:center;font-size:12px;font-family:'Space Mono',monospace;">${getDia()}</span>
+<label style="cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf);">📅<input type="date" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="irParaDataEspecifica(this.value)"/></label>
 ${getDia()!==hj()?`<button onclick="irParaHoje();render();" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);font-size:10px;cursor:pointer;">Hoje</button>`:""}
 <button onclick="navegarDia(1);render();" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">▶</button>
 </div>`:""}
@@ -11481,6 +11489,7 @@ return `<div class="si">
 <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
 <button onclick="navegarDia(-1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">◀</button>
 <span style="flex:1;text-align:center;font-size:11px;font-family:'Space Mono',monospace;" id="dre-data-titulo">${titulo}</span>
+<label style="cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf);">📅<input type="date" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="irParaDataEspecifica(this.value)"/></label>
 ${getDia()!==hj()?`<button onclick="irParaHoje()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);font-size:10px;cursor:pointer;">Hoje</button>`:""}
 <button onclick="navegarDia(1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">▶</button>
 </div>
