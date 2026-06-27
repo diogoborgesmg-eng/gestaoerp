@@ -4554,6 +4554,9 @@ function rPDV(){
 
  return`<div style="background:var(--sf);min-height:100vh;">
 <div id="status-caixa-area" style="padding:10px 12px 0;"><p style="font-size:10px;color:var(--mu);">Carregando status do caixa...</p></div>
+<div style="padding:0 12px;">
+<button onclick="atualizarDeOutrosDispositivos()" style="width:100%;padding:7px;border-radius:8px;border:1px solid rgba(68,136,255,0.3);background:rgba(68,136,255,0.08);color:var(--bl);font-size:11px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Ver Lançamentos de Outros Dispositivos</button>
+</div>
 
  <!-- HEADER PDV -->
  <div style="background:#1a1a2e;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid rgba(255,51,102,0.3);">
@@ -19184,6 +19187,44 @@ async function gravarMovimentoEstoqueSupabase(produto,tipo,quantidade,origem){
    body:JSON.stringify({id:uid(),produto,tipo,quantidade,origem:origem||'',device_id:cfg.deviceId})
   });
  }catch(e){console.error('Erro ao gravar movimento de estoque no Supabase (mantido local):',e.message);}
+}
+
+async function puxarLancamentosOutrosDispositivos(diaComercial){
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return{novos:0};
+ const dia=diaComercial||hj();
+ try{
+  const resp=await fetch(`${cfg.url}/rest/v1/lancamentos?dia_comercial=eq.${encodeURIComponent(dia)}`,{
+   headers:{'apikey':cfg.key}
+  });
+  if(!resp.ok)return{novos:0};
+  const linhas=await resp.json();
+  const db=ldb();
+  if(!db[dia])db[dia]={r:[],c:[]};
+  if(!db[dia].r)db[dia].r=[];
+  if(!db[dia].c)db[dia].c=[];
+  const idsLocais=new Set([...db[dia].r.map(x=>x.id),...db[dia].c.map(x=>x.id)]);
+  let novos=0;
+  linhas.forEach(l=>{
+   if(idsLocais.has(l.id))return; // ja existe local, nao duplica
+   const item={id:l.id,d:l.descricao,v:Number(l.valor),cat:l.categoria,seg:l.segmento,dt:dia,_deOutroDispositivo:true};
+   if(l.tipo==='receita')db[dia].r.push(item);
+   else db[dia].c.push(item);
+   novos++;
+  });
+  if(novos>0)sdb(db);
+  return{novos};
+ }catch(e){console.error('Erro ao puxar lancamentos de outros dispositivos:',e.message);return{novos:0};}
+}
+
+async function atualizarDeOutrosDispositivos(){
+ const r=await puxarLancamentosOutrosDispositivos();
+ if(r.novos>0){
+  alert(`✅ ${r.novos} lançamento(s) de outro(s) dispositivo(s) adicionado(s)!`);
+  render();
+ }else{
+  alert('Nenhum lançamento novo de outros dispositivos.');
+ }
 }
 
 async function gravarLancamentoSupabase(tipo,diaComercial,descricao,categoria,segmento,valor,caixaId,localId){
