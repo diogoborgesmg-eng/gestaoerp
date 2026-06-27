@@ -280,9 +280,9 @@ const server = http.createServer((req, res) => {
         const ehComprovante = palavrasChave.some(p => texto.toLowerCase().includes(p));
         if (!ehComprovante) return;
         await wpp(num, 'Lendo comprovante de texto...');
-        const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR, (2) NOME DE QUEM RECEBEU (em DADOS DE DESTINO > Nome, ou Favorecido, ou Beneficiario - nunca Di Casa), (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
+        const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR, (2) NOME DE QUEM RECEBEU (em DADOS DE DESTINO > Nome, ou Favorecido, ou Beneficiario - NUNCA Di Casa, e NUNCA o nome de banco/cooperativa/instituicao financeira como SICOOB/CCLA/Nu Pagamentos - use a PESSOA/EMPRESA dona da conta), (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
         // Log completo da resposta para debug
-        console.log('tipo msg:', tipo, '| b64 len:', b64.length, '| inicio:', b64.substring(0,10));
+        console.log('tipo msg:', tipo);
         console.log('r1 response:', JSON.stringify(r1).substring(0,300));
         let analise = 'Nao consegui extrair.';
         if (r1 && r1.content && r1.content[0]) {
@@ -291,14 +291,12 @@ const server = http.createServer((req, res) => {
           analise = 'Erro API: ' + JSON.stringify(r1.error);
         }
         console.log('Analise texto:', analise.substring(0,100));
-        // Salva recibo original no GitHub
-        const reciboUrl = await salvarReciboGitHub(b64, tipo, new Date());
-        if(reciboUrl) console.log('Recibo salvo:', reciboUrl);
+        // Texto nao tem imagem original pra salvar (era so o b64 quebrado antes)
         const msgAnalise = analise==='Nao consegui extrair.' ? 
           'Nao consegui extrair. Tente: 1) salvar a imagem e reenviar, 2) tirar foto da tela do comprovante.' : 
           'Analise:\n' + analise.substring(0,300);
         await wpp(num, msgAnalise);
-        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"valorJuros":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa fisica - NAO usar para alimentos,comida,feira,mercado,padaria,carne,frango,legumes,hortifruti)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. IMPORTANTE: valorJuros e o valor de JUROS ou MULTA cobrado SEPARADAMENTE do valor principal (comum em boleto pago com atraso). Se o comprovante mostrar "Valor original" + "Juros/Multa" separados, valor=valor original e valorJuros=juros/multa. Se nao houver juros/multa, valorJuros=0. Se nao tiver valor retorne {"valor":0}';
+        const prompt2 = 'Extraia do texto abaixo APENAS JSON valido. Texto: "' + analise + '". Formato: {"valor":0.00,"valorJuros":0.00,"destinatario":"nome de quem recebeu - NUNCA Di Casa Gastronomia, NUNCA nome de banco/cooperativa/instituicao financeira (SICOOB,CCLA,Nu Pagamentos,etc), use a PESSOA/EMPRESA dona da conta","categoria":"🥩 Matéria Prima (alimentos,insumos,carnes,hortifruti,frango,peixe,legumes,verduras,feira,padaria,mercado,bebidas ingredientes,pamonha,carvao,gelo,ovos,queijo,manteiga,farinha,tempero,molho)|👥 RH / Mão de Obra (salario,diaria,freelancer,diarista,funcionario,colaborador,pagamento pessoa fisica - NAO usar para alimentos,comida,feira,mercado,padaria,carne,frango,legumes,hortifruti)|🔧 Manutenção (reparo,conserto,tecnico)|💡 Energia / Utilidades (luz,agua,gas)|🚚 Frete / Entregador (entrega,motoboy,frete,logistica)|🏢 Aluguel / Fixos (aluguel,iptu,condominio)|📦 Embalagem (embalagem,caixa,sacola)|🍺 Bebidas / Bar (bebida,drinks,cerveja,refrigerante)|🧹 Limpeza / Higiene (limpeza,higiene,produto)|💳 Taxas / Impostos (taxa,imposto,multa,cartao)|📱 Telecom / Internet (internet,telefone,celular)|🔄 Outros","tipo":"pix|boleto|dinheiro|credito|debito|stone|cielo","data":"DD/MM/AAAA","descricao":"motivo do pagamento se houver"}. IMPORTANTE: valorJuros e o valor de JUROS ou MULTA cobrado SEPARADAMENTE do valor principal (comum em boleto pago com atraso). Se o comprovante mostrar "Valor original" + "Juros/Multa" separados, valor=valor original e valorJuros=juros/multa. Se nao houver juros/multa, valorJuros=0. Se nao tiver valor retorne {"valor":0}';
         const r2 = await claude([{ role:'user', content: prompt2 }], 300);
         const texto2 = r2.content && r2.content[0] ? r2.content[0].text : '{}';
         const match = texto2.match(/\{[\s\S]*\}/);
