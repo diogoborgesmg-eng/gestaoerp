@@ -7447,6 +7447,12 @@ function ir(n){
  if(ti>=0) document.querySelectorAll(".tb")[ti]?.classList.add("a");
  document.getElementById("n-"+n)?.classList.add("a");
  render();
+ // Busca automaticamente lancamentos de outros dispositivos pras telas que mostram dados financeiros
+ if(["dre","vendas","forn","pdv","fin"].includes(n)){
+  puxarLancamentosOutrosDispositivos(getDia()).then(r=>{
+   if(r.novos>0&&aba===n)render(); // so re-renderiza se ainda estiver na mesma tela
+  });
+ }
 }
 // ═══════════════════════════════════════════════════════════════
 // MÓDULO: PLANO DE CONTAS
@@ -25090,6 +25096,7 @@ async function autoSyncSupabaseInicial(){
 // setTimeout(autoSyncSupabaseInicial,2500);
 
 render();
+puxarLancamentosOutrosDispositivos(getDia()).then(r=>{if(r.novos>0)render();});
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
