@@ -7431,6 +7431,7 @@ Máx 200 palavras, seja prático e direto.`}]});
 }
 let aba="dre", mt="", fs="idle", fd=null, va=false, vt="", vr=null, diaAtual=null;
 let dreVista="diario";
+let dreVistaPeriodo={de:"",ate:""};
 let vendaVista="diario", vendaPeriodo={de:"",ate:""};
 let cfoHistorico=[];
 let _compObsId="";
@@ -11328,6 +11329,31 @@ function importarDados(inp){
  r.readAsText(f);
 }
 
+function calcDREPeriodo(de,ate){
+ const db=ldb();
+ const dias=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
+ const result={r:[],c:[],resumoDias:[]};
+ dias.forEach(dia=>{
+ const[d,m,y]=dia.split('/');
+ const dt=new Date(y,m-1,d);
+ const[dd,dm,dy]=de.split('/');const[ad,am,ay]=ate.split('/');
+ if(dt>=new Date(dy,dm-1,dd)&&dt<=new Date(ay,am-1,ad)){
+ const recDia=db[dia].r||[];
+ const cusDia=db[dia].c||[];
+ recDia.forEach(x=>result.r.push({...x,_dia:dia}));
+ cusDia.forEach(x=>result.c.push({...x,_dia:dia}));
+ const rTotal=recDia.reduce((a,x)=>a+Number(x.v),0);
+ const cTotal=cusDia.reduce((a,x)=>a+Number(x.v),0);
+ if(rTotal>0||cTotal>0)result.resumoDias.push({dia,r:rTotal,c:cTotal,res:rTotal-cTotal});
+ }
+ });
+ result.resumoDias.sort((a,b)=>{
+ const[da,ma,ya]=a.dia.split('/');const[db2,mb,yb]=b.dia.split('/');
+ return new Date(ya,ma-1,da)-new Date(yb,mb-1,db2);
+ });
+ return result;
+}
+
 function calcDREMes(){
  const hoje=new Date();
  const de=`01/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
@@ -11382,6 +11408,7 @@ function calcDRESemana(){
 }
 
 function getDREData(){
+ if(dreVista==="periodo")return calcDREPeriodo(dreVistaPeriodo.de||hj(),dreVistaPeriodo.ate||hj());
  if(dreVista==="mensal")return calcDREMes();
  return gdia();
 }
@@ -11438,6 +11465,7 @@ ${(window._botPendentes&&window._botPendentes.length>0)?('<div style="margin:8px
  }
 
  const isDiario=dreVista==="diario";
+ const isPeriodoDRE=dreVista==="periodo";
  const dados=getDREData();
  const rec=dados.r||[]; const cus=dados.c||[];
  const r=rec.reduce((a,x)=>a+Number(x.v),0);
@@ -11488,17 +11516,29 @@ return `<div class="si">
 <p style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mu);font-weight:700;">📊 DRE</p>
 <div style="display:flex;gap:4px;">
 <button onclick="dreVista='diario';render();" style="padding:4px 10px;border-radius:6px;border:1px solid ${isDiario?'var(--gr)':'var(--br)'};background:${isDiario?'rgba(0,255,136,0.15)':'transparent'};color:${isDiario?'var(--gr)':'var(--mu)'};font-size:10px;font-weight:700;cursor:pointer;">Diário</button>
-<button onclick="dreVista='mensal';render();" style="padding:4px 10px;border-radius:6px;border:1px solid ${!isDiario?'var(--bl)':'var(--br)'};background:${!isDiario?'rgba(68,136,255,0.15)':'transparent'};color:${!isDiario?'var(--bl)':'var(--mu)'};font-size:10px;font-weight:700;cursor:pointer;">Mensal</button>
+<button onclick="dreVista='mensal';render();" style="padding:4px 10px;border-radius:6px;border:1px solid ${dreVista==='mensal'?'var(--bl)':'var(--br)'};background:${dreVista==='mensal'?'rgba(68,136,255,0.15)':'transparent'};color:${dreVista==='mensal'?'var(--bl)':'var(--mu)'};font-size:10px;font-weight:700;cursor:pointer;">Mensal</button>
+<button onclick="dreVista='periodo';render();" style="padding:4px 10px;border-radius:6px;border:1px solid ${isPeriodoDRE?'var(--pu)':'var(--br)'};background:${isPeriodoDRE?'rgba(170,68,255,0.15)':'transparent'};color:${isPeriodoDRE?'var(--pu)':'var(--mu)'};font-size:10px;font-weight:700;cursor:pointer;">Período</button>
 <button onclick="dispararWppGeral('dre')" style="padding:4px 8px;border-radius:6px;border:none;background:#25D366;color:#fff;font-size:12px;cursor:pointer;" title="Enviar DRE por WhatsApp">📲</button>
 </div>
 </div><div class="hero">
-<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+${isPeriodoDRE?`<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
+<div style="flex:1;">
+<p style="font-size:9px;color:var(--mu);margin-bottom:3px;">De</p>
+<input type="date" value="${converterDataParaInput(dreVistaPeriodo.de)}"
+onchange="dreVistaPeriodo.de=this.value.split('-').reverse().join('/');render();"
+style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:7px;color:var(--tx);font-size:11px;font-family:'Space Mono',monospace;"/></div>
+<div style="flex:1;">
+<p style="font-size:9px;color:var(--mu);margin-bottom:3px;">Até</p>
+<input type="date" value="${converterDataParaInput(dreVistaPeriodo.ate)}"
+onchange="dreVistaPeriodo.ate=this.value.split('-').reverse().join('/');render();"
+style="width:100%;background:var(--sf2);border:1px solid var(--br);border-radius:7px;padding:7px;color:var(--tx);font-size:11px;font-family:'Space Mono',monospace;"/></div>
+</div>`:`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
 <button onclick="navegarDia(-1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">◀</button>
 <span style="flex:1;text-align:center;font-size:11px;font-family:'Space Mono',monospace;" id="dre-data-titulo">${titulo}</span>
 <label style="cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--br);background:var(--sf);">📅<input type="date" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="irParaDataEspecifica(this.value)"/></label>
 ${getDia()!==hj()?`<button onclick="irParaHoje()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);font-size:10px;cursor:pointer;">Hoje</button>`:""}
 <button onclick="navegarDia(1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:var(--sf);color:var(--tx);font-size:14px;cursor:pointer;">▶</button>
-</div>
+</div>`}
 <p class="hv" style="color:${cor};">${brl(res)}</p>
 <p class="hs">Margem: <strong style="color:${cor};">${m.toFixed(1)}%</strong></p>
 <div class="badge ${bc}">${st}</div>
