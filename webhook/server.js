@@ -212,6 +212,16 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ultimoGrupoId: global._ultimoGrupoId||null}));
       return;
     }
+    if (req.url && req.url.startsWith('/test-ifood-auth')) {
+      obterTokenIfood().then(tok => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, tokenPreview: tok.substring(0,15)+'...', mensagem:'Token obtido com sucesso!'}));
+      }).catch(e => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro: e.message}));
+      });
+      return;
+    }
     if (req.url && req.url.startsWith('/test-supabase')) {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
@@ -574,6 +584,37 @@ async function executarDispatch(diaForcado){
 }
 
 let _ultimoCaixaAlertado = null;
+let _ifoodTokenCache = { token: null, expiresAt: 0 };
+async function obterTokenIfood() {
+  if (_ifoodTokenCache.token && Date.now() < _ifoodTokenCache.expiresAt) return _ifoodTokenCache.token;
+  const clientId = process.env.IFOOD_CLIENT_ID;
+  const clientSecret = process.env.IFOOD_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error('IFOOD_CLIENT_ID/IFOOD_CLIENT_SECRET nao configurados no ambiente');
+  const params = new URLSearchParams({ grantType: 'client_credentials', clientId, clientSecret }).toString();
+  return new Promise((resolve, reject) => {
+    const u = new URL('https://merchant-api.ifood.com.br/authentication/v1.0/oauth/token');
+    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(params), 'accept': 'application/json' } };
+    const r = https.request(opts, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d);
+          if (j.accessToken) {
+            _ifoodTokenCache.token = j.accessToken;
+            _ifoodTokenCache.expiresAt = Date.now() + ((j.expiresIn || 10800) - 60) * 1000;
+            resolve(j.accessToken);
+          } else { reject(new Error('Resposta sem accessToken: ' + d)); }
+        } catch (e) { reject(new Error('Erro ao parsear resposta do token: ' + d)); }
+      });
+    });
+    r.on('error', reject);
+    r.write(params);
+    r.end();
+  });
+}
+
 async function checarCaixaAberto6h(){
   try{
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
