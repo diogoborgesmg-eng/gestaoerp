@@ -222,6 +222,25 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url && req.url.startsWith('/test-ifood-financial')) {
+      const u = new URL(req.url, 'http://x');
+      const merchantId = u.searchParams.get('merchantId');
+      const beginDate = u.searchParams.get('beginDate') || '2025-01-01';
+      const endDate = u.searchParams.get('endDate') || '2025-01-31';
+      if (!merchantId) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro:'Passe ?merchantId=XXX na URL'}));
+        return;
+      }
+      buscarFinancialEventsIfood(merchantId, beginDate, endDate).then(r => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, statusIfood: r.status, resposta: r.body}, null, 2));
+      }).catch(e => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro: e.message}));
+      });
+      return;
+    }
     if (req.url && req.url.startsWith('/test-supabase')) {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
@@ -611,6 +630,27 @@ async function obterTokenIfood() {
     });
     r.on('error', reject);
     r.write(params);
+    r.end();
+  });
+}
+
+async function buscarFinancialEventsIfood(merchantId, beginDate, endDate, page) {
+  const token = await obterTokenIfood();
+  page = page || 1;
+  const url = `https://merchant-api.ifood.com.br/financial/v3.0/merchants/${merchantId}/financial-events?beginDate=${beginDate}&endDate=${endDate}&page=${page}&size=100`;
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const opts = { hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + token, 'x-request-homologation': 'true' } };
+    const r = https.request(opts, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { resolve({status: res.statusCode, body: JSON.parse(d)}); }
+        catch(e) { resolve({status: res.statusCode, body: d}); }
+      });
+    });
+    r.on('error', reject);
     r.end();
   });
 }
