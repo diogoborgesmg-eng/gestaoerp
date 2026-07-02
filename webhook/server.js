@@ -1,3 +1,54 @@
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO SEFAZ — NFeDistribuicaoDFe (consulta NFs recebidas)
+// ═══════════════════════════════════════════════════════════════
+let _forge = null;
+function getForge(){ if(!_forge)_forge=require('node-forge'); return _forge; }
+
+function carregarCertPFX(pfxBase64, senha){
+  const forge=getForge();
+  const pfxDer=forge.util.decode64(pfxBase64);
+  const pfxAsn1=forge.asn1.fromDer(pfxDer);
+  const pfx=forge.pkcs12.pkcs12FromAsn1(pfxAsn1,senha);
+  let cert=null,key=null;
+  for(const sc of pfx.safeContents)for(const sb of sc.safeBags){
+    if(sb.type===forge.pki.oids.certBag)cert=sb.cert;
+    else if(sb.type===forge.pki.oids.pkcs8ShroudedKeyBag||sb.type===forge.pki.oids.keyBag)key=sb.key;
+  }
+  if(!cert||!key)throw new Error('Certificado ou chave nao encontrados no .pfx');
+  return{certPem:forge.pki.certificateToPem(cert),keyPem:forge.pki.privateKeyToPem(key)};
+}
+
+async function sefazDistribuicaoDFe(pfxBase64, senha, cnpj, ultNSU='000000000000000', ambiente='prod'){
+  const{certPem,keyPem}=carregarCertPFX(pfxBase64,senha);
+  const cnpjLimpo=cnpj.replace(/[^\d]/g,'');
+  const xmlBody=`<distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>${ambiente==='prod'?'1':'2'}</tpAmb><cUFAutor>31</cUFAutor><CNPJ>${cnpjLimpo}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
+  const soapEnv=`<?xml version="1.0" encoding="UTF-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg>${xmlBody}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  const url=ambiente==='prod'?'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx':'https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
+  const u=new URL(url);
+  const forge=getForge();
+  const certDer=forge.util.decode64(forge.util.encode64(forge.asn1.toDer(forge.pki.certificateToAsn1(forge.pki.certificateFromPem(certPem))).getBytes()));
+  return new Promise((resolve,reject)=>{
+    const body=Buffer.from(soapEnv,'utf8');
+    const opts={hostname:u.hostname,path:u.pathname,method:'POST',
+      headers:{'Content-Type':'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"','Content-Length':body.length},
+      cert:certPem,key:keyPem,rejectUnauthorized:false};
+    const r=https.request(opts,res=>{
+      let d='';res.on('data',c=>d+=c);
+      res.on('end',()=>resolve({status:res.statusCode,xml:d}));
+    });
+    r.on('error',reject);r.write(body);r.end();
+  });
+}
+
+function parsearNFesDoXML(xmlResp){
+  // Extrai os documentos fiscais (NF-e XML) da resposta da SEFAZ
+  const nfes=[];
+  const matches=xmlResp.matchAll(/<chNFe>(\d{44})<\/chNFe>[\s\S]*?<NSU>(\d+)<\/NSU>/g);
+  for(const m of matches)nfes.push({chave:m[1],nsu:m[2]});
+  return nfes;
+}
+
 const http = require('http');
 const https = require('https');
 const PORT = process.env.PORT || 10000;
@@ -238,6 +289,31 @@ const server = http.createServer((req, res) => {
       }).catch(e => {
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ok:false, erro: e.message}));
+      });
+      return;
+    }
+    if (req.url && req.url.startsWith('/test-sefaz-dist')) {
+      const u = new URL(req.url, 'http://x');
+      const ultNSU = u.searchParams.get('ultNSU') || '000000000000000';
+      // Busca o certificado do Supabase (onde está salvo)
+      const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+      const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+      req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).then(async rows => {
+        try {
+          const d = JSON.parse(rows[0].data);
+          const cert = d.dadosFiscais?.certificado;
+          if (!cert || !cert.pfxBase64) throw new Error('Certificado não encontrado nos dados fiscais. Configure em ⚙️ Config → Fiscal');
+          const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', ultNSU, 'prod');
+          const nfes = parsearNFesDoXML(r.xml);
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, status:r.status, nfes, xmlPreview:r.xml.substring(0,500)}));
+        } catch(e) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, erro:e.message}));
+        }
+      }).catch(e => {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro:'Erro ao buscar dados: '+e.message}));
       });
       return;
     }
