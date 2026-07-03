@@ -385,7 +385,7 @@ const server = http.createServer((req, res) => {
         const ehComprovante = palavrasChave.some(p => texto.toLowerCase().includes(p));
         if (!ehComprovante) return;
         await wpp(num, 'Lendo comprovante de texto...');
-        const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Di Casa Gastronomia PAGOU alguem. Identifique: (1) VALOR, (2) NOME DE QUEM RECEBEU (em DADOS DE DESTINO > Nome, ou Favorecido, ou Beneficiario - NUNCA Di Casa, e NUNCA o nome de banco/cooperativa/instituicao financeira como SICOOB/CCLA/Nu Pagamentos - use a PESSOA/EMPRESA dona da conta), (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
+        const r1 = await claude([{ role:'user', content: texto + '\n\nAnalise este comprovante de pagamento acima. Este comprovante é de um PAGAMENTO FEITO pela empresa Di Casa Gastronomia / Di Casa Laranjinha. Di Casa Gastronomia é SEMPRE o PAGADOR (quem enviou o dinheiro), NUNCA o destinatário. Identifique: (1) VALOR pago, (2) NOME DE QUEM RECEBEU o dinheiro (campo Destino/Favorecido/Beneficiario - é a OUTRA PESSOA ou empresa, NUNCA Di Casa Gastronomia, NUNCA Di Casa Laranjinha, NUNCA nome de banco/cooperativa/instituicao financeira). Se o campo destino/favorecido mostrar "Di Casa" é porque voce está lendo o campo errado - procure o outro lado da transacao. (3) DATA, (4) TIPO pix/boleto/cartao, (5) OBSERVACAO/descricao da transferencia se houver. Se nao tiver observacao informe SEM_DESCRICAO.' }], 600);
         // Log completo da resposta para debug
         console.log('tipo msg:', tipo);
         console.log('r1 response:', JSON.stringify(r1).substring(0,300));
