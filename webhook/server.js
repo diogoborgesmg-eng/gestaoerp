@@ -578,6 +578,27 @@ async function executarDispatch(diaForcado){
   if (!r) {
     r = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/dados/dre_sync.json?t='+Date.now(),null,{});
   }
+  // Funde com a tabela lancamentos (novos lancamentos que ainda nao foram pro blob via Forcar Envio)
+  try {
+    const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&order=created_at.desc&limit=2000', null, {'apikey':SB_KEY});
+    if (Array.isArray(lancRows) && lancRows.length) {
+      if (!r) r = {};
+      lancRows.forEach(l => {
+        const dia = l.dia_comercial;
+        if (!dia) return;
+        if (!r[dia]) r[dia] = {r:[], c:[]};
+        if (!r[dia].r) r[dia].r = [];
+        if (!r[dia].c) r[dia].c = [];
+        const jaExiste = [...r[dia].r, ...r[dia].c].some(x => x.id === l.id);
+        if (!jaExiste) {
+          const item = {id:l.id, d:l.descricao, v:Number(l.valor||0), cat:l.categoria, seg:l.segmento, dt:dia};
+          if (l.tipo === 'receita') r[dia].r.push(item);
+          else r[dia].c.push(item);
+        }
+      });
+      console.log('Lancamentos fundidos do Supabase:', lancRows.length);
+    }
+  } catch(eLanc) { console.log('Erro ao fundir lancamentos:', eLanc.message); }
   if (!r || typeof r !== 'object') { console.log('Dispatch: sem dados ainda'); return {ok:false,erro:'sem dados disponiveis'}; }
 
   let anoOntem, mesOntem, diaOntemNum, ontemBR;
