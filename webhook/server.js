@@ -141,7 +141,7 @@ async function getMidia(msg) {
 }
 
 async function claude(messages, maxTok) {
-  const payload = JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTok || 800, messages });
+  const payload = JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTok || 800, messages });
   return new Promise((resolve) => {
     const opts = { hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload),
