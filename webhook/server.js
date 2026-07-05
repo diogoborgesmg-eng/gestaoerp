@@ -942,6 +942,41 @@ async function manifestarCiencia(certPfx, senha, cnpj, chNFe, ambiente='prod') {
 }
 
 
+
+function detectarGrupoServidor(descricao){
+ const d=(descricao||'').toLowerCase();
+ // Verifica primeiro a memoria de categorias confirmadas (vem do Supabase)
+ if(/(coca|pepsi|guarana|fanta|sprite|schweppes|refrigerante|refri|agua|suco|isotonic|energetic|red bull|heineken|skol|brahma|cervej|chopp|vinho|espumante|whisky|vodka|gin|rum|cachaca)/i.test(d))
+  return{cat:'venda_direta',grupo:'Bebidas',icone:'🥤',catDRE:'🥤 Bebidas'};
+ if(/(alcatra|picanha|maminha|fraldinha|contrafile|file mignon|patinho|coxao|lagarto|costela|bife|bovino|carne)/i.test(d))
+  return{cat:'materia_prima',grupo:'Carnes Bovinas',icone:'🥩',catDRE:'🥩 Matéria Prima'};
+ if(/(frango|peito|coxa|sobrecoxa|chester|peru)/i.test(d))
+  return{cat:'materia_prima',grupo:'Aves',icone:'🐔',catDRE:'🥩 Matéria Prima'};
+ if(/(suino|lombo|pernil|bacon|linguica|linguiça|salsicha|presunto|copa|porco)/i.test(d))
+  return{cat:'materia_prima',grupo:'Carnes Suínas',icone:'🐖',catDRE:'🥩 Matéria Prima'};
+ if(/(camarao|peixe|tilapia|salmon|atum|bacalhau|fruto do mar)/i.test(d))
+  return{cat:'materia_prima',grupo:'Frutos do Mar',icone:'🐟',catDRE:'🥩 Matéria Prima'};
+ if(/(tomate|cebola|alho|batata|abobrinha|cenoura|brocolis|couve|alface|rucula|pepino|pimentao|milho|feijao|hortalica|legume|verdura|fruta|banana|maca|laranja)/i.test(d))
+  return{cat:'materia_prima',grupo:'Hortifrúti',icone:'🥦',catDRE:'🥩 Matéria Prima'};
+ if(/(arroz|macarrao|farinha|amido|polenta|fuba|trigo|massa)/i.test(d))
+  return{cat:'materia_prima',grupo:'Cereais e Grãos',icone:'🌾',catDRE:'🥩 Matéria Prima'};
+ if(/(queijo|mussarela|parmesao|requeijao|creme de leite|leite|manteiga|margarina|iogurte)/i.test(d))
+  return{cat:'materia_prima',grupo:'Laticínios',icone:'🧀',catDRE:'🥩 Matéria Prima'};
+ if(/(oleo|azeite|gordura|banha)/i.test(d))
+  return{cat:'materia_prima',grupo:'Óleos e Gorduras',icone:'🫙',catDRE:'🥩 Matéria Prima'};
+ if(/(sal |pimenta|tempero|condimento|oregano|molho|ketchup|mostarda|maionese|vinagre|shoyu)/i.test(d))
+  return{cat:'materia_prima',grupo:'Temperos',icone:'🧂',catDRE:'🥩 Matéria Prima'};
+ if(/(embalagem|bandeja|saco|sacola|caixa de papel|canudo|garfo|colher|copo descart|prato descart|guardanapo|palito|isopor|aluminio|filme pvc)/i.test(d))
+  return{cat:'limpeza_embalagem',grupo:'Embalagens',icone:'📦',catDRE:'📦 Embalagem'};
+ if(/(detergente|sabao|sabão|desinfetante|sanitaria|cloro|alcool|multiuso|limpeza|desgordurante)/i.test(d))
+  return{cat:'limpeza_embalagem',grupo:'Limpeza',icone:'🧴',catDRE:'🧹 Limpeza/Higiene'};
+ if(/(luva|touca|avental|mascara|epi|uniforme)/i.test(d))
+  return{cat:'limpeza_embalagem',grupo:'EPI',icone:'🧤',catDRE:'🧹 Limpeza/Higiene'};
+ if(/(gas|botijao|lenha|carvao|gelo)/i.test(d))
+  return{cat:'materia_prima',grupo:'Combustível/Insumo',icone:'🔥',catDRE:'🥩 Matéria Prima'};
+ return{cat:'materia_prima',grupo:'Outros Insumos',icone:'📋',catDRE:'🥩 Matéria Prima'};
+}
+
 async function lancarEstoqueNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
   // So lanca estoque se tiver itens (NF completa, ja manifestada)
   if (!dados.itens || dados.itens.length === 0) return 0;
@@ -960,24 +995,24 @@ async function lancarEstoqueNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
     const cuUn = Number(it.valor_unitario) || 0;
     const nfNum = dados.nNF || nfe.chNFe || '';
 
+    // Classifica o produto automaticamente por nome
+    const grp = detectarGrupoServidor(nome);
     // Verifica se produto ja existe (busca por nome aproximado)
     const exIdx = d.est.findIndex(p => p.n && p.n.toLowerCase() === nome.toLowerCase());
     if (exIdx >= 0) {
-      // Atualiza produto existente
       d.est[exIdx].q = (d.est[exIdx].q || 0) + qtd;
       d.est[exIdx].qi = (d.est[exIdx].qi || 0) + qtd;
       if (!d.est[exIdx].lotes) d.est[exIdx].lotes = [];
-      d.est[exIdx].lotes.push({ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum });
+      d.est[exIdx].lotes.push({ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum, _sefaz: true });
       d.est[exIdx].cuAnterior = d.est[exIdx].cu || cuUn;
       d.est[exIdx].cu = cuUn;
+      if (!d.est[exIdx].grupo) d.est[exIdx].grupo = grp;
     } else {
-      // Produto novo
       d.est.push({
         id: 'sefaz_' + Date.now() + '_' + itensLancados,
         n: nome, u: it.unidade || 'un', q: qtd, qi: qtd, qun: qtd, upc: 1,
-        cu: cuUn, cuAnterior: cuUn,
-        grupo: { cat: 'materia_prima', grupo: 'Insumos', icone: '📦' },
-        lotes: [{ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum }],
+        cu: cuUn, cuAnterior: cuUn, grupo: grp,
+        lotes: [{ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum, _sefaz: true }],
         min: 0, s: [], perdas: []
       });
     }
@@ -1057,7 +1092,7 @@ async function consultarNFsRecebidas() {
         await req2('POST', SB_URL+'/rest/v1/lancamentos',
           { id: 'nf_'+nfe.chNFe, tipo: 'custo', dia_comercial: dia,
             descricao: `NF ${nfe.nNF||''} - ${nfe.emitente||'Fornecedor'}`,
-            categoria: 'Insumos/Matéria-prima', segmento: null, valor: nfe.valor,
+            categoria: detectarGrupoServidor(nfe.emitente||'').catDRE || '🥩 Matéria Prima', segmento: null, valor: nfe.valor,
             device_id: 'sefaz_auto' },
           { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
         ).catch(()=>{});
