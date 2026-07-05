@@ -977,6 +977,50 @@ function detectarGrupoServidor(descricao){
  return{cat:'materia_prima',grupo:'Outros Insumos',icone:'📋',catDRE:'🥩 Matéria Prima'};
 }
 
+
+async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
+  // So lanca conta a pagar se tiver vencimento (boleto)
+  if (!dados.vencimento) return false;
+
+  const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+  if (!Array.isArray(rows) || !rows.length) return false;
+  const d = JSON.parse(rows[0].data);
+  const deviceId = rows[0].device_id || 'sefaz_auto';
+  if (!d.contasPagar) d.contasPagar = [];
+
+  // Evita duplicar conta da mesma NF
+  const jaExiste = d.contasPagar.some(cp => cp.nf === dados.nNF && cp.forn === dados.emitente);
+  if (jaExiste) return false;
+
+  const idConta = 'sefaz_cp_' + nfe.chNFe;
+  d.contasPagar.push({
+    id: idConta,
+    forn: dados.emitente || 'Fornecedor',
+    val: dados.valor,
+    venc: dados.vencimento,
+    pag: 'boleto',
+    pago: false,
+    nf: dados.nNF || '',
+    dt: dados.data || new Date().toLocaleDateString('pt-BR'),
+    semana: '',
+    _sefaz: true,
+    criadoEm: new Date().toISOString()
+  });
+
+  // Salva o blob atualizado
+  await req2('POST', SB_URL+'/rest/v1/erp_sync',
+    { device_id: deviceId, data: JSON.stringify(d) },
+    { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+
+  // Tambem grava na tabela contas_pagar_v2
+  await req2('POST', SB_URL+'/rest/v1/contas_pagar_v2',
+    { id: idConta, fornecedor: dados.emitente, valor: dados.valor, vencimento: dados.vencimento, nf: dados.nNF||'', pago: false, device_id: 'sefaz_auto' },
+    { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+  ).catch(()=>{});
+
+  return true;
+}
+
 async function lancarEstoqueNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
   // So lanca estoque se tiver itens (NF completa, ja manifestada)
   if (!dados.itens || dados.itens.length === 0) return 0;
@@ -1076,6 +1120,12 @@ async function consultarNFsRecebidas() {
       const hoje = new Date().toLocaleDateString('pt-BR');
       for (const nfe of nfesDados) {
         const dia = nfe.data || hoje;
+        // Lanca conta a pagar automaticamente (se NF tem vencimento de boleto)
+        if (nfe.vencimento) {
+          lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY)
+            .then(ok => { if(ok) console.log('Conta a pagar lançada: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor); })
+            .catch(e => console.log('Erro conta a pagar:', e.message));
+        }
         // Lanca itens no estoque automaticamente (se NF completa com itens)
         if (nfe.itens && nfe.itens.length > 0) {
           lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY)
