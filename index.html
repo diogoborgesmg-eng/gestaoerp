@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="ponto" onclick="ir('ponto')" style="font-size:16px;padding:6px 10px;" title="Ponto">⏱️</button>
 <button class="tb" data-tab="saida" onclick="ir('saida')" style="font-size:16px;padding:6px 10px;" title="Saída de Estoque">📤</button>
 <button class="tb" data-tab="pdv" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
 <button class="tb" data-tab="cad" onclick="ir('cad')">📦 Cadastros</button>
@@ -4766,6 +4767,147 @@ async function renderStatusCaixa(){
    <button onclick="abrirCaixaSupabase()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">Abrir Caixa</button>
   </div>`;
  }
+}
+
+
+function rPonto(){
+ const db=ldb();
+ const funcs=gFuncs().filter(f=>f.ativo);
+ const hoje=hj();
+ const ponto=db.ponto||{};
+ const pontHoje=ponto[hoje]||{};
+ const mes=hoje.slice(3);
+ const diasMes=Object.keys(ponto).filter(d=>d.slice(3)===mes).sort();
+
+ // Calculo de custo do mes por funcionario
+ const custoMes={};
+ funcs.forEach(f=>{
+  let total=0;
+  diasMes.forEach(d=>{
+   const reg=ponto[d]?.[f.id];
+   if(!reg)return;
+   if(reg.presente&&f.tipo==='diarista')total+=Number(f.valorDia||0);
+   if(reg.horas&&f.tipo==='horista')total+=Number(reg.horas)*Number(f.valorHora||0);
+  });
+  custoMes[f.id]=total;
+ });
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:12px;">⏱️ Ponto & Pagamento</p>
+
+<!-- PONTO DE HOJE -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:12px;">
+<p style="font-size:12px;font-weight:700;margin-bottom:8px;">📅 Hoje — ${hoje}</p>
+${funcs.length===0?`<p style="font-size:11px;color:var(--mu);">Nenhum funcionário ativo. Cadastre em RH.</p>`:''}
+${funcs.map(f=>{
+ const reg=pontHoje[f.id]||{};
+ const presente=reg.presente||false;
+ const horas=reg.horas||'';
+ const obs=reg.obs||'';
+ return`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--br);">
+ <button onclick="togglePonto('${f.id}','${hoje}')"
+  style="min-width:36px;height:36px;border-radius:8px;border:none;cursor:pointer;font-size:18px;
+  background:${presente?'rgba(0,255,136,0.2)':'rgba(255,51,102,0.1)'};
+  color:${presente?'var(--gr)':'var(--re)'};">
+  ${presente?'✅':'❌'}
+ </button>
+ <div style="flex:1;">
+  <p style="font-size:12px;font-weight:700;">${f.nome}</p>
+  <p style="font-size:10px;color:var(--mu);">${f.cargo||''} · ${f.tipo==='diarista'?'Diária '+brl(f.valorDia||0):f.tipo==='horista'?'R$'+f.valorHora+'/h':'Mensalista'}</p>
+ </div>
+ ${f.tipo==='horista'?`<input type="number" min="0" max="16" step="0.5" placeholder="h"
+  value="${horas}" onchange="salvarHorasPonto('${f.id}','${hoje}',this.value)"
+  style="width:50px;background:var(--sf);border:1px solid var(--br);border-radius:6px;padding:4px;color:#fff;font-size:11px;text-align:center;"/>`:
+  presente?`<p style="font-size:10px;color:var(--gr);">${brl(f.valorDia||0)}</p>`:''}
+ </div>`;
+}).join('')}
+<button onclick="salvarPontoHoje()" style="width:100%;margin-top:10px;padding:9px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Ponto de Hoje</button>
+</div>
+
+<!-- RESUMO DO MES -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:12px;">
+<p style="font-size:12px;font-weight:700;margin-bottom:8px;">📊 Resumo do mês — ${mes}</p>
+${funcs.map(f=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;">
+ <div>
+  <p style="font-weight:700;">${f.nome}</p>
+  <p style="color:var(--mu);">${diasMes.filter(d=>ponto[d]?.[f.id]?.presente).length} dias presentes</p>
+ </div>
+ <div style="text-align:right;">
+  <p style="font-weight:700;color:var(--ye);">${brl(custoMes[f.id]||0)}</p>
+  <button onclick="registrarPagamento('${f.id}',${custoMes[f.id]||0},'${mes}')"
+   style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid rgba(255,204,0,0.3);background:rgba(255,204,0,0.1);color:var(--ye);cursor:pointer;margin-top:2px;">
+   💳 Pagar
+  </button>
+ </div>
+</div>`).join('')}
+</div>
+
+<!-- PAGAMENTOS INFORMAIS -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;">
+<p style="font-size:12px;font-weight:700;margin-bottom:8px;">💳 Lançar Pagamento Avulso</p>
+<input id="pag-nome" placeholder="Nome da pessoa" style="width:100%;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:6px;"/>
+<input id="pag-valor" type="number" placeholder="Valor R$" style="width:100%;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:6px;"/>
+<input id="pag-desc" placeholder="Motivo (ex: diária, bico, ajudante)" style="width:100%;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:8px;"/>
+<button onclick="lancarPagamentoAvulso()" style="width:100%;padding:9px;border-radius:8px;border:none;background:var(--ye);color:#000;font-size:12px;font-weight:800;cursor:pointer;">💸 Lançar no DRE</button>
+</div>
+</div>`;
+}
+
+function togglePonto(funcId,dia){
+ const db=ldb();
+ if(!db.ponto)db.ponto={};
+ if(!db.ponto[dia])db.ponto[dia]={};
+ if(!db.ponto[dia][funcId])db.ponto[dia][funcId]={};
+ db.ponto[dia][funcId].presente=!db.ponto[dia][funcId].presente;
+ sdb(db);render();
+}
+
+function salvarHorasPonto(funcId,dia,horas){
+ const db=ldb();
+ if(!db.ponto)db.ponto={};
+ if(!db.ponto[dia])db.ponto[dia]={};
+ if(!db.ponto[dia][funcId])db.ponto[dia][funcId]={};
+ db.ponto[dia][funcId].horas=parseFloat(horas)||0;
+ db.ponto[dia][funcId].presente=parseFloat(horas)>0;
+ sdb(db);
+}
+
+function salvarPontoHoje(){
+ sdb(ldb());
+ alert('✅ Ponto salvo!');
+}
+
+function registrarPagamento(funcId,valor,mes){
+ const funcs=gFuncs();
+ const f=funcs.find(x=>x.id===funcId);
+ if(!f)return;
+ if(!confirm(`Confirmar pagamento de ${brl(valor)} para ${f.nome} (${mes})?`))return;
+ const db=ldb();
+ const dia=hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ const _id=uid();
+ db[dia].c.push({id:_id,d:`Pagamento ${f.nome} — ${mes}`,v:valor,cat:'👥 RH / Mão de Obra',seg:'fixo',dt:dia,_rhPagamento:true,_funcId:funcId});
+ gravarLancamentoSupabase('custo',dia,`Pagamento ${f.nome} — ${mes}`,'👥 RH / Mão de Obra','fixo',valor,null,_id).catch(()=>{});
+ sdb(db);
+ alert(`✅ Pagamento de ${brl(valor)} lançado no DRE!`);
+ render();
+}
+
+function lancarPagamentoAvulso(){
+ const nome=document.getElementById('pag-nome')?.value?.trim();
+ const valor=parseFloat(document.getElementById('pag-valor')?.value||'0');
+ const desc=document.getElementById('pag-desc')?.value?.trim()||'Pagamento avulso';
+ if(!nome||!valor){alert('Preencha nome e valor.');return;}
+ if(!confirm(`Lançar pagamento de ${brl(valor)} para ${nome}?`))return;
+ const db=ldb();
+ const dia=hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ const _id=uid();
+ db[dia].c.push({id:_id,d:`${desc} — ${nome}`,v:valor,cat:'👥 RH / Mão de Obra',seg:'fixo',dt:dia,_rhAvulso:true});
+ gravarLancamentoSupabase('custo',dia,`${desc} — ${nome}`,'👥 RH / Mão de Obra','fixo',valor,null,_id).catch(()=>{});
+ sdb(db);
+ alert(`✅ ${brl(valor)} lançado no DRE como custo de RH!`);
+ render();
 }
 
 
@@ -9537,7 +9679,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
@@ -9849,9 +9991,12 @@ function adicionarFuncionario(){
  const nome=document.getElementById("func-nome")?.value?.trim();
  const salario=parseFloat(document.getElementById("func-sal")?.value)||0;
  const cargo=document.getElementById("func-cargo")?.value?.trim()||"";
- if(!nome||!salario){alert("Preencha nome e salário!");return;}
+ const tipo=document.getElementById("func-tipo")?.value||"mensalista";
+ const valorDia=parseFloat(document.getElementById("func-valordia")?.value)||0;
+ const valorHora=parseFloat(document.getElementById("func-valorhora")?.value)||0;
+ if(!nome){alert("Preencha o nome!");return;}
  const funcs=gFuncs();
- funcs.push({id:uid(),nome,cargo,salario,ativo:true,admissao:hj()});
+ funcs.push({id:uid(),nome,cargo,salario,tipo,valorDia,valorHora,ativo:true,admissao:hj()});
  sFuncs(funcs);render();
 }
 
