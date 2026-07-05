@@ -19872,6 +19872,58 @@ async function gravarMovimentoEstoqueSupabase(produto,tipo,quantidade,origem){
  }catch(e){console.error('Erro ao gravar movimento de estoque no Supabase (mantido local):',e.message);}
 }
 
+async function sincronizarBlobAutomatico(){
+ // Verifica se o blob no Supabase e mais recente que o local
+ // Se sim, mescla estoque e contas a pagar automaticamente
+ const cfg=getSupabaseCfg();
+ if(!cfg.url||!cfg.key)return;
+ try{
+  const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?select=data,updated_at,device_id&order=updated_at.desc&limit=1`,
+   {headers:{'apikey':cfg.key}});
+  if(!resp.ok)return;
+  const rows=await resp.json();
+  if(!rows||!rows.length)return;
+  const row=rows[0];
+  if(row.device_id===cfg.deviceId)return; // foi eu mesmo que salvei, ignora
+  const ultimoSync=localStorage.getItem('erp_ultimo_blob_sync')||'';
+  if(ultimoSync===row.updated_at)return; // ja sincronizei esse blob
+  // Blob e mais novo e veio de outro dispositivo/servidor — mescla
+  const dadosServidor=JSON.parse(row.data);
+  const db=ldb();
+  let mudou=false;
+  // Mescla estoque (produtos com _sefaz:true sao do servidor)
+  if(dadosServidor.est&&dadosServidor.est.length>0){
+   const idsLocais=new Set((db.est||[]).map(p=>p.id));
+   dadosServidor.est.forEach(p=>{
+    if(!idsLocais.has(p.id)){
+     if(!db.est)db.est=[];
+     db.est.push(p);
+     mudou=true;
+    }
+   });
+  }
+  // Mescla contas a pagar (contas com _sefaz:true sao do servidor)
+  if(dadosServidor.contasPagar&&dadosServidor.contasPagar.length>0){
+   const idsLocais=new Set((db.contasPagar||[]).map(cp=>cp.id));
+   dadosServidor.contasPagar.forEach(cp=>{
+    if(!idsLocais.has(cp.id)){
+     if(!db.contasPagar)db.contasPagar=[];
+     db.contasPagar.push(cp);
+     mudou=true;
+    }
+   });
+  }
+  if(mudou){
+   sdb(db);
+   localStorage.setItem('erp_ultimo_blob_sync',row.updated_at);
+   render();
+   console.log('Auto-sync: blob do servidor mesclado (estoque/contas a pagar atualizados)');
+  }else{
+   localStorage.setItem('erp_ultimo_blob_sync',row.updated_at);
+  }
+ }catch(e){console.error('Erro sincronizarBlobAutomatico:',e.message);}
+}
+
 async function puxarLancamentosOutrosDispositivos(diaComercial){
  const cfg=getSupabaseCfg();
  if(!cfg.url||!cfg.key)return{novos:0};
@@ -25765,6 +25817,8 @@ async function autoSyncSupabaseInicial(){
 
 render();
 puxarLancamentosOutrosDispositivos(getDia()).then(r=>{if(r.novos>0)render();});
+sincronizarBlobAutomatico();
+setInterval(sincronizarBlobAutomatico, 5*60*1000);
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
