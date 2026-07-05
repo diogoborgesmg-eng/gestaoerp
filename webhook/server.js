@@ -843,6 +843,74 @@ function agendarAlertsEstoque() {
 }
 agendarAlertsEstoque();
 
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTA DE CONTAS VENCENDO — avisa 3, 2, 1 dia antes e no dia
+// ═══════════════════════════════════════════════════════════════
+async function checarContasVencendo() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rows) || !rows.length) return;
+    const d = JSON.parse(rows[0].data);
+    const contas = d.contasPagar || [];
+    const agora = new Date();
+    agora.setHours(0,0,0,0);
+
+    const alertas = [];
+    contas.filter(cp => !cp.pago).forEach(cp => {
+      const vStr = cp.venc || cp.vencimento || '';
+      if (!vStr) return;
+      let vDate;
+      if (vStr.includes('/')) {
+        const [dd, mm, yyyy] = vStr.split('/');
+        vDate = new Date(yyyy, mm-1, dd);
+      } else {
+        vDate = new Date(vStr);
+      }
+      if (isNaN(vDate)) return;
+      vDate.setHours(0,0,0,0);
+      const dias = Math.round((vDate - agora) / (1000*60*60*24));
+      if (dias >= 0 && dias <= 3) {
+        const emoji = dias === 0 ? '🔴' : dias === 1 ? '🟠' : '🟡';
+        const texto = dias === 0 ? 'VENCE HOJE' : dias === 1 ? 'vence amanhã' : `vence em ${dias} dias`;
+        alertas.push({ emoji, texto, forn: cp.forn || cp.desc || 'Fornecedor', val: Number(cp.val || cp.valor || 0), venc: vStr, dias });
+      }
+    });
+
+    if (alertas.length === 0) return;
+
+    // Ordena do mais urgente pro menos urgente
+    alertas.sort((a, b) => a.dias - b.dias);
+    const totalVencendo = alertas.reduce((s, a) => s + a.val, 0);
+    const brl = v => 'R$' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    const linhas = alertas.map(a => a.emoji + " " + a.forn + ": " + brl(a.val) + " — " + a.texto).join("\n");
+    const msg = "*💳 Contas Vencendo — Di Casa Laranjinha*\n\n" + linhas + "\n\n*Total: " + brl(totalVencendo) + "*";
+
+    const destinos = ['5534996853258', '5534997692282'];
+    for (const num of destinos) await wpp(num, msg);
+    console.log('Alerta contas vencendo:', alertas.length, 'contas');
+  } catch(e) { console.error('Erro checarContasVencendo:', e.message); }
+}
+
+// Roda todo dia as 7h da manha (10h UTC)
+function agendarAlertaContas() {
+  const agora = new Date();
+  const prox = new Date();
+  prox.setUTCHours(10, 0, 0, 0);
+  if (prox <= agora) prox.setUTCDate(prox.getUTCDate() + 1);
+  const ms = prox - agora;
+  console.log('Contas: proximo alerta em ' + Math.round(ms/60000) + ' minutos');
+  setTimeout(() => {
+    checarContasVencendo();
+    setInterval(checarContasVencendo, 24 * 60 * 60 * 1000);
+  }, ms);
+}
+agendarAlertaContas();
+
+
 let _ultimoCaixaAlertado = null;
 let _ifoodTokenCache = { token: null, expiresAt: 0 };
 async function obterTokenIfood() {
