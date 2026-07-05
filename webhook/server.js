@@ -273,6 +273,34 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url && req.url.startsWith('/limpar-teste-sefaz')) { (async () => {
+      const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+      const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+      try {
+        const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+        const d = JSON.parse(rows[0].data);
+        const deviceId = rows[0].device_id;
+        // Remove itens de teste do estoque
+        const estAntes = (d.est||[]).length;
+        d.est = (d.est||[]).filter(p => !p.id?.startsWith('sefaz_'));
+        // Remove contas a pagar de teste
+        const cpAntes = (d.contasPagar||[]).length;
+        d.contasPagar = (d.contasPagar||[]).filter(cp => !cp.id?.startsWith('sefaz_cp_'));
+        // Remove lancamentos de teste da tabela lancamentos
+        await req2('DELETE', SB_URL+'/rest/v1/lancamentos?device_id=eq.sefaz_teste', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
+        await req2('DELETE', SB_URL+'/rest/v1/lancamentos?device_id=eq.sefaz_auto', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
+        await req2('DELETE', SB_URL+'/rest/v1/movimentos_estoque?device_id=eq.sefaz_auto', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
+        // Salva blob limpo
+        await req2('POST', SB_URL+'/rest/v1/erp_sync', { device_id: deviceId, data: JSON.stringify(d) },
+          { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: true, estRemovidos: estAntes-(d.est||[]).length, cpRemovidos: cpAntes-(d.contasPagar||[]).length, mensagem: 'Limpo! Agora clique em Restaurar da Nuvem no sistema.' }));
+      } catch(e) {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      }
+    })(); return;
+    }
     if (req.url && req.url.startsWith('/test-nfe-simulada')) { (async () => {
       // Simula uma NF chegando da SEFAZ com itens reais de restaurante
       const nfeSimulada = {
