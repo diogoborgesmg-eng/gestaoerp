@@ -941,6 +941,64 @@ async function manifestarCiencia(certPfx, senha, cnpj, chNFe, ambiente='prod') {
   });
 }
 
+
+async function lancarEstoqueNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
+  // So lanca estoque se tiver itens (NF completa, ja manifestada)
+  if (!dados.itens || dados.itens.length === 0) return 0;
+
+  // Busca o blob atual do Supabase
+  const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+  if (!Array.isArray(rows) || !rows.length) return 0;
+  const d = JSON.parse(rows[0].data);
+  const deviceId = rows[0].device_id || 'sefaz_auto';
+  if (!d.est) d.est = [];
+
+  let itensLancados = 0;
+  for (const it of dados.itens) {
+    const nome = it.descricao;
+    const qtd = Number(it.quantidade) || 1;
+    const cuUn = Number(it.valor_unitario) || 0;
+    const nfNum = dados.nNF || nfe.chNFe || '';
+
+    // Verifica se produto ja existe (busca por nome aproximado)
+    const exIdx = d.est.findIndex(p => p.n && p.n.toLowerCase() === nome.toLowerCase());
+    if (exIdx >= 0) {
+      // Atualiza produto existente
+      d.est[exIdx].q = (d.est[exIdx].q || 0) + qtd;
+      d.est[exIdx].qi = (d.est[exIdx].qi || 0) + qtd;
+      if (!d.est[exIdx].lotes) d.est[exIdx].lotes = [];
+      d.est[exIdx].lotes.push({ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum });
+      d.est[exIdx].cuAnterior = d.est[exIdx].cu || cuUn;
+      d.est[exIdx].cu = cuUn;
+    } else {
+      // Produto novo
+      d.est.push({
+        id: 'sefaz_' + Date.now() + '_' + itensLancados,
+        n: nome, u: it.unidade || 'un', q: qtd, qi: qtd, qun: qtd, upc: 1,
+        cu: cuUn, cuAnterior: cuUn,
+        grupo: { cat: 'materia_prima', grupo: 'Insumos', icone: '📦' },
+        lotes: [{ qtdCx: qtd, qtdUn: qtd, cuPorCx: cuUn, cuPorUn: cuUn, dt: dados.data, nf: nfNum }],
+        min: 0, s: [], perdas: []
+      });
+    }
+
+    // Grava movimento de estoque na tabela
+    await req2('POST', SB_URL+'/rest/v1/movimentos_estoque',
+      { id: 'sefaz_est_'+nfe.chNFe+'_'+itensLancados, produto: nome, tipo: 'entrada', quantidade: qtd, origem: 'NF '+nfNum+' SEFAZ', device_id: 'sefaz_auto' },
+      { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+    ).catch(() => {});
+
+    itensLancados++;
+  }
+
+  // Salva o blob atualizado
+  await req2('POST', SB_URL+'/rest/v1/erp_sync',
+    { device_id: deviceId, data: JSON.stringify(d) },
+    { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+
+  return itensLancados;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SEFAZ — Consulta automática diária de NFs recebidas
 // Roda 1x por dia às 3h da manhã, salva NSU no Supabase
@@ -983,6 +1041,12 @@ async function consultarNFsRecebidas() {
       const hoje = new Date().toLocaleDateString('pt-BR');
       for (const nfe of nfesDados) {
         const dia = nfe.data || hoje;
+        // Lanca itens no estoque automaticamente (se NF completa com itens)
+        if (nfe.itens && nfe.itens.length > 0) {
+          lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY)
+            .then(n => { if(n>0) console.log('Estoque: '+n+' itens lançados da NF '+nfe.nNF); })
+            .catch(e => console.log('Erro estoque NF:', e.message));
+        }
         // Manifesta ciência automaticamente para receber XML completo na próxima consulta
         if (nfe.chNFe) {
           manifestarCiencia(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod')
