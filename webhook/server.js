@@ -790,6 +790,83 @@ async function buscarFinancialEventsIfood(merchantId, beginDate, endDate, page) 
 }
 
 
+
+// ═══════════════════════════════════════════════════════════════
+// PARSER DE NF-e — descompacta docZip (GZIP+base64) e extrai dados
+// ═══════════════════════════════════════════════════════════════
+const zlib = require('zlib');
+
+function descompactarDocZip(docZipBase64) {
+  const buf = Buffer.from(docZipBase64, 'base64');
+  try {
+    return zlib.gunzipSync(buf).toString('utf-8');
+  } catch(e) {
+    return buf.toString('utf-8'); // ja descomprimido
+  }
+}
+
+function extrairTagXML(xml, tag) {
+  const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]+)</${tag}>`));
+  return m ? m[1].trim() : '';
+}
+
+function parsearNFeXML(xml) {
+  // Extrai dados principais da NF-e
+  const emitente = extrairTagXML(xml, 'xNome') || extrairTagXML(xml, 'xFant');
+  const cnpjEmit = extrairTagXML(xml, 'CNPJ');
+  const nNF = extrairTagXML(xml, 'nNF');
+  const dhEmi = extrairTagXML(xml, 'dhEmi');
+  const vNF = parseFloat(extrairTagXML(xml, 'vNF') || '0');
+  const vProd = parseFloat(extrairTagXML(xml, 'vProd') || '0');
+  const chNFe = extrairTagXML(xml, 'chNFe');
+
+  // Extrai itens
+  const itens = [];
+  const detMatches = xml.matchAll(/<det nItem="(\d+)">([\s\S]*?)<\/det>/g);
+  for (const m of detMatches) {
+    const det = m[2];
+    const xProd = extrairTagXML(det, 'xProd');
+    const qCom = parseFloat(extrairTagXML(det, 'qCom') || '1');
+    const vUnCom = parseFloat(extrairTagXML(det, 'vUnCom') || '0');
+    const vProdItem = parseFloat(extrairTagXML(det, 'vProd') || '0');
+    const uCom = extrairTagXML(det, 'uCom');
+    if (xProd) itens.push({ descricao: xProd, quantidade: qCom, unidade: uCom, valor_unitario: vUnCom, valor_total: vProdItem });
+  }
+
+  // Data formatada DD/MM/YYYY
+  let dataFormatada = '';
+  if (dhEmi) {
+    const d = new Date(dhEmi);
+    if (!isNaN(d)) dataFormatada = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  // Vencimento (boleto)
+  const dVenc = extrairTagXML(xml, 'dVenc');
+  let vencFormatado = '';
+  if (dVenc) {
+    const d = new Date(dVenc);
+    if (!isNaN(d)) vencFormatado = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  return { emitente, cnpjEmit, nNF, chNFe, data: dataFormatada, vencimento: vencFormatado, valor: vNF || vProd, itens };
+}
+
+function parsearDocZips(xmlResp) {
+  const nfes = [];
+  const matches = xmlResp.matchAll(/<docZip[^>]*schema="([^"]*)"[^>]*>([^<]+)<\/docZip>/g);
+  for (const m of matches) {
+    const schema = m[1];
+    const b64 = m[2].trim();
+    if (!schema.includes('NFe') && !schema.includes('nfe')) continue;
+    try {
+      const xmlNFe = descompactarDocZip(b64);
+      const dados = parsearNFeXML(xmlNFe);
+      if (dados.valor > 0 || dados.emitente) nfes.push({ schema, ...dados });
+    } catch(e) { console.log('Erro ao parsear docZip:', e.message); }
+  }
+  return nfes;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SEFAZ — Consulta automática diária de NFs recebidas
 // Roda 1x por dia às 3h da manhã, salva NSU no Supabase
@@ -825,20 +902,27 @@ async function consultarNFsRecebidas() {
     const xmlDocs = r.xml.matchAll(/<chNFe>(\d{44})<\/chNFe>/g);
     for (const m of xmlDocs) chaves.push(m[1]);
 
-    if (chaves.length > 0) {
-      console.log('SEFAZ: encontradas', chaves.length, 'NFs novas');
-      // Salva as chaves no Supabase pra o sistema importar
-      for (const chave of chaves) {
+    // Parseia os docZips para extrair dados completos das NFs
+    const nfesDados = parsearDocZips(r.xml);
+    if (nfesDados.length > 0) {
+      console.log('SEFAZ: encontradas', nfesDados.length, 'NFs novas com dados');
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      for (const nfe of nfesDados) {
+        const dia = nfe.data || hoje;
+        // Lança custo no DRE
         await req2('POST', SB_URL+'/rest/v1/lancamentos',
-          { id: 'nf_'+chave, tipo: 'nf_entrada', dia_comercial: new Date().toLocaleDateString('pt-BR'), 
-            descricao: 'NF recebida SEFAZ - chave: '+chave, valor: 0, device_id: 'sefaz_auto' },
+          { id: 'nf_'+nfe.chNFe, tipo: 'custo', dia_comercial: dia,
+            descricao: `NF ${nfe.nNF||''} - ${nfe.emitente||'Fornecedor'}`,
+            categoria: 'Insumos/Matéria-prima', segmento: null, valor: nfe.valor,
+            device_id: 'sefaz_auto' },
           { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
         ).catch(()=>{});
       }
-      // Notifica via WhatsApp
+      // Notifica via WhatsApp com resumo
       const destinos = ['5534996853258','5534997692282'];
+      const resumo = nfesDados.map(n=>`• ${n.emitente||'?'} — R$${n.valor.toFixed(2)}`).join('\n');
       for (const num of destinos) {
-        await wpp(num, `📄 SEFAZ: ${chaves.length} NF(s) nova(s) recebida(s)! Abra o GestaoERP para importar.`);
+        await wpp(num, `📄 SEFAZ: ${nfesDados.length} NF(s) nova(s) recebida(s):\n${resumo}\n\nDados lançados automaticamente no sistema!`);
       }
     }
 
