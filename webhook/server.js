@@ -338,7 +338,12 @@ const server = http.createServer((req, res) => {
           const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', ultNSU, 'prod');
           const nfes = parsearNFesDoXML(r.xml);
           res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ok:true, status:r.status, nfes, xmlPreview:r.xml.substring(0,500)}));
+          // Extrai o cStat e xMotivo pra debug
+          const cStat = (r.xml.match(/<cStat>(\d+)<\/cStat>/) || [])[1] || '';
+          const xMotivo = (r.xml.match(/<xMotivo>([^<]+)<\/xMotivo>/) || [])[1] || '';
+          const ultNSUResp = (r.xml.match(/<ultNSU>(\d+)<\/ultNSU>/) || [])[1] || '';
+          const maxNSU = (r.xml.match(/<maxNSU>(\d+)<\/maxNSU>/) || [])[1] || '';
+          res.end(JSON.stringify({ok:true, status:r.status, cStat, xMotivo, ultNSU:ultNSUResp, maxNSU, nfes, xmlLen:r.xml.length}));
         } catch(e) {
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ok:false, erro:e.message}));
