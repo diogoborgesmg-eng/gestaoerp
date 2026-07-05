@@ -789,6 +789,85 @@ async function buscarFinancialEventsIfood(merchantId, beginDate, endDate, page) 
   });
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// SEFAZ — Consulta automática diária de NFs recebidas
+// Roda 1x por dia às 3h da manhã, salva NSU no Supabase
+// ═══════════════════════════════════════════════════════════════
+let _sefazUltNSU = '000000000004755'; // NSU confirmado pela SEFAZ
+
+async function consultarNFsRecebidas() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+
+    // Busca o certificado do blob
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rows) || !rows.length) return;
+    const d = JSON.parse(rows[0].data);
+    const cert = d.dadosFiscais?.certificado;
+    if (!cert?.pfxBase64) { console.log('SEFAZ: certificado não configurado'); return; }
+
+    // Busca o ultimo NSU salvo
+    const nsuSalvo = d.sefazUltNSU || _sefazUltNSU;
+
+    console.log('SEFAZ: consultando a partir do NSU', nsuSalvo);
+    const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', nsuSalvo, 'prod');
+
+    const cStat = (r.xml.match(/<cStat>(\d+)<\/cStat>/) || [])[1] || '';
+    const ultNSUResp = (r.xml.match(/<ultNSU>(\d+)<\/ultNSU>/) || [])[1] || '';
+    console.log('SEFAZ resposta cStat:', cStat, 'ultNSU:', ultNSUResp);
+
+    if (cStat === '656') { console.log('SEFAZ: consumo indevido, aguardando proximo ciclo'); return; }
+
+    // Extrai chaves das NFs
+    const chaves = [];
+    const xmlDocs = r.xml.matchAll(/<chNFe>(\d{44})<\/chNFe>/g);
+    for (const m of xmlDocs) chaves.push(m[1]);
+
+    if (chaves.length > 0) {
+      console.log('SEFAZ: encontradas', chaves.length, 'NFs novas');
+      // Salva as chaves no Supabase pra o sistema importar
+      for (const chave of chaves) {
+        await req2('POST', SB_URL+'/rest/v1/lancamentos',
+          { id: 'nf_'+chave, tipo: 'nf_entrada', dia_comercial: new Date().toLocaleDateString('pt-BR'), 
+            descricao: 'NF recebida SEFAZ - chave: '+chave, valor: 0, device_id: 'sefaz_auto' },
+          { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+        ).catch(()=>{});
+      }
+      // Notifica via WhatsApp
+      const destinos = ['5534996853258','5534997692282'];
+      for (const num of destinos) {
+        await wpp(num, `📄 SEFAZ: ${chaves.length} NF(s) nova(s) recebida(s)! Abra o GestaoERP para importar.`);
+      }
+    }
+
+    // Atualiza o NSU no blob
+    if (ultNSUResp && ultNSUResp !== '000000000000000') {
+      d.sefazUltNSU = ultNSUResp;
+      _sefazUltNSU = ultNSUResp;
+      await req2('POST', SB_URL+'/rest/v1/erp_sync',
+        { device_id: 'sefaz_auto', data: JSON.stringify(d) },
+        { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+    }
+  } catch(e) { console.error('SEFAZ consulta erro:', e.message); }
+}
+
+// Roda 1x por dia às 3h da manhã (horário Brasília = 6h UTC)
+function agendarConsultaSEFAZ() {
+  const agora = new Date();
+  const prox3h = new Date();
+  prox3h.setUTCHours(6, 0, 0, 0);
+  if (prox3h <= agora) prox3h.setUTCDate(prox3h.getUTCDate() + 1);
+  const msAte3h = prox3h - agora;
+  console.log(`SEFAZ: próxima consulta em ${Math.round(msAte3h/60000)} minutos`);
+  setTimeout(() => {
+    consultarNFsRecebidas();
+    setInterval(consultarNFsRecebidas, 24 * 60 * 60 * 1000); // depois a cada 24h
+  }, msAte3h);
+}
+agendarConsultaSEFAZ();
+
 async function checarCaixaAberto6h(){
   try{
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
