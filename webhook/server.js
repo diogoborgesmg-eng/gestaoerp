@@ -273,6 +273,54 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url && req.url.startsWith('/test-nfe-simulada')) { (async () => {
+      // Simula uma NF chegando da SEFAZ com itens reais de restaurante
+      const nfeSimulada = {
+        emitente: 'DISTRIBUIDORA TESTE LTDA',
+        cnpjEmit: '99999999000199',
+        nNF: '000001',
+        chNFe: '31' + Date.now().toString().padStart(42,'0'),
+        data: new Date().toLocaleDateString('pt-BR'),
+        vencimento: new Date(Date.now()+7*24*60*60*1000).toLocaleDateString('pt-BR'),
+        valor: 1250.80,
+        itens: [
+          { descricao: 'ALCATRA BOVINA KG', quantidade: 10, unidade: 'KG', valor_unitario: 45.00, valor_total: 450.00 },
+          { descricao: 'FRANGO INTEIRO KG', quantidade: 8, unidade: 'KG', valor_unitario: 18.50, valor_total: 148.00 },
+          { descricao: 'DETERGENTE 5L', quantidade: 4, unidade: 'UN', valor_unitario: 22.00, valor_total: 88.00 },
+          { descricao: 'EMBALAGEM MARMITA 500ML CX', quantidade: 5, unidade: 'CX', valor_unitario: 45.00, valor_total: 225.00 },
+          { descricao: 'TOMATE KG', quantidade: 15, unidade: 'KG', valor_unitario: 8.00, valor_total: 120.00 },
+          { descricao: 'CARVAO CX 10KG', quantidade: 3, unidade: 'CX', valor_unitario: 73.27, valor_total: 219.80 }
+        ]
+      };
+      const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+      const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+      try {
+        const [estOk, contaOk] = await Promise.all([
+          lancarEstoqueNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY),
+          lancarContaPagarNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY)
+        ]);
+        // Lanca custo no DRE
+        await req2('POST', SB_URL+'/rest/v1/lancamentos',
+          { id: 'teste_nf_'+Date.now(), tipo: 'custo', dia_comercial: nfeSimulada.data,
+            descricao: 'NF TESTE - DISTRIBUIDORA TESTE LTDA',
+            categoria: '🥩 Matéria Prima', segmento: null, valor: nfeSimulada.valor,
+            device_id: 'sefaz_teste' },
+          { 'apikey': SB_KEY, 'Prefer': 'return=minimal', 'Content-Type': 'application/json' });
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({
+          ok: true,
+          mensagem: 'NF simulada processada com sucesso!',
+          itensEstoque: estOk,
+          contaPagar: contaOk,
+          nf: { emitente: nfeSimulada.emitente, valor: nfeSimulada.valor, itens: nfeSimulada.itens.length, vencimento: nfeSimulada.vencimento }
+        }, null, 2));
+      } catch(e) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro:e.message}));
+      }
+      })();
+      return;
+    }
     if (req.url && req.url.startsWith('/test-ifood-financial')) {
       const u = new URL(req.url, 'http://x');
       const merchantId = u.searchParams.get('merchantId');
