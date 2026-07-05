@@ -867,6 +867,34 @@ function parsearDocZips(xmlResp) {
   return nfes;
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// MANIFESTAÇÃO DO DESTINATÁRIO — Ciência da Operação (ciente=210210)
+// ═══════════════════════════════════════════════════════════════
+async function manifestarCiencia(certPfx, senha, cnpj, chNFe, ambiente='prod') {
+  const { certPem, keyPem } = carregarCertPFX(certPfx, senha);
+  const cnpjLimpo = cnpj.replace(/[^\d]/g, '');
+  const agora = new Date().toISOString().split('.')[0] + '-03:00';
+  const nSeqEvento = '1';
+  const xmlEvento = `<envEvento versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe"><idLote>1</idLote><evento versao="1.00"><infEvento Id="ID210210${chNFe}${nSeqEvento.padStart(2,'0')}"><cOrgao>91</cOrgao><tpAmb>${ambiente==='prod'?'1':'2'}</tpAmb><CNPJ>${cnpjLimpo}</CNPJ><chNFe>${chNFe}</chNFe><dhEvento>${agora}</dhEvento><tpEvento>210210</tpEvento><nSeqEvento>${nSeqEvento}</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Ciencia da Operacao</descEvento></detEvento></infEvento></evento></envEvento>`;
+  const url = ambiente==='prod'
+    ? 'https://www1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx'
+    : 'https://hom1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx';
+  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeRecepcaoEvento xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4"><nfeDadosMsg>${xmlEvento}</nfeDadosMsg></nfeRecepcaoEvento></soap12:Body></soap12:Envelope>`;
+  const u = new URL(url);
+  return new Promise((resolve, reject) => {
+    const body = Buffer.from(soapEnv, 'utf8');
+    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
+      headers: { 'Content-Type': 'application/soap+xml; charset=utf-8', 'Content-Length': body.length },
+      cert: certPem, key: keyPem, rejectUnauthorized: false };
+    const r = https.request(opts, res => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => resolve({ status: res.statusCode, xml: d }));
+    });
+    r.on('error', reject); r.write(body); r.end();
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SEFAZ — Consulta automática diária de NFs recebidas
 // Roda 1x por dia às 3h da manhã, salva NSU no Supabase
@@ -909,6 +937,12 @@ async function consultarNFsRecebidas() {
       const hoje = new Date().toLocaleDateString('pt-BR');
       for (const nfe of nfesDados) {
         const dia = nfe.data || hoje;
+        // Manifesta ciência automaticamente para receber XML completo na próxima consulta
+        if (nfe.chNFe) {
+          manifestarCiencia(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod')
+            .then(mr => console.log('Manifestação', nfe.chNFe.substring(0,10)+'...', 'cStat:', (mr.xml.match(/<cStat>(\d+)<\/cStat>/)||[])[1]))
+            .catch(e => console.log('Erro manifestação:', e.message));
+        }
         // Lança custo no DRE
         await req2('POST', SB_URL+'/rest/v1/lancamentos',
           { id: 'nf_'+nfe.chNFe, tipo: 'custo', dia_comercial: dia,
