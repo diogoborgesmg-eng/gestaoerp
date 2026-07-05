@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="saida" onclick="ir('saida')" style="font-size:16px;padding:6px 10px;" title="Saída de Estoque">📤</button>
 <button class="tb" data-tab="pdv" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
 <button class="tb" data-tab="cad" onclick="ir('cad')">📦 Cadastros</button>
 <button class="tb" data-tab="dre" onclick="ir('dre')">📊 DRE</button>
@@ -4767,6 +4768,111 @@ async function renderStatusCaixa(){
  }
 }
 
+
+function rSaidaEstoque(){
+ const db=ldb();
+ const est=db.est||[];
+ const seg=localStorage.getItem('saida_segmento')||'';
+ const segs=[
+  {id:'restaurante',nome:'🍽️ Restaurante',cor:'#00ff88'},
+  {id:'espetaria',nome:'🍢 Espetaria',cor:'#ff8800'},
+  {id:'pizzaria',nome:'🍕 Pizzaria',cor:'#ff3366'},
+  {id:'hamburgueria',nome:'🍔 Hamburgueria',cor:'#aa44ff'}
+ ];
+
+ if(!seg){
+  return`<div style="padding:16px;">
+  <p style="font-weight:800;font-size:16px;margin-bottom:16px;">📤 Saída de Estoque</p>
+  <p style="font-size:12px;color:var(--mu);margin-bottom:16px;">Selecione o seu setor:</p>
+  ${segs.map(s=>`<button onclick="localStorage.setItem('saida_segmento','${s.id}');render('saida')"
+   style="width:100%;padding:16px;margin-bottom:10px;border-radius:12px;border:none;
+   background:${s.cor}22;border:2px solid ${s.cor}66;color:${s.cor};
+   font-size:15px;font-weight:800;cursor:pointer;">${s.nome}</button>`).join('')}
+  </div>`;
+ }
+
+ const segObj=segs.find(s=>s.id===seg)||segs[0];
+ const prodDisponiveis=est.filter(p=>(p.q||0)>0).sort((a,b)=>(a.n||'').localeCompare(b.n||''));
+
+ return`<div style="padding:12px;">
+ <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+  <button onclick="localStorage.removeItem('saida_segmento');render('saida')"
+   style="padding:6px 10px;border-radius:8px;border:1px solid var(--br);background:var(--sf);color:var(--mu);font-size:12px;cursor:pointer;">← Trocar</button>
+  <p style="font-weight:800;font-size:14px;color:${segObj.cor};">${segObj.nome}</p>
+ </div>
+
+ <p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Selecione o produto e informe a quantidade usada na produção de hoje:</p>
+
+ <div id="saida-lista">
+ ${prodDisponiveis.length===0?`<p style="color:var(--mu);font-size:12px;">Nenhum produto em estoque.</p>`:
+  prodDisponiveis.map(p=>`
+  <div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+   <div style="flex:1;">
+    <p style="font-size:12px;font-weight:700;">${p.grupo?.icone||'📦'} ${p.n}</p>
+    <p style="font-size:10px;color:var(--mu);">Em estoque: ${Number(p.q||0).toFixed(1)} ${p.u||'un'} · Custo unit: ${brl(p.cu||0)}</p>
+   </div>
+   <div style="display:flex;align-items:center;gap:6px;">
+    <input type="number" min="0" step="0.1" placeholder="0"
+     id="saida-qty-${p.id}"
+     style="width:70px;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:6px;color:#fff;font-size:13px;text-align:center;"/>
+    <span style="font-size:10px;color:var(--mu);">${p.u||'un'}</span>
+   </div>
+  </div>`).join('')}
+ </div>
+
+ <button onclick="confirmarSaidaEstoque('${seg}')"
+  style="width:100%;padding:12px;border-radius:10px;border:none;background:${segObj.cor};color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px;">
+  ✅ Confirmar Saída
+ </button>
+ </div>`;
+}
+
+function confirmarSaidaEstoque(seg){
+ const db=ldb();
+ const est=db.est||[];
+ const dia=hj();
+ if(!db[dia])db[dia]={r:[],c:[]};
+ if(!db[dia].c)db[dia].c=[];
+
+ const segs={restaurante:'🍽️ Restaurante',espetaria:'🍢 Espetaria',pizzaria:'🍕 Pizzaria',hamburgueria:'🍔 Hamburgueria'};
+ const segNome=segs[seg]||seg;
+ let totalCusto=0, itensLancados=0;
+
+ est.forEach(p=>{
+  const inp=document.getElementById('saida-qty-'+p.id);
+  if(!inp)return;
+  const qty=parseFloat(inp.value||'0');
+  if(qty<=0)return;
+
+  const cuTotal=qty*(p.cu||0);
+  totalCusto+=cuTotal;
+
+  // Debita do estoque
+  const idx=db.est.findIndex(e=>e.id===p.id);
+  if(idx>=0){
+   db.est[idx].q=Math.max(0,(db.est[idx].q||0)-qty);
+   if(!db.est[idx].perdas)db.est[idx].perdas=[];
+   db.est[idx].s=db.est[idx].s||[];
+   db.est[idx].s.push({dt:dia,q:qty,seg,motivo:'producao'});
+  }
+
+  // Lanca custo no DRE do segmento
+  const _id=uid();
+  const cat=p.grupo?.catDRE||p.grupo?.grupo||'Insumos/Matéria-prima';
+  db[dia].c.push({id:_id,d:`${p.n} — ${segNome}`,v:cuTotal,cat,seg,dt:dia,_saidaEst:true});
+  gravarLancamentoSupabase('custo',dia,`${p.n} — ${segNome}`,cat,seg,cuTotal,null,_id).catch(()=>{});
+  gravarMovimentoEstoqueSupabase(p.n,'saida',qty,`Produção ${segNome}`).catch(()=>{});
+  itensLancados++;
+ });
+
+ if(itensLancados===0){alert('Informe a quantidade de pelo menos 1 produto.');return;}
+ sdb(db);
+ alert(`✅ Saída registrada!
+${itensLancados} produto(s) — Custo total: ${brl(totalCusto)}
+Debitado de: ${segNome}`);
+ localStorage.removeItem('saida_segmento');
+ render('saida');
+}
 
 function rFachada(){
  const db=ldb();
@@ -9431,7 +9537,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
