@@ -388,6 +388,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <div class="ial ag" style="margin-bottom:6px;"><span>☁️</span><span>Supabase configurado · Último sync: 26/06/2026, 01:53:11</span></div>
 <button id="sb-sync-btn" onclick="sincronizarAgora()" style="width:100%;padding:9px;border-radius:9px;border:none;background:rgba(62,207,142,0.8);color:#000;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔄 Sincronizar Agora</button>
 <button onclick="ir('fachada')" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,170,0,0.4);background:rgba(255,170,0,0.08);color:#ffaa00;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🏠 Gerador de Fachada</button>
+<button onclick="limparEstoqueCompleto()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,51,102,0.3);background:rgba(255,51,102,0.08);color:var(--re);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">🗑️ Limpar Estoque Completo</button>
 <button onclick="abrirLimparDia()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);color:var(--re);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;margin-top:10px;">🗑️ Limpar Lançamentos de um Dia</button>
 <button onclick="forcarEnvioLocalParaNuvem()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(255,153,0,0.4);background:rgba(255,153,0,0.1);color:#ff9900;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📤 Forçar Envio Deste Celular pra Nuvem</button>
 <button onclick="restaurarDaNuvemAgora()" style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(62,207,142,0.5);background:rgba(62,207,142,0.15);color:#3ecf8e;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">📥 Restaurar da Nuvem Agora</button>
@@ -5141,6 +5142,17 @@ function salvarFachada(url){
  if(db.fachadaImagens.some(f=>f.url===url))return;
  db.fachadaImagens.push({url,dt:new Date().toISOString()});
  sdb(db);
+ render();
+}
+
+function limparEstoqueCompleto(){
+ if(!confirm('Isso vai apagar TODOS os produtos do estoque.\n\nTem certeza?'))return;
+ if(!confirm('CONFIRMAÇÃO FINAL: apagar estoque completo?'))return;
+ const db=ldb();
+ const qtd=(db.est||[]).length;
+ db.est=[];
+ sdb(db);
+ alert('✅ '+qtd+' produto(s) removido(s) do estoque.');
  render();
 }
 
@@ -19884,9 +19896,8 @@ async function sincronizarBlobAutomatico(){
   const rows=await resp.json();
   if(!rows||!rows.length)return;
   const row=rows[0];
-  if(row.device_id===cfg.deviceId)return; // foi eu mesmo que salvei, ignora
   const ultimoSync=localStorage.getItem('erp_ultimo_blob_sync')||'';
-  if(ultimoSync===row.updated_at)return; // ja sincronizei esse blob
+  if(ultimoSync===row.updated_at)return; // ja sincronizei esse blob, nao repete
   // Blob e mais novo e veio de outro dispositivo/servidor — mescla
   const dadosServidor=JSON.parse(row.data);
   const db=ldb();
