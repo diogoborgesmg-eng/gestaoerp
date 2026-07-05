@@ -2429,6 +2429,14 @@ async function forcarEnvioLocalParaNuvem(){
  const localDias=Object.keys(localData).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).length;
  if(!confirm(`Isso vai ENVIAR os dados deste celular (${localDias} dias) para a nuvem, substituindo o que estiver lá.\n\nContinuar?`))return;
  try{
+  // 0. Inclui o certificado no blob antes de enviar (pra SEFAZ funcionar no servidor)
+  const pfx1=localStorage.getItem('erp_cert_pfx_1')||'';
+  const senha1=localStorage.getItem('erp_cert_senha_1')||'';
+  const info1=JSON.parse(localStorage.getItem('erp_cert_info_1')||'{}');
+  if(pfx1&&senha1){
+   if(!localData.dadosFiscais)localData.dadosFiscais={};
+   localData.dadosFiscais.certificado={pfxBase64:pfx1,senha:senha1,cnpj:info1.cnpj||'44686412000100'};
+  }
   // 1. Grava o blob completo (compatibilidade com PDF das 6h e outros)
   await syncSupabaseSave(localData,cfg);
   // 2. Migra cada lancamento individualmente pra tabela lancamentos (novo sistema de sync automatico)
