@@ -292,17 +292,39 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url === '/configurar-certificado' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => body += d);
+      req.on('end', async () => {
+        try {
+          const { pfxBase64, senha, cnpj } = JSON.parse(body);
+          if (!pfxBase64 || !senha) throw new Error('pfxBase64 e senha obrigatórios');
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          // Salva no Supabase numa tabela de configurações segura
+          await req2('POST', SB_URL+'/rest/v1/configuracoes', 
+            { chave: 'cert_principal', valor: JSON.stringify({ pfxBase64, senha, cnpj }), updated_at: new Date().toISOString() },
+            { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ ok: true, mensagem: 'Certificado salvo com sucesso!' }));
+        } catch(e) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ ok: false, erro: e.message }));
+        }
+      });
+      return;
+    }
     if (req.url && req.url.startsWith('/test-sefaz-dist')) {
       const u = new URL(req.url, 'http://x');
       const ultNSU = u.searchParams.get('ultNSU') || '000000000000000';
       // Busca o certificado do Supabase (onde está salvo)
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-      req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).then(async rows => {
+      req2('GET', SB_URL+'/rest/v1/configuracoes?chave=eq.cert_principal&select=valor', null, {'apikey':SB_KEY}).then(async rows => {
         try {
-          const d = JSON.parse(rows[0].data);
-          const cert = d.dadosFiscais?.certificado;
-          if (!cert || !cert.pfxBase64) throw new Error('Certificado não encontrado nos dados fiscais. Configure em ⚙️ Config → Fiscal');
+          if (!Array.isArray(rows) || !rows.length) throw new Error('Certificado não configurado. Use o botão "Enviar Certificado pro Servidor" em Config → Fiscal');
+          const cert = JSON.parse(rows[0].valor);
+          if (!cert || !cert.pfxBase64) throw new Error('Certificado inválido. Reconfigure em Config → Fiscal');
           const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', ultNSU, 'prod');
           const nfes = parsearNFesDoXML(r.xml);
           res.writeHead(200, {'Content-Type':'application/json'});
