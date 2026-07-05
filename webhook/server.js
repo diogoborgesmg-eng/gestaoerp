@@ -782,6 +782,67 @@ ${contasHoje}
   return { ok: !!pdfBase64, ontemBR, hojeBR: brDataStr(hojeP.ano,hojeP.mes,hojeP.dia), receitaOntem, custoOntem, lucroOntem, diasComDados: diasDoMes.filter(d=>d.receita>0||d.custo>0).length, erroPdf };
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTA DE ESTOQUE BAIXO — checa diariamente e avisa via WhatsApp
+// ═══════════════════════════════════════════════════════════════
+async function checarEstoqueBaixo() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rows) || !rows.length) return;
+    const d = JSON.parse(rows[0].data);
+    const est = d.est || [];
+
+    // Filtra produtos com estoque abaixo do mínimo definido
+    const criticos = est.filter(p => {
+      const min = Number(p.min || 0);
+      const qtd = Number(p.q || 0);
+      return min > 0 && qtd <= min;
+    }).sort((a, b) => {
+      // Ordena do mais crítico (zerado) para o menos critico
+      const pctA = Number(a.q||0) / Number(a.min||1);
+      const pctB = Number(b.q||0) / Number(b.min||1);
+      return pctA - pctB;
+    });
+
+    if (criticos.length === 0) return;
+
+    const destinos = ['5534996853258', '5534997692282'];
+    const linhas = criticos.map(p => {
+      const qtd = Number(p.q||0).toFixed(1);
+      const min = Number(p.min||0).toFixed(1);
+      const emoji = Number(p.q||0) === 0 ? '🔴' : '🟡';
+      return `${emoji} ${p.n}: ${qtd} ${p.u||'un'} (mín: ${min})`;
+    });
+
+    const msg = "⚠️ *Estoque Baixo — Di Casa Laranjinha*\n\n" + linhas.join("\n") + "\n\n_Faça o pedido antes de acabar!_";
+    for (const num of destinos) await wpp(num, msg);
+    console.log('Alerta estoque baixo enviado:', criticos.length, 'produtos');
+  } catch(e) { console.error('Erro checarEstoqueBaixo:', e.message); }
+}
+
+// Roda 2x por dia: 8h e 14h (horário Brasília = 11h e 17h UTC)
+function agendarAlertsEstoque() {
+  const agora = new Date();
+  const horarios = [11, 17]; // UTC
+  const proximos = horarios.map(h => {
+    const d = new Date();
+    d.setUTCHours(h, 0, 0, 0);
+    if (d <= agora) d.setUTCDate(d.getUTCDate() + 1);
+    return d;
+  });
+  const prox = proximos.reduce((a, b) => a < b ? a : b);
+  const ms = prox - agora;
+  console.log(`Estoque: próximo alerta em ${Math.round(ms/60000)} minutos`);
+  setTimeout(() => {
+    checarEstoqueBaixo();
+    setInterval(checarEstoqueBaixo, 12 * 60 * 60 * 1000); // depois a cada 12h
+  }, ms);
+}
+agendarAlertsEstoque();
+
 let _ultimoCaixaAlertado = null;
 let _ifoodTokenCache = { token: null, expiresAt: 0 };
 async function obterTokenIfood() {
