@@ -301,12 +301,21 @@ const server = http.createServer((req, res) => {
           if (!pfxBase64 || !senha) throw new Error('pfxBase64 e senha obrigatórios');
           const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
           const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-          // Salva no Supabase numa tabela de configurações segura
-          await req2('POST', SB_URL+'/rest/v1/configuracoes', 
-            { chave: 'cert_principal', valor: JSON.stringify({ pfxBase64, senha, cnpj }), updated_at: new Date().toISOString() },
+          // Lê o blob atual e adiciona o certificado nele (sem precisar de nova tabela)
+          const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+          let dados = {};
+          let deviceId = 'servidor';
+          if (Array.isArray(rows) && rows.length) {
+            dados = JSON.parse(rows[0].data);
+            deviceId = rows[0].device_id || deviceId;
+          }
+          if (!dados.dadosFiscais) dados.dadosFiscais = {};
+          dados.dadosFiscais.certificado = { pfxBase64, senha, cnpj };
+          await req2('POST', SB_URL+'/rest/v1/erp_sync',
+            { device_id: deviceId, data: JSON.stringify(dados) },
             { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
           res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ ok: true, mensagem: 'Certificado salvo com sucesso!' }));
+          res.end(JSON.stringify({ ok: true, mensagem: 'Certificado salvo no sistema!' }));
         } catch(e) {
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ ok: false, erro: e.message }));
@@ -320,11 +329,12 @@ const server = http.createServer((req, res) => {
       // Busca o certificado do Supabase (onde está salvo)
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-      req2('GET', SB_URL+'/rest/v1/configuracoes?chave=eq.cert_principal&select=valor', null, {'apikey':SB_KEY}).then(async rows => {
+      req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).then(async rows => {
         try {
-          if (!Array.isArray(rows) || !rows.length) throw new Error('Certificado não configurado. Use o botão "Enviar Certificado pro Servidor" em Config → Fiscal');
-          const cert = JSON.parse(rows[0].valor);
-          if (!cert || !cert.pfxBase64) throw new Error('Certificado inválido. Reconfigure em Config → Fiscal');
+          if (!Array.isArray(rows) || !rows.length) throw new Error('Sem dados no sistema');
+          const d = JSON.parse(rows[0].data);
+          const cert = d.dadosFiscais?.certificado;
+          if (!cert || !cert.pfxBase64) throw new Error('Certificado não configurado. Use o botão "🔐 Enviar Certificado pro Servidor" em Config → Fiscal');
           const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', ultNSU, 'prod');
           const nfes = parsearNFesDoXML(r.xml);
           res.writeHead(200, {'Content-Type':'application/json'});
