@@ -9279,6 +9279,7 @@ ${funcs.filter(f=>f.ativo).length>0?`<div style="display:flex;justify-content:sp
 <div><label style="font-size:10px;color:var(--mu);">Token API</label><input id="cfg-backend-token" class="inpm" placeholder="gestaoerp_diCasa_..." style="font-size:10px;"/></div>
 </div>
 <button onclick="salvarDadosFiscais()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">💾 Salvar Dados Fiscais</button>
+<button onclick="enviarCertificadoServidor()" style="width:100%;margin-top:6px;padding:9px;border-radius:8px;border:none;background:rgba(0,200,150,0.15);border:1px solid rgba(0,200,150,0.4);color:#00c896;font-size:12px;font-weight:800;cursor:pointer;">🔐 Enviar Certificado pro Servidor (SEFAZ)</button>
 <button onclick="publicarNoVercel()" id="btn-publicar" style="width:100%;margin-top:6px;padding:11px;border-radius:8px;border:2px solid rgba(255,204,0,0.5);background:rgba(255,204,0,0.12);color:var(--ye);font-size:13px;font-weight:800;cursor:pointer;">🚀 Publicar Atualização no Vercel</button>
 <p style="font-size:9px;color:var(--mu);text-align:center;margin-top:4px;">Envia o sistema para o GitHub → Vercel atualiza em ~1 min</p>
 <button onclick="publicarNoVercel()" id="btn-publicar" style="width:100%;margin-top:6px;padding:9px;border-radius:8px;border:1px solid rgba(255,204,0,0.4);background:rgba(255,204,0,0.1);color:var(--ye);font-size:12px;font-weight:800;cursor:pointer;">🚀 Publicar Atualização no Vercel</button>
@@ -17327,6 +17328,23 @@ iniciarVerificacaoBancariaDiaria();
 // ═══════════════════════════════════════════════════════════════
 function gDadosFiscais(){return JSON.parse(localStorage.getItem('erp_dados_fiscais')||'{}');}
 function sDadosFiscais(d){localStorage.setItem('erp_dados_fiscais',JSON.stringify(d));}
+
+async function enviarCertificadoServidor(){
+ const pfx=localStorage.getItem('erp_cert_pfx_1')||'';
+ const senha=localStorage.getItem('erp_cert_senha_1')||'';
+ const info=JSON.parse(localStorage.getItem('erp_cert_info_1')||'{}');
+ if(!pfx){alert('Certificado não encontrado. Configure o certificado A1 primeiro.');return;}
+ if(!confirm('Isso vai enviar seu certificado digital pro servidor pra habilitar a consulta automática de NFs na SEFAZ.\nContinuar?'))return;
+ try{
+  const r=await fetch('https://gestaoerp-webhook.onrender.com/configurar-certificado',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({pfxBase64:pfx,senha,cnpj:info.cnpj||'44686412000100'})
+  });
+  const d=await r.json();
+  if(d.ok)alert('✅ Certificado enviado! Consulta SEFAZ habilitada.');
+  else alert('❌ Erro: '+d.erro);
+ }catch(e){alert('❌ Erro ao enviar: '+e.message);}
+}
 
 function salvarDadosFiscais(){
  const f=id=>document.getElementById(id)?.value?.trim()||'';
