@@ -111,6 +111,10 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="compras" onclick="ir('compras')" style="font-size:16px;padding:6px 10px;" title="Lista de Compras">🛒</button>
+<button class="tb" data-tab="precos" onclick="ir('precos')" style="font-size:16px;padding:6px 10px;" title="Preços">📈</button>
+<button class="tb" data-tab="escala" onclick="ir('escala')" style="font-size:16px;padding:6px 10px;" title="Escala">📅</button>
+<button class="tb" data-tab="semanal" onclick="ir('semanal')" style="font-size:16px;padding:6px 10px;" title="Semanal">📋</button>
 <button class="tb" data-tab="resumo" onclick="ir('resumo')" style="font-size:16px;padding:6px 10px;" title="Resumo">🏠</button>
 <button class="tb" data-tab="ind" onclick="ir('ind')" style="font-size:16px;padding:6px 10px;" title="Indicadores">💼</button>
 <button class="tb" data-tab="cmv" onclick="ir('cmv')" style="font-size:16px;padding:6px 10px;" title="CMV por Segmento">📊</button>
@@ -4948,6 +4952,263 @@ function calcCMVPorSegmento(de,ate){
   cmv:s.receita>0?((s.custo/s.receita)*100).toFixed(1):'-',
   resultado:s.receita-s.custo
  })).filter(s=>s.receita>0||s.custo>0);
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO 1 — LISTA DE COMPRAS
+// ═══════════════════════════════════════════════════════
+function rListaCompras(){
+ const db=ldb();
+ const est=db.est||[];
+ const forn=db.forn||[];
+
+ // Produtos que precisam de reposicao (abaixo do minimo ou zerados)
+ const precisaComprar=est.filter(p=>Number(p.q||0)<=Number(p.min||0)*1.2)
+  .sort((a,b)=>{
+   const pctA=Number(a.q||0)/Math.max(Number(a.min||1),1);
+   const pctB=Number(b.q||0)/Math.max(Number(b.min||1),1);
+   return pctA-pctB;
+  });
+
+ // Calcula quantidade sugerida (repoe para 7 dias de estoque)
+ function qtdSugerida(p){
+  const diasCobertura=7;
+  const consumoDiario=p._consumoDiario||(Number(p.min||0)/3);
+  const meta=consumoDiario*diasCobertura;
+  return Math.max(meta-Number(p.q||0),Number(p.min||0));
+ }
+
+ // Agrupa por fornecedor (usando lotes anteriores)
+ function fornecedorProduto(p){
+  if(p.lotes&&p.lotes.length>0){
+   const ultimo=p.lotes[p.lotes.length-1];
+   if(ultimo.nf)return ultimo.nf;
+  }
+  return 'Fornecedor não identificado';
+ }
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">🛒 Lista de Compras</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">${precisaComprar.length} produto(s) precisam de reposição</p>
+
+${precisaComprar.length===0
+ ?`<div style="background:var(--sf2);border-radius:12px;padding:20px;text-align:center;">
+  <p style="font-size:24px;">✅</p>
+  <p style="font-size:12px;color:var(--gr);">Estoque abastecido!</p>
+  <p style="font-size:11px;color:var(--mu);margin-top:4px;">Nenhum produto abaixo do mínimo.</p>
+ </div>`
+ :precisaComprar.map(p=>{
+  const qtd=qtdSugerida(p);
+  const custo=qtd*(p.cu||0);
+  const pct=Number(p.min||0)>0?(Number(p.q||0)/Number(p.min||0)*100).toFixed(0):0;
+  const cor=Number(p.q||0)===0?'var(--re)':Number(pct)<50?'var(--ye)':'var(--or)';
+  return`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;border-left:3px solid ${cor};">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+   <p style="font-size:12px;font-weight:800;">${p.grupo?.icone||'📦'} ${p.n}</p>
+   <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${cor}22;color:${cor};">
+    ${Number(p.q||0)===0?'ZERADO':pct+'% do mín.'}
+   </span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:8px;">
+   <span>Atual: ${Number(p.q||0).toFixed(1)} ${p.u||'un'} · Mín: ${Number(p.min||0)} ${p.u||'un'}</span>
+   <span>Último custo: ${brl(p.cu||0)}/${p.u||'un'}</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+   <div style="flex:1;background:var(--sf);border-radius:8px;padding:6px 8px;">
+    <p style="font-size:9px;color:var(--mu);margin-bottom:2px;">Qtd sugerida</p>
+    <input type="number" id="compra-qty-${p.id}" value="${qtd.toFixed(1)}" min="0" step="0.5"
+     style="width:100%;background:transparent;border:none;color:#fff;font-size:13px;font-weight:700;"/>
+   </div>
+   <div style="text-align:right;">
+    <p style="font-size:9px;color:var(--mu);">Custo est.</p>
+    <p style="font-size:12px;font-weight:700;">${brl(custo)}</p>
+   </div>
+  </div>
+ </div>`;
+ }).join('')}
+
+${precisaComprar.length>0?`
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-top:8px;">
+ <p style="font-size:11px;font-weight:700;margin-bottom:6px;">Custo total estimado</p>
+ <p style="font-size:18px;font-weight:800;color:var(--ye);">${brl(precisaComprar.reduce((a,p)=>a+qtdSugerida(p)*(p.cu||0),0))}</p>
+</div>
+<button onclick="enviarListaWhatsApp()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📱 Enviar lista pro WhatsApp</button>
+`:''}
+</div>`;
+}
+
+async function enviarListaWhatsApp(){
+ const db=ldb();
+ const est=db.est||[];
+ const precisaComprar=est.filter(p=>Number(p.q||0)<=Number(p.min||0)*1.2);
+ if(!precisaComprar.length){alert('Nenhum produto pra comprar!');return;}
+ const linhas=precisaComprar.map(p=>{
+  const inp=document.getElementById('compra-qty-'+p.id);
+  const qtd=inp?parseFloat(inp.value||0):0;
+  if(qtd<=0)return null;
+  return `• ${p.n}: ${qtd.toFixed(1)} ${p.u||'un'}`;
+ }).filter(Boolean);
+ if(!linhas.length){alert('Informe as quantidades.');return;}
+ const texto=`🛒 *Lista de Compras — Di Casa Laranjinha*\n${new Date().toLocaleDateString('pt-BR')}\n\n${linhas.join('\n')}\n\n_Gerado pelo GestaoERP_`;
+ if(navigator.share){
+  await navigator.share({text:texto}).catch(()=>{});
+ }else{
+  const el=document.createElement('textarea');
+  el.value=texto;document.body.appendChild(el);el.select();
+  document.execCommand('copy');document.body.removeChild(el);
+  alert('✅ Lista copiada! Cole no WhatsApp do fornecedor.');
+ }
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO 2 — HISTÓRICO DE PREÇOS
+// ═══════════════════════════════════════════════════════
+function rHistoricoPrecos(){
+ const db=ldb();
+ const est=db.est||[];
+ const prodComLotes=est.filter(p=>p.lotes&&p.lotes.length>1)
+  .sort((a,b)=>(a.n||'').localeCompare(b.n||''));
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📈 Histórico de Preços</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Variação por produto entre compras</p>
+
+${prodComLotes.length===0
+ ?`<p style="font-size:12px;color:var(--mu);">Ainda não há histórico. Importe NFs da SEFAZ para gerar automaticamente.</p>`
+ :prodComLotes.map(p=>{
+  const lotes=p.lotes.slice(-5); // ultimos 5 lotes
+  const primeiro=lotes[0];const ultimo=lotes[lotes.length-1];
+  const variacao=primeiro.cuPorUn>0?((ultimo.cuPorUn-primeiro.cuPorUn)/primeiro.cuPorUn*100):0;
+  const corVar=variacao>10?'var(--re)':variacao>0?'var(--ye)':variacao<0?'var(--gr)':'var(--mu)';
+  return`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+   <p style="font-size:12px;font-weight:800;">${p.grupo?.icone||'📦'} ${p.n}</p>
+   <span style="font-size:12px;font-weight:800;color:${corVar};">${variacao>0?'+':''}${variacao.toFixed(1)}%</span>
+  </div>
+  <div style="display:flex;gap:4px;overflow-x:auto;">
+  ${lotes.map((l,i)=>`<div style="min-width:60px;text-align:center;background:var(--sf);border-radius:6px;padding:6px 4px;">
+   <p style="font-size:9px;color:var(--mu);">${l.dt||'-'}</p>
+   <p style="font-size:11px;font-weight:700;color:${i>0&&l.cuPorUn>lotes[i-1].cuPorUn?'var(--re)':i>0&&l.cuPorUn<lotes[i-1].cuPorUn?'var(--gr)':'#fff'};">${brl(l.cuPorUn||0)}</p>
+   <p style="font-size:9px;color:var(--mu);">${l.qtdUn||l.qtdCx||0} ${p.u||'un'}</p>
+  </div>`).join('')}
+  </div>
+ </div>`;
+ }).join('')}
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO 3 — RH: ESCALA E HORAS EXTRAS
+// ═══════════════════════════════════════════════════════
+function rEscala(){
+ const db=ldb();
+ const funcs=gFuncs().filter(f=>f.ativo);
+ const hoje=new Date();
+ const diasSemana=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+ // Gera os proximos 7 dias
+ const dias=[];
+ for(let i=0;i<7;i++){
+  const d=new Date(hoje);d.setDate(d.getDate()+i);
+  const key=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  dias.push({key,label:diasSemana[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)});
+ }
+ const escala=db.escala||{};
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📅 Escala de Trabalho</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Próximos 7 dias — toque para marcar turno</p>
+
+${funcs.length===0?`<p style="font-size:12px;color:var(--mu);">Cadastre funcionários em ⏱️ Ponto primeiro.</p>`:''}
+
+${funcs.map(f=>`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:8px;">
+<p style="font-size:12px;font-weight:700;margin-bottom:8px;">${f.nome} <span style="font-size:10px;color:var(--mu);">${f.cargo||''}</span></p>
+<div style="display:flex;gap:4px;overflow-x:auto;">
+${dias.map(d=>{
+ const turno=escala[f.id]?.[d.key]||'';
+ const cor=turno==='M'?'var(--bl)':turno==='T'?'var(--or)':turno==='N'?'var(--pu)':turno==='F'?'var(--re)':'var(--sf)';
+ return`<button onclick="toggleEscala('${f.id}','${d.key}')"
+  style="min-width:38px;height:48px;border-radius:8px;border:none;background:${cor};color:#fff;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;">
+  <p style="font-size:8px;color:rgba(255,255,255,0.7);">${d.label.split(' ')[0]}</p>
+  <p>${turno||'—'}</p>
+ </button>`;
+}).join('')}
+</div>
+</div>`).join('')}
+
+${funcs.length>0?`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-top:4px;">
+<p style="font-size:10px;color:var(--mu);">M = Manhã · T = Tarde · N = Noite · F = Folga · — = Sem escala</p>
+</div>`:''}
+</div>`;
+}
+
+function toggleEscala(funcId,dia){
+ const db=ldb();
+ if(!db.escala)db.escala={};
+ if(!db.escala[funcId])db.escala[funcId]={};
+ const atual=db.escala[funcId][dia]||'';
+ const seq=['','M','T','N','F'];
+ const prox=seq[(seq.indexOf(atual)+1)%seq.length];
+ db.escala[funcId][dia]=prox;
+ sdb(db);render();
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO 4 — RELATÓRIO SEMANAL AUTOMÁTICO
+// já rodando no servidor — aqui mostra o ultimo enviado
+// ═══════════════════════════════════════════════════════
+function rRelatorioSemanal(){
+ const db=ldb();
+ const hoje=hj();
+ const mesAtual=hoje.slice(3);
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mesAtual).sort();
+
+ // Agrupa por semana
+ const semanas={};
+ diasMes.forEach(d=>{
+  const[dd,mm,yy]=d.split('/');
+  const dt=new Date(yy,mm-1,dd);
+  const semana=Math.ceil(parseInt(dd)/7);
+  const key=`Semana ${semana}`;
+  if(!semanas[key])semanas[key]={dias:[],rec:0,cus:0};
+  semanas[key].dias.push(d);
+  semanas[key].rec+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  semanas[key].cus+=(db[d].c||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ });
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📋 Relatório Semanal</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Enviado automaticamente todo domingo às 20h via WhatsApp</p>
+
+${Object.entries(semanas).reverse().map(([sem,s])=>{
+ const luc=s.rec-s.cus;
+ const mar=s.rec>0?((luc/s.rec)*100).toFixed(1):'-';
+ return`<div style="background:var(--sf2);border-radius:10px;padding:12px;margin-bottom:8px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:12px;font-weight:800;">${sem} <span style="font-size:10px;color:var(--mu);">(${s.dias.length} dias)</span></p>
+  <span style="font-size:11px;color:${luc>=0?'var(--gr)':'var(--re)'};">${mar==='--'?'--':mar+'% margem'}</span>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+  <div><p style="font-size:9px;color:var(--mu);">Receita</p><p style="font-size:12px;font-weight:700;color:var(--gr);">${brl(s.rec)}</p></div>
+  <div><p style="font-size:9px;color:var(--mu);">Custo</p><p style="font-size:12px;font-weight:700;color:var(--re);">${brl(s.cus)}</p></div>
+  <div><p style="font-size:9px;color:var(--mu);">Lucro</p><p style="font-size:12px;font-weight:700;color:${luc>=0?'var(--gr)':'var(--re)'};">${brl(luc)}</p></div>
+ </div>
+</div>`;
+}).join('')}
+
+${Object.keys(semanas).length===0?`<p style="font-size:12px;color:var(--mu);">Nenhum dado ainda este mês.</p>`:''}
+
+<button onclick="enviarRelatorioSemanalAgora()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:var(--pu);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📲 Enviar Relatório Agora</button>
+</div>`;
+}
+
+
+async function enviarRelatorioSemanalAgora(){
+ try{
+  const r=await fetch('https://gestaoerp-webhook.onrender.com/relatorio-semanal',{method:'POST'});
+  const d=await r.json();
+  if(d.ok)alert('✅ Relatório enviado no WhatsApp!');
+  else alert('❌ Erro: '+(d.erro||'desconhecido'));
+ }catch(e){alert('❌ Erro: '+e.message);}
 }
 
 function rResumo(){
@@ -10058,7 +10319,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
