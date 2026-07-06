@@ -455,6 +455,16 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url === '/relatorio-pdf') {
+      gerarEnviarRelatorioPDF().then(result => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(result));
+      }).catch(e => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url && req.url.startsWith('/test-sefaz-dist')) {
       const u = new URL(req.url, 'http://x');
       const ultNSU = u.searchParams.get('ultNSU') || '000000000000000';
@@ -527,17 +537,6 @@ const server = http.createServer((req, res) => {
       }).catch(e => {
         res.writeHead(500, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ok:false, erro:e.message}));
-      });
-      return;
-    }
-    // Rota de teste: gerar e enviar relatorio PDF agora
-    if (req.url === '/relatorio-pdf') {
-      gerarEnviarRelatorioPDF().then(result => {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify(result));
-      }).catch(e => {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false,erro:e.message}));
       });
       return;
     }
