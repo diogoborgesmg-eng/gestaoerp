@@ -17947,7 +17947,7 @@ const btn=document.querySelector('[onclick="salvarDadosFiscais()"]');
  if(btn){const t=btn.textContent;btn.textContent='✅ Salvo!';setTimeout(()=>btn.textContent=t,1500);}
 }
 
-function limparDadosTeste(){
+async function limparDadosTeste(){
  if(!confirm('ATENÇÃO: Apaga estoque, vendas, lançamentos e comandas.\nNÃO apaga: cardápio PDV, fichas técnicas, fornecedores, configs.\n\nContinuar?'))return;
  const db=ldb();
  const keep={
@@ -17967,22 +17967,24 @@ function limparDadosTeste(){
  localStorage.clear();
  keys.forEach(k=>{if(cfg[k])localStorage.setItem(k,cfg[k]);});
  localStorage.setItem('erp',JSON.stringify(keep));
- localStorage.setItem('erp_ultimo_blob_sync','');
- // Limpa tambem o blob no Supabase (evita que o sync traga de volta)
+ localStorage.setItem('erp_ultimo_blob_sync','cleared_'+Date.now());
+ // Limpa tambem o blob no Supabase ANTES de renderizar (evita sync trazer de volta)
  const cfg2=getSupabaseCfg();
  if(cfg2.url&&cfg2.key){
-  fetch(`${cfg2.url}/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1`,{headers:{'apikey':cfg2.key}})
-   .then(r=>r.json()).then(rows=>{
-    if(!rows||!rows.length)return;
+  try{
+   const r=await fetch(`${cfg2.url}/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1`,{headers:{'apikey':cfg2.key}});
+   const rows=await r.json();
+   if(rows&&rows.length){
     const d=JSON.parse(rows[0].data);
-    d.est=[]; d.contasPagar=[];
+    d.est=[];d.contasPagar=[];
     Object.keys(d).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(k=>delete d[k]);
-    fetch(`${cfg2.url}/rest/v1/erp_sync`,{
+    await fetch(`${cfg2.url}/rest/v1/erp_sync`,{
      method:'POST',
      headers:{'apikey':cfg2.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
      body:JSON.stringify({device_id:cfg2.deviceId,data:JSON.stringify(d)})
     });
-   }).catch(()=>{});
+   }
+  }catch(e){console.error('Erro limpar nuvem:',e.message);}
  }
  alert('✅ Dados de teste limpos local e na nuvem!\nCardápio, fichas, fornecedores e configurações mantidos.');
  render();
