@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="csv" onclick="ir('csv')" style="font-size:16px;padding:6px 10px;" title="Extrato Bancário">🏦</button>
 <button class="tb" data-tab="dash" onclick="ir('dash')" style="font-size:16px;padding:6px 10px;" title="Dashboard">📈</button>
 <button class="tb" data-tab="fluxo" onclick="ir('fluxo')" style="font-size:16px;padding:6px 10px;" title="Fluxo de Caixa">🌊</button>
 <button class="tb" data-tab="fin2" onclick="ir('fin2')" style="font-size:16px;padding:6px 10px;" title="DRE Completo">💰</button>
@@ -5365,6 +5366,189 @@ ${meses.map(m=>{
 </div>
 </div>
 </div>`;
+}
+
+
+function rCsvBanco(){
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">🏦 Importar Extrato Bancário</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Stone · C6 · Sicoob · Santander · Inter · Nubank</p>
+
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+ <p style="font-size:11px;font-weight:700;margin-bottom:8px;">Como exportar o CSV:</p>
+ <div style="font-size:11px;color:var(--mu);line-height:1.8;">
+  <p>• <strong style="color:#fff;">Stone:</strong> App → Extrato → Exportar → CSV</p>
+  <p>• <strong style="color:#fff;">C6:</strong> App → Extrato → Compartilhar → CSV</p>
+  <p>• <strong style="color:#fff;">Sicoob:</strong> Internet Banking → Extrato → Exportar OFX/CSV</p>
+  <p>• <strong style="color:#fff;">Santander:</strong> App → Extrato → Exportar → CSV</p>
+  <p>• <strong style="color:#fff;">Inter:</strong> App → Extrato → Exportar CSV</p>
+ </div>
+</div>
+
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+ <label style="font-size:12px;font-weight:700;display:block;margin-bottom:8px;">Selecionar banco:</label>
+ <select id="csv-banco" style="width:100%;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;color:#fff;font-size:12px;margin-bottom:10px;">
+  <option value="stone">Stone</option>
+  <option value="c6">C6 Bank</option>
+  <option value="sicoob">Sicoob</option>
+  <option value="santander">Santander</option>
+  <option value="inter">Inter</option>
+  <option value="nubank">Nubank</option>
+  <option value="auto">Detectar automaticamente</option>
+ </select>
+ <input type="file" id="csv-file" accept=".csv,.txt,.ofx" style="display:none;" onchange="processarCsvBanco(this)"/>
+ <button onclick="document.getElementById('csv-file').click()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bl);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📂 Selecionar arquivo CSV</button>
+</div>
+
+<div id="csv-preview" style="display:none;"></div>
+</div>`;
+}
+
+async function processarCsvBanco(input){
+ const file=input.files[0];
+ if(!file)return;
+ const banco=document.getElementById('csv-banco')?.value||'auto';
+ const texto=await file.text();
+ const linhas=texto.split('\\n').map(l=>l.trim()).filter(l=>l.length>0);
+ const transacoes=parsearCsvBanco(linhas,banco,file.name);
+ if(!transacoes.length){
+  alert('Nenhuma transação encontrada. Verifique o arquivo e o banco selecionado.');
+  return;
+ }
+ // Classifica automaticamente
+ transacoes.forEach(t=>{
+  t.categoria=classificarTransacao(t.descricao,t.valor);
+  t.tipo=t.valor<0?'custo':'receita';
+  t.selecionado=t.valor<0; // pre-seleciona debitos
+ });
+ mostrarPreviewCsv(transacoes,banco);
+}
+
+function parsearCsvBanco(linhas,banco,filename){
+ const transacoes=[];
+ // Detecta banco automaticamente pelo header ou nome do arquivo
+ const header=linhas[0]?.toLowerCase()||'';
+ const fn=filename.toLowerCase();
+ let bncDetect=banco;
+ if(banco==='auto'){
+  if(header.includes('stone')||fn.includes('stone'))bncDetect='stone';
+  else if(header.includes('c6')||fn.includes('c6'))bncDetect='c6';
+  else if(header.includes('sicoob')||fn.includes('sicoob')||fn.includes('ccla'))bncDetect='sicoob';
+  else if(header.includes('santander')||fn.includes('santander'))bncDetect='santander';
+  else if(header.includes('inter')||fn.includes('inter'))bncDetect='inter';
+  else if(header.includes('nubank')||fn.includes('nu'))bncDetect='nubank';
+  else bncDetect='generico';
+ }
+ // Parser generico que tenta extrair data/descricao/valor
+ for(let i=1;i<linhas.length;i++){
+  const l=linhas[i];
+  // Separadores: virgula, ponto-e-virgula, tab
+  const sep=l.includes(';')?';':l.includes('\\t')?'\\t':',';
+  const cols=l.split(sep).map(c=>c.replace(/["']/g,'').trim());
+  if(cols.length<2)continue;
+  // Tenta encontrar data, descricao e valor nas colunas
+  let data='',desc='',valor=0;
+  cols.forEach((col,idx)=>{
+   // Data: DD/MM/YYYY ou YYYY-MM-DD
+   if(/\\d{2}[\\/-]\\d{2}[\\/-]\\d{4}/.test(col)||/\\d{4}-\\d{2}-\\d{2}/.test(col)){
+    if(col.includes('-')&&col.length===10){
+     const[y,m,d]=col.split('-');
+     data=`${d}/${m}/${y}`;
+    }else data=col.replace(/-/g,'/');
+   }
+   // Valor: numero com possivel sinal e separadores BR/EN
+   const numStr=col.replace(/[R$\\s]/g,'').replace(/\\./g,'').replace(',','.');
+   const num=parseFloat(numStr);
+   if(!isNaN(num)&&Math.abs(num)>0.01&&idx>0)valor=num;
+   // Descricao: coluna de texto mais longa
+   if(col.length>desc.length&&!/^[\\d,\\.\\/-]+$/.test(col))desc=col;
+  });
+  if(data&&Math.abs(valor)>0.01){
+   transacoes.push({data,descricao:desc.slice(0,60),valor,banco:bncDetect,id:'csv_'+Date.now()+'_'+i});
+  }
+ }
+ return transacoes;
+}
+
+function classificarTransacao(desc,valor){
+ const d=(desc||'').toLowerCase();
+ if(valor>0)return '💰 Receita/Transferência recebida';
+ if(/(alcatra|frango|carne|bovino|suino|peixe|hortifruti|verdura|legume)/.test(d))return '🥩 Matéria Prima';
+ if(/(embalagem|bandeja|sacola|copo|prato descart)/.test(d))return '📦 Embalagem';
+ if(/(limpeza|detergente|sabao|desinf|alcool|cloro)/.test(d))return '🧹 Limpeza/Higiene';
+ if(/(salario|pagamento|diaria|funcionario|colaborador)/.test(d))return '👥 RH / Mão de Obra';
+ if(/(aluguel|locacao|condominio)/.test(d))return '🏢 Custos Fixos';
+ if(/(energia|eletric|cemig|copasa|agua|gas)/.test(d))return '🏢 Custos Fixos';
+ if(/(internet|telefon|claro|vivo|tim|oi)/.test(d))return '📱 Telecom/Internet';
+ if(/(juros|multa|mora|atraso)/.test(d))return '⚠️ Juros/Multa';
+ if(/(taxa|tarifa|ted|pix|transf)/.test(d))return '💳 Taxas/Impostos';
+ if(/(ifood|rappi|uber|delivery)/.test(d))return '🚚 Frete/Entregador';
+ return '🔄 Outros';
+}
+
+function mostrarPreviewCsv(transacoes,banco){
+ const preview=document.getElementById('csv-preview');
+ if(!preview)return;
+ preview.style.display='block';
+ const debitos=transacoes.filter(t=>t.valor<0);
+ const creditos=transacoes.filter(t=>t.valor>0);
+ const totalDebitos=debitos.reduce((a,t)=>a+Math.abs(t.valor),0);
+ const totalCreditos=creditos.reduce((a,t)=>a+t.valor,0);
+ preview.innerHTML=`
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+ <p style="font-size:12px;font-weight:800;margin-bottom:8px;">📋 Preview — ${transacoes.length} transações</p>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+  <div style="background:rgba(255,51,102,0.1);border-radius:8px;padding:8px;text-align:center;">
+   <p style="font-size:9px;color:var(--mu);">Débitos</p>
+   <p style="font-size:14px;font-weight:800;color:var(--re);">${brl(totalDebitos)}</p>
+  </div>
+  <div style="background:rgba(0,255,136,0.1);border-radius:8px;padding:8px;text-align:center;">
+   <p style="font-size:9px;color:var(--mu);">Créditos</p>
+   <p style="font-size:14px;font-weight:800;color:var(--gr);">${brl(totalCreditos)}</p>
+  </div>
+ </div>
+ <div style="max-height:250px;overflow-y:auto;">
+ ${transacoes.slice(0,30).map((t,i)=>`
+ <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;">
+  <input type="checkbox" id="csv-sel-${i}" ${t.selecionado?'checked':''} style="flex-shrink:0;"/>
+  <div style="flex:1;min-width:0;">
+   <p style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.descricao}</p>
+   <p style="color:var(--mu);font-size:10px;">${t.data}</p>
+  </div>
+  <div style="text-align:right;flex-shrink:0;">
+   <p style="font-weight:700;color:${t.valor<0?'var(--re)':'var(--gr)'};">${brl(Math.abs(t.valor))}</p>
+   <select onchange="_csvTrans[${i}].categoria=this.value" style="font-size:9px;background:var(--sf);border:none;color:var(--mu);max-width:100px;">
+    ${['🥩 Matéria Prima','📦 Embalagem','🧹 Limpeza/Higiene','👥 RH / Mão de Obra','🏢 Custos Fixos','📱 Telecom/Internet','⚠️ Juros/Multa','💳 Taxas/Impostos','🚚 Frete/Entregador','💰 Receita/Transferência recebida','🔄 Outros'].map(cat=>`<option value="${cat}" ${t.categoria===cat?'selected':''}>${cat}</option>`).join('')}
+   </select>
+  </div>
+ </div>`).join('')}
+ </div>
+ <button onclick="importarCsvSelecionados(_csvTrans)" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:none;background:var(--gr);color:#000;font-size:13px;font-weight:800;cursor:pointer;">✅ Importar selecionados</button>
+</div>`;
+ window._csvTrans=transacoes;
+}
+
+function importarCsvSelecionados(transacoes){
+ const db=ldb();
+ let importados=0;
+ transacoes.forEach((t,i)=>{
+  const cb=document.getElementById('csv-sel-'+i);
+  if(!cb?.checked)return;
+  const dia=t.data;
+  if(!db[dia])db[dia]={r:[],c:[]};
+  const item={id:t.id,d:t.descricao,v:Math.abs(t.valor),cat:t.categoria,seg:'fixo',dt:dia,_csv:true};
+  const tipo=t.valor<0?'c':'r';
+  // Evita duplicata
+  const jaExiste=db[dia][tipo].some(x=>x.id===t.id||(String(x.v)===String(item.v)&&x.d.slice(0,10)===item.d.slice(0,10)));
+  if(!jaExiste){
+   db[dia][tipo].push(item);
+   gravarLancamentoSupabase(tipo==='c'?'custo':'receita',dia,t.descricao,t.categoria,'fixo',Math.abs(t.valor),null,t.id).catch(()=>{});
+   importados++;
+  }
+ });
+ sdb(db);
+ alert('✅ '+importados+' transações importadas!');
+ render();
 }
 
 
@@ -10730,7 +10914,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,csv:rCsvBanco,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
