@@ -111,6 +111,8 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="cc" onclick="ir('cc')" style="font-size:16px;padding:6px 10px;" title="Centro de Custo">🏭</button>
+<button class="tb" data-tab="aforn" onclick="ir('aforn')" style="font-size:16px;padding:6px 10px;" title="Fornecedores">🤝</button>
 <button class="tb" data-tab="csv" onclick="ir('csv')" style="font-size:16px;padding:6px 10px;" title="Extrato Bancário">🏦</button>
 <button class="tb" data-tab="dash" onclick="ir('dash')" style="font-size:16px;padding:6px 10px;" title="Dashboard">📈</button>
 <button class="tb" data-tab="fluxo" onclick="ir('fluxo')" style="font-size:16px;padding:6px 10px;" title="Fluxo de Caixa">🌊</button>
@@ -5572,6 +5574,165 @@ function importarCsvSelecionados(transacoes){
 }
 
 
+// ═══════════════════════════════════════════════════════
+// CENTRO DE CUSTO — P&L por segmento
+// ═══════════════════════════════════════════════════════
+function rCentroCusto(){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mes).sort();
+
+ const segs={
+  restaurante:{nome:'🍽️ Restaurante',cor:'#00ff88',rec:0,cus:0},
+  espetaria:{nome:'🍢 Espetaria',cor:'#ff8800',rec:0,cus:0},
+  pizzaria:{nome:'🍕 Pizzaria',cor:'#ff3366',rec:0,cus:0},
+  hamburgueria:{nome:'🍔 Hamburgueria',cor:'#aa44ff',rec:0,cus:0},
+  fixo:{nome:'🏢 Custos Fixos',cor:'#888',rec:0,cus:0},
+ };
+
+ diasMes.forEach(d=>{
+  (db[d].r||[]).forEach(x=>{
+   const seg=(x.seg||'restaurante').toLowerCase().replace(/[^a-z]/g,'');
+   if(segs[seg])segs[seg].rec+=Number(x.v||0);
+   else segs.restaurante.rec+=Number(x.v||0);
+  });
+  (db[d].c||[]).forEach(x=>{
+   const seg=(x.seg||'fixo').toLowerCase().replace(/[^a-z]/g,'');
+   if(segs[seg])segs[seg].cus+=Number(x.v||0);
+   else segs.fixo.cus+=Number(x.v||0);
+  });
+ });
+
+ const totalRec=Object.values(segs).reduce((a,s)=>a+s.rec,0);
+ const totalCus=Object.values(segs).reduce((a,s)=>a+s.cus,0);
+ const totalLuc=totalRec-totalCus;
+
+ // Rateio de custos fixos proporcionalmente à receita
+ const recVenda=Object.values(segs).filter(s=>s.nome!=='🏢 Custos Fixos').reduce((a,s)=>a+s.rec,0);
+ const cusFixo=segs.fixo.cus;
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">🏭 Centro de Custo — ${mes}</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">P&L por segmento do negócio</p>
+
+<!-- TOTAL -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+  <div><p style="font-size:9px;color:var(--mu);">Receita Total</p><p style="font-size:14px;font-weight:800;color:var(--gr);">${brl(totalRec)}</p></div>
+  <div><p style="font-size:9px;color:var(--mu);">Custos Total</p><p style="font-size:14px;font-weight:800;color:var(--re);">${brl(totalCus)}</p></div>
+  <div><p style="font-size:9px;color:var(--mu);">Lucro</p><p style="font-size:14px;font-weight:800;color:${totalLuc>=0?'var(--gr)':'var(--re)'};">${brl(totalLuc)}</p></div>
+ </div>
+</div>
+
+<!-- POR SEGMENTO -->
+${Object.entries(segs).filter(([id,s])=>id!=='fixo'&&(s.rec>0||s.cus>0)).map(([id,s])=>{
+ // Rateio do custo fixo proporcional à receita do segmento
+ const cusFixoRateado=recVenda>0?(s.rec/recVenda)*cusFixo:0;
+ const cusTotal=s.cus+cusFixoRateado;
+ const lucro=s.rec-cusTotal;
+ const margem=s.rec>0?((lucro/s.rec)*100).toFixed(1):'-';
+ const cmv=s.rec>0?((s.cus/s.rec)*100).toFixed(1):'-';
+ return`<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;border-left:3px solid ${s.cor};">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:13px;font-weight:800;">${s.nome}</p>
+  <span style="font-size:12px;font-weight:800;color:${lucro>=0?'var(--gr)':'var(--re)'};">${margem!=='-'?margem+'%':'-'} margem</span>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:8px;">
+  <div style="background:var(--sf);border-radius:6px;padding:6px;">
+   <p style="font-size:8px;color:var(--mu);">Receita</p>
+   <p style="font-size:12px;font-weight:700;color:var(--gr);">${brl(s.rec)}</p>
+  </div>
+  <div style="background:var(--sf);border-radius:6px;padding:6px;">
+   <p style="font-size:8px;color:var(--mu);">Custo direto</p>
+   <p style="font-size:12px;font-weight:700;color:var(--ye);">${brl(s.cus)}</p>
+  </div>
+  <div style="background:var(--sf);border-radius:6px;padding:6px;">
+   <p style="font-size:8px;color:var(--mu);">Lucro c/rateio</p>
+   <p style="font-size:12px;font-weight:700;color:${lucro>=0?'var(--gr)':'var(--re)'};">${brl(lucro)}</p>
+  </div>
+ </div>
+ <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mu);">
+  <span>CMV: ${cmv!=='-'?cmv+'%':'-'}</span>
+  <span>Fixo rateado: ${brl(cusFixoRateado)}</span>
+  <span>Part. receita: ${totalRec>0?((s.rec/totalRec)*100).toFixed(0)+'%':'-'}</span>
+ </div>
+</div>`;
+}).join('')}
+
+<!-- CUSTOS FIXOS -->
+${cusFixo>0?`<div style="background:var(--sf2);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.08);">
+<p style="font-size:11px;color:var(--mu);">🏢 Custos Fixos compartilhados: <strong style="color:#fff;">${brl(cusFixo)}</strong> — rateados proporcionalmente entre os segmentos acima</p>
+</div>`:''}
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// ANÁLISE DE FORNECEDORES
+// ═══════════════════════════════════════════════════════
+function rAnalForn(){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mes);
+
+ // Agrupa gastos por fornecedor/destinatario
+ const fornMap={};
+ diasMes.forEach(d=>{
+  (db[d].c||[]).forEach(x=>{
+   const nome=(x.d||x.desc||'Outros').trim();
+   if(!nome||nome.length<2)return;
+   if(!fornMap[nome])fornMap[nome]={nome,total:0,count:0,cat:x.cat||'',datas:[]};
+   fornMap[nome].total+=Number(x.v||0);
+   fornMap[nome].count++;
+   fornMap[nome].datas.push(d);
+  });
+ });
+
+ // Também de contas a pagar pagas no mes
+ (db.contasPagar||[]).filter(cp=>cp.pago).forEach(cp=>{
+  const dtPag=cp.dtPagamento||'';
+  if(!dtPag.slice(3)===mes)return;
+  const nome=(cp.forn||cp.desc||'Outros').trim();
+  if(!fornMap[nome])fornMap[nome]={nome,total:0,count:0,cat:cp.cat||'',datas:[]};
+  fornMap[nome].total+=Number(cp.val||cp.valor||0);
+  fornMap[nome].count++;
+ });
+
+ const lista=Object.values(fornMap).sort((a,b)=>b.total-a.total);
+ const totalGasto=lista.reduce((a,f)=>a+f.total,0);
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">🤝 Análise de Fornecedores — ${mes}</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Total gasto: ${brl(totalGasto)} com ${lista.length} fornecedores</p>
+
+${lista.length===0
+ ?`<p style="font-size:12px;color:var(--mu);">Nenhum gasto registrado ainda. Importe extratos ou registre pagamentos.</p>`
+ :lista.slice(0,20).map((f,i)=>{
+  const pct=totalGasto>0?((f.total/totalGasto)*100).toFixed(1):0;
+  const barW=Math.min(100,parseFloat(pct)*2);
+  return`<div style="background:var(--sf2);border-radius:10px;padding:10px;margin-bottom:6px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+   <div style="flex:1;min-width:0;">
+    <p style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i+1}. ${f.nome}</p>
+    <p style="font-size:10px;color:var(--mu);">${f.cat||'Outros'} · ${f.count} lançamento(s)</p>
+   </div>
+   <div style="text-align:right;margin-left:8px;">
+    <p style="font-size:14px;font-weight:800;">${brl(f.total)}</p>
+    <p style="font-size:10px;color:var(--mu);">${pct}% do total</p>
+   </div>
+  </div>
+  <div style="background:var(--sf);border-radius:3px;height:4px;">
+   <div style="height:100%;border-radius:3px;background:var(--bl);width:${barW}%;"></div>
+  </div>
+ </div>`;
+ }).join('')}
+
+${lista.length>20?`<p style="font-size:11px;color:var(--mu);text-align:center;padding:8px;">+ ${lista.length-20} outros fornecedores</p>`:''}
+</div>`;
+}
+
+
 function rListaCompras(){
  const db=ldb();
  const est=db.est||[];
@@ -10934,7 +11095,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,csv:rCsvBanco,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,csv:rCsvBanco,cc:rCentroCusto,aforn:rAnalForn,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
