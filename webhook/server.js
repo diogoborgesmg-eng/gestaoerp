@@ -1428,36 +1428,43 @@ async function consultarNFsRecebidas() {
 // ═══════════════════════════════════════════════════════════════
 async function gerarEnviarRelatorioPDF() {
   try {
-    const PDFDocument = require('pdfkit');
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-
-    // Busca dados do sistema
-    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
-    if (!Array.isArray(rows)||!rows.length) return {ok:false,erro:'Sem dados'};
-    const d = JSON.parse(rows[0].data);
     const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-    // Período: últimos 7 dias
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    // Funde com tabela lancamentos
+    let r = {};
+    if (Array.isArray(rows) && rows.length) r = JSON.parse(rows[0].data);
+    try {
+      const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&order=created_at.desc&limit=2000', null, {'apikey':SB_KEY});
+      if (Array.isArray(lancRows)) lancRows.forEach(l => {
+        const dia = l.dia_comercial; if (!dia) return;
+        if (!r[dia]) r[dia] = {r:[],c:[]};
+        const jaExiste = [...(r[dia].r||[]),...(r[dia].c||[])].some(x=>x.id===l.id);
+        if (!jaExiste) {
+          const item = {id:l.id,d:l.descricao,v:Number(l.valor||0),cat:l.categoria,seg:l.segmento,dt:dia};
+          if (l.tipo==='receita') r[dia].r.push(item); else r[dia].c.push(item);
+        }
+      });
+    } catch(e) {}
+
+    // Periodo: ultimos 7 dias
     const agora = new Date();
     const dias7 = [];
     for (let i=6;i>=0;i--) {
       const dt = new Date(agora); dt.setDate(dt.getDate()-i);
-      const k = String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();
-      dias7.push(k);
+      dias7.push(String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear());
     }
-    const inicioPeriodo = dias7[0];
-    const fimPeriodo = dias7[6];
 
-    // Calcula DRE da semana
-    let rec=0,matPrima=0,rh=0,emb=0,fixo=0,juros=0,tarifas=0,taxas=0,outros=0;
+    let rec=0,matPrima=0,rhCus=0,emb=0,fixo=0,juros=0,tarifas=0,taxas=0,outros=0;
     dias7.forEach(k => {
-      const dia = d[k]||{r:[],c:[]};
+      const dia = r[k]||{r:[],c:[]};
       rec += (dia.r||[]).reduce((a,x)=>a+Number(x.v||0),0);
       (dia.c||[]).forEach(x => {
         const cat=(x.cat||'').toLowerCase(); const v=Number(x.v||0);
         if(cat.includes('materia')||cat.includes('insumo'))matPrima+=v;
-        else if(cat.includes('rh')||cat.includes('mao de obra'))rh+=v;
+        else if(cat.includes('rh')||cat.includes('mao de obra'))rhCus+=v;
         else if(cat.includes('embalagem'))emb+=v;
         else if(cat.includes('fixo')||cat.includes('aluguel'))fixo+=v;
         else if(cat.includes('juros')||cat.includes('multa'))juros+=v;
@@ -1466,121 +1473,55 @@ async function gerarEnviarRelatorioPDF() {
         else outros+=v;
       });
     });
-    const cusTot = matPrima+rh+emb+fixo+juros+tarifas+taxas+outros;
+    const cusTot = matPrima+rhCus+emb+fixo+juros+tarifas+taxas+outros;
     const lucro = rec-cusTot;
     const marg = rec>0 ? ((lucro/rec)*100).toFixed(1) : '0';
     const cmv = rec>0 ? (((matPrima+emb)/rec)*100).toFixed(1) : '0';
 
-    // Desempenho de funcionários
-    const funcs = d.funcionarios||[];
-    const ponto = d.ponto||{};
-    const funcDesempenho = funcs.filter(f=>f.ativo).map(f => {
-      let diasPresente=0, totalPago=0;
-      dias7.forEach(k => {
-        const reg = ponto[k]?.[f.id];
-        if (reg?.presente) { diasPresente++; totalPago += Number(reg.valorPago||f.valorDia||0); }
-      });
-      return { nome: f.nome, cargo: f.cargo||'', tipo: f.tipo||'diarista', diasPresente, totalPago };
-    }).filter(f => f.diasPresente > 0 || f.totalPago > 0);
+    // Desempenho funcionarios
+    const funcs = r.funcionarios||[];
+    const ponto = r.ponto||{};
+    const funcLinhas = funcs.filter(f=>f.ativo).map(f => {
+      let dias=0, pago=0;
+      dias7.forEach(k => { const reg=ponto[k]?.[f.id]; if(reg?.presente){dias++;pago+=Number(reg.valorPago||f.valorDia||0);} });
+      return dias>0 ? '  '+f.nome+': '+dias+'d presente | Pago: '+brl(pago) : null;
+    }).filter(Boolean);
 
     // Contas vencendo essa semana
-    const contasSemana = (d.contasPagar||[]).filter(cp => {
-      if(cp.pago) return false;
-      const v = cp.venc||cp.vencimento||'';
-      return dias7.includes(v);
-    });
+    const contasSemana = (r.contasPagar||[]).filter(cp => !cp.pago && dias7.includes(cp.venc||cp.vencimento||''));
+    const totalCP = contasSemana.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
 
-    // Gera o PDF
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
-
-    // Header
-    doc.fontSize(20).font('Helvetica-Bold').text('Di Casa Laranjinha', {align:'center'});
-    doc.fontSize(13).font('Helvetica').text('Relatório Semanal', {align:'center'});
-    doc.fontSize(10).fillColor('#666').text(`Período: ${inicioPeriodo} a ${fimPeriodo}`, {align:'center'});
-    doc.fillColor('#000').moveDown(1);
-
-    // Linha separadora
-    doc.moveTo(40,doc.y).lineTo(555,doc.y).stroke('#ddd');
-    doc.moveDown(0.5);
-
-    // DRE
-    doc.fontSize(13).font('Helvetica-Bold').text('📊 Resultado da Semana');
-    doc.moveDown(0.3);
-    const tbl = [
-      ['Receita Total', brl(rec), ''],
-      ['Matéria Prima', brl(matPrima), rec>0?cmv+'% (CMV)':''],
-      ['RH / Mão de Obra', brl(rh), rec>0?((rh/rec)*100).toFixed(1)+'%':''],
-      ['Embalagem', brl(emb), ''],
-      ['Custos Fixos', brl(fixo), ''],
-      ['Juros / Multa', brl(juros), ''],
-      ['Tarifas Bancárias', brl(tarifas), ''],
-      ['Taxas / Impostos', brl(taxas), ''],
-      ['Outros', brl(outros), ''],
-      ['TOTAL CUSTOS', brl(cusTot), ''],
-      ['LUCRO LÍQUIDO', brl(lucro), marg+'% margem'],
+    const linhasMsg = [
+      '*Relatorio Semanal Di Casa Laranjinha*',
+      dias7[0]+' a '+dias7[6],
+      '',
+      '*Resultado:*',
+      'Receita: '+brl(rec)
     ];
-    tbl.forEach(([label,val,pct],i) => {
-      const isTotal = label.includes('TOTAL')||label.includes('LUCRO');
-      doc.fontSize(isTotal?11:10).font(isTotal?'Helvetica-Bold':'Helvetica');
-      if(isTotal){ doc.moveTo(40,doc.y).lineTo(555,doc.y).stroke('#999'); doc.moveDown(0.1); }
-      doc.text(label, 40, doc.y, {width:250,continued:true})
-         .text(val, {width:150,align:'right',continued:true})
-         .fillColor(pct?'#666':'#000').text('  '+pct, {align:'left'}).fillColor('#000');
-    });
-    doc.moveDown(1);
+    if(matPrima>0)linhasMsg.push('Materia Prima: '+brl(matPrima)+' CMV:'+cmv+'%');
+    if(rhCus>0)linhasMsg.push('RH: '+brl(rhCus));
+    if(emb>0)linhasMsg.push('Embalagem: '+brl(emb));
+    if(fixo>0)linhasMsg.push('Fixos: '+brl(fixo));
+    if(juros>0)linhasMsg.push('Juros/Multa: '+brl(juros));
+    if(tarifas>0)linhasMsg.push('Tarifas Bancarias: '+brl(tarifas));
+    if(taxas>0)linhasMsg.push('Impostos: '+brl(taxas));
+    linhasMsg.push('---');
+    linhasMsg.push('*Lucro: '+brl(lucro)+' ('+marg+'%)*');
+    if(funcLinhas.length>0){linhasMsg.push('');linhasMsg.push('*Funcionarios:*');funcLinhas.forEach(l=>linhasMsg.push(l));}
+    if(contasSemana.length>0){linhasMsg.push('');linhasMsg.push('*Contas da semana:*');contasSemana.forEach(cp=>linhasMsg.push('  '+( cp.forn||'?')+': '+brl(Number(cp.val||cp.valor||0))));linhasMsg.push('Total: '+brl(totalCP));}
+    linhasMsg.push('');linhasMsg.push('GestaoERP Di Casa Laranjinha');
+    const msg = linhasMsg.join('\n');
 
-    // Funcionários
-    if(funcDesempenho.length > 0) {
-      doc.moveTo(40,doc.y).lineTo(555,doc.y).stroke('#ddd'); doc.moveDown(0.5);
-      doc.fontSize(13).font('Helvetica-Bold').text('👥 Desempenho dos Funcionários');
-      doc.moveDown(0.3);
-      funcDesempenho.forEach(f => {
-        doc.fontSize(10).font('Helvetica-Bold').text(f.nome+' ('+f.cargo+')', {continued:true})
-           .font('Helvetica').text('  —  '+f.diasPresente+' dias  |  Pago: '+brl(f.totalPago));
-      });
-      doc.moveDown(1);
-    }
-
-    // Contas vencendo
-    if(contasSemana.length > 0) {
-      doc.moveTo(40,doc.y).lineTo(555,doc.y).stroke('#ddd'); doc.moveDown(0.5);
-      doc.fontSize(13).font('Helvetica-Bold').text('⚠️ Contas a Pagar esta Semana');
-      doc.moveDown(0.3);
-      contasSemana.forEach(cp => {
-        doc.fontSize(10).font('Helvetica').text((cp.forn||'?')+' — vence '+cp.venc+' — '+brl(Number(cp.val||cp.valor||0)));
-      });
-      doc.moveDown(1);
-    }
-
-    // Footer
-    doc.moveTo(40,doc.y).lineTo(555,doc.y).stroke('#ddd');
-    doc.moveDown(0.3);
-    doc.fontSize(8).fillColor('#999').text('Gerado automaticamente pelo GestaoERP — Di Casa Laranjinha', {align:'center'});
-    doc.text(new Date().toLocaleString('pt-BR'), {align:'center'});
-    doc.end();
-
-    // Aguarda PDF completo
-    const pdfBuffer = await new Promise((resolve,reject) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-    });
-    const pdfBase64 = pdfBuffer.toString('base64');
-    const dataStr = `${String(agora.getDate()).padStart(2,'0')}-${String(agora.getMonth()+1).padStart(2,'0')}-${agora.getFullYear()}`;
-
-    // Envia para Diogo e Herielly
     const destinos = ['5534996853258','5534997692282'];
-    for (const num of destinos) {
-      await wppDocumento(num, pdfBase64, `Relatorio_Semanal_${dataStr}.pdf`, `📄 Relatório Semanal — ${inicioPeriodo} a ${fimPeriodo}`);
-    }
-    console.log('Relatório semanal PDF enviado:', dataStr);
+    for (const num of destinos) await wpp(num, msg);
+    console.log('Relatorio semanal enviado');
     return {ok:true};
   } catch(e) {
-    console.error('Erro relatório PDF:', e.message);
+    console.error('Erro relatorio:', e.message);
     return {ok:false, erro:e.message};
   }
 }
+
 
 // Verificacao a cada 30min — sobrevive a restarts do servidor
 // Roda SEFAZ às 3h, alertas de contas às 7h, alertas de estoque às 8h e 14h
