@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="fluxo" onclick="ir('fluxo')" style="font-size:16px;padding:6px 10px;" title="Fluxo de Caixa">🌊</button>
 <button class="tb" data-tab="fin2" onclick="ir('fin2')" style="font-size:16px;padding:6px 10px;" title="DRE Completo">💰</button>
 <button class="tb" data-tab="compras" onclick="ir('compras')" style="font-size:16px;padding:6px 10px;" title="Lista de Compras">🛒</button>
 <button class="tb" data-tab="precos" onclick="ir('precos')" style="font-size:16px;padding:6px 10px;" title="Preços">📈</button>
@@ -5113,6 +5114,125 @@ function salvarMetas(){
  alert('✅ Metas salvas!');
  ir('fin2');
 }
+
+function rFluxo(){
+ const db=ldb();
+ const hoje=hj();
+ const agora=new Date();
+
+ // Media de receita diaria dos ultimos 30 dias
+ const dias30=[];
+ for(let i=29;i>=0;i--){
+  const d=new Date(agora);d.setDate(d.getDate()-i);
+  const k=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const rec=(db[k]?.r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  if(rec>0)dias30.push(rec);
+ }
+ const mediaDiaria=dias30.length>0?dias30.reduce((a,b)=>a+b,0)/dias30.length:0;
+
+ // Proximos 30 dias
+ const fluxo=[];
+ let saldoAcum=0;
+ for(let i=0;i<=30;i++){
+  const d=new Date(agora);d.setDate(d.getDate()+i);
+  const k=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const diaSemana=d.getDay();
+  const isWeekend=diaSemana===0||diaSemana===6;
+
+  // Receita: usa real se ja passou, projeta se futuro
+  const recReal=(db[k]?.r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  const recProj=i===0?recReal:(isWeekend?mediaDiaria*0.7:mediaDiaria);
+
+  // Contas a pagar nesse dia
+  const contasDia=(db.contasPagar||[]).filter(cp=>{
+   if(cp.pago)return false;
+   const v=cp.venc||cp.vencimento||'';
+   return v===k;
+  });
+  const saidas=contasDia.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
+
+  saldoAcum+=recProj-saidas;
+  fluxo.push({k,d:new Date(d),i,recProj,saidas,contasDia,saldoAcum,isHoje:i===0});
+ }
+
+ // Proximas contas (top 5 mais urgentes)
+ const contasProximas=(db.contasPagar||[])
+  .filter(cp=>!cp.pago)
+  .map(cp=>{
+   const v=cp.venc||cp.vencimento||'';
+   if(!v)return null;
+   const [dd,mm,yy]=v.includes('/')?v.split('/'):['','',''];
+   if(!yy)return null;
+   const dt=new Date(yy,mm-1,dd);
+   const dias=Math.round((dt-agora)/86400000);
+   return{...cp,dias,dt};
+  })
+  .filter(x=>x&&x.dias>=0&&x.dias<=30)
+  .sort((a,b)=>a.dias-b.dias)
+  .slice(0,8);
+
+ const totalSaidasProx=contasProximas.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
+ const receitaProj30=fluxo.reduce((a,f)=>a+f.recProj,0);
+ const saldoFinal=fluxo[fluxo.length-1]?.saldoAcum||0;
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📊 Fluxo de Caixa</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">Projeção 30 dias — média de ${brl(mediaDiaria)}/dia</p>
+
+<!-- RESUMO 30 DIAS -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">
+ <div style="background:rgba(0,255,136,0.08);border-radius:10px;padding:10px;text-align:center;">
+  <p style="font-size:9px;color:var(--mu);">Receita proj. 30d</p>
+  <p style="font-size:13px;font-weight:800;color:var(--gr);">${brl(receitaProj30)}</p>
+ </div>
+ <div style="background:rgba(255,51,102,0.08);border-radius:10px;padding:10px;text-align:center;">
+  <p style="font-size:9px;color:var(--mu);">Contas a pagar</p>
+  <p style="font-size:13px;font-weight:800;color:var(--re);">${brl(totalSaidasProx)}</p>
+ </div>
+ <div style="background:${saldoFinal>=0?'rgba(0,255,136,0.08)':'rgba(255,51,102,0.08)'};border-radius:10px;padding:10px;text-align:center;">
+  <p style="font-size:9px;color:var(--mu);">Saldo projetado</p>
+  <p style="font-size:13px;font-weight:800;color:${saldoFinal>=0?'var(--gr)':'var(--re)'};">${brl(saldoFinal)}</p>
+ </div>
+</div>
+
+<!-- GRAFICO SIMPLIFICADO (barras) -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:12px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">Saldo acumulado dia a dia</p>
+<div style="display:flex;align-items:flex-end;gap:2px;height:60px;overflow-x:auto;">
+${fluxo.filter((_,i)=>i%2===0).map(f=>{
+ const maxSaldo=Math.max(...fluxo.map(x=>Math.abs(x.saldoAcum)))||1;
+ const h=Math.abs(f.saldoAcum/maxSaldo*55);
+ const cor=f.saldoAcum>=0?'var(--gr)':'var(--re)';
+ return`<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:14px;">
+  <div style="width:10px;height:${h}px;background:${cor};border-radius:2px 2px 0 0;opacity:${f.isHoje?1:0.6};"></div>
+ </div>`;
+}).join('')}
+</div>
+</div>
+
+<!-- CONTAS DOS PROXIMOS 30 DIAS -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">📅 Contas a pagar — próximos 30 dias</p>
+${contasProximas.length===0
+ ?`<p style="font-size:12px;color:var(--gr);">✅ Nenhuma conta nos próximos 30 dias!</p>`
+ :contasProximas.map(cp=>{
+  const emoji=cp.dias===0?'🔴':cp.dias<=3?'🟠':cp.dias<=7?'🟡':'🔵';
+  const texto=cp.dias===0?'HOJE':cp.dias===1?'amanhã':`em ${cp.dias}d`;
+  return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);font-size:11px;">
+  <div>
+   <span>${emoji} ${(cp.forn||cp.desc||'?').slice(0,20)}</span>
+   <p style="font-size:10px;color:var(--mu);margin-top:1px;">${cp.venc||cp.vencimento||''} — ${texto}</p>
+  </div>
+  <div style="text-align:right;">
+   <p style="font-weight:700;">${brl(Number(cp.val||cp.valor||0))}</p>
+   <button onclick="pagarConta('${cp.id}')" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.1);color:var(--gr);cursor:pointer;margin-top:2px;">✓ Pago</button>
+  </div>
+ </div>`;
+ }).join('')}
+</div>
+</div>`;
+}
+
 
 function rListaCompras(){
  const db=ldb();
@@ -10476,7 +10596,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
