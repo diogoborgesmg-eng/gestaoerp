@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="resumo" onclick="ir('resumo')" style="font-size:16px;padding:6px 10px;" title="Resumo">🏠</button>
 <button class="tb" data-tab="ind" onclick="ir('ind')" style="font-size:16px;padding:6px 10px;" title="Indicadores">💼</button>
 <button class="tb" data-tab="cmv" onclick="ir('cmv')" style="font-size:16px;padding:6px 10px;" title="CMV por Segmento">📊</button>
 <button class="tb" data-tab="ponto" onclick="ir('ponto')" style="font-size:16px;padding:6px 10px;" title="Ponto">⏱️</button>
@@ -4949,6 +4950,134 @@ function calcCMVPorSegmento(de,ate){
  })).filter(s=>s.receita>0||s.custo>0);
 }
 
+function rResumo(){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mes).sort();
+
+ // Ontem
+ const ontemD=new Date();ontemD.setDate(ontemD.getDate()-1);
+ const ontem=`${String(ontemD.getDate()).padStart(2,'0')}/${String(ontemD.getMonth()+1).padStart(2,'0')}/${ontemD.getFullYear()}`;
+ const diaOntem=db[ontem]||{r:[],c:[]};
+ const recOntem=(diaOntem.r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ const cusOntem=(diaOntem.c||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ const lucOntem=recOntem-cusOntem;
+ const margemOntem=recOntem>0?((lucOntem/recOntem)*100).toFixed(1):'-';
+
+ // Mes
+ let recMes=0,cusMes=0;
+ diasMes.forEach(d=>{
+  recMes+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  cusMes+=(db[d].c||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ });
+ const lucMes=recMes-cusMes;
+ const margemMes=recMes>0?((lucMes/recMes)*100).toFixed(1):'-';
+ const mediaDiaria=diasMes.length>0?recMes/diasMes.length:0;
+
+ // Projecao do mes completo (baseado na media atual)
+ const diasNoMes=new Date(ontemD.getFullYear(),ontemD.getMonth()+1,0).getDate();
+ const projecaoMes=mediaDiaria*diasNoMes;
+
+ // Contas urgentes (vence em ate 3 dias)
+ const agora=new Date();agora.setHours(0,0,0,0);
+ const contasUrgentes=(db.contasPagar||[]).filter(cp=>{
+  if(cp.pago)return false;
+  const v=cp.venc||cp.vencimento||'';
+  if(!v)return false;
+  let d;
+  if(v.includes('/')){const[dd,mm,yy]=v.split('/');d=new Date(yy,mm-1,dd);}
+  else d=new Date(v);
+  if(isNaN(d))return false;
+  d.setHours(0,0,0,0);
+  return Math.round((d-agora)/(86400000))<=3;
+ });
+ const totalUrgente=contasUrgentes.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
+
+ // Estoque critico
+ const estCritico=(db.est||[]).filter(p=>Number(p.min||0)>0&&Number(p.q||0)<=Number(p.min||0));
+
+ // CMV do mes
+ const cmvMes=recMes>0?((cusMes/recMes)*100).toFixed(1):'-';
+ const cmvOk=parseFloat(cmvMes)<35;
+
+ // Sinal geral do negocio
+ const sinais=[];
+ if(lucMes<0)sinais.push({emoji:'🔴',msg:'Prejuízo no mês'});
+ else if(parseFloat(margemMes)<10)sinais.push({emoji:'🟡',msg:'Margem baixa no mês'});
+ if(totalUrgente>0)sinais.push({emoji:'🟠',msg:`R$${(totalUrgente/1000).toFixed(0)}k vence em 3 dias`});
+ if(estCritico.length>0)sinais.push({emoji:'🟡',msg:`${estCritico.length} produto(s) em falta`});
+ if(!cmvOk&&cmvMes!=='-')sinais.push({emoji:'🟡',msg:`CMV alto: ${cmvMes}%`});
+ if(sinais.length===0)sinais.push({emoji:'🟢',msg:'Tudo sob controle!'});
+
+ return`<div style="padding:12px;">
+
+<!-- SINAL GERAL -->
+<div style="background:var(--sf2);border-radius:14px;padding:14px;margin-bottom:10px;text-align:center;">
+ <p style="font-size:32px;margin-bottom:4px;">${sinais[0].emoji}</p>
+ <p style="font-size:15px;font-weight:800;">${sinais[0].msg}</p>
+ ${sinais.slice(1).map(s=>`<p style="font-size:12px;color:var(--mu);margin-top:4px;">${s.emoji} ${s.msg}</p>`).join('')}
+ <p style="font-size:10px;color:var(--mu);margin-top:6px;">${hoje}</p>
+</div>
+
+<!-- ONTEM -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:10px;color:var(--mu);font-weight:700;margin-bottom:6px;">ONTEM — ${ontem}</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+ <div style="text-align:center;background:var(--sf);border-radius:8px;padding:8px;">
+  <p style="font-size:9px;color:var(--mu);">Receita</p>
+  <p style="font-size:16px;font-weight:800;color:var(--gr);">${brl(recOntem)}</p>
+ </div>
+ <div style="text-align:center;background:var(--sf);border-radius:8px;padding:8px;">
+  <p style="font-size:9px;color:var(--mu);">Resultado</p>
+  <p style="font-size:16px;font-weight:800;color:${lucOntem>=0?'var(--gr)':'var(--re)'};">${brl(lucOntem)}</p>
+  <p style="font-size:9px;color:var(--mu);">${margemOntem==='--'?'--':margemOntem+'%'}</p>
+ </div>
+</div>
+</div>
+
+<!-- MES -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:10px;color:var(--mu);font-weight:700;margin-bottom:6px;">MÊS — ${mes} (${diasMes.length}/${diasNoMes} dias)</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+ <div style="background:var(--sf);border-radius:8px;padding:7px;">
+  <p style="font-size:9px;color:var(--mu);">Receita</p>
+  <p style="font-size:13px;font-weight:800;color:var(--gr);">${brl(recMes)}</p>
+ </div>
+ <div style="background:var(--sf);border-radius:8px;padding:7px;">
+  <p style="font-size:9px;color:var(--mu);">Lucro</p>
+  <p style="font-size:13px;font-weight:800;color:${lucMes>=0?'var(--gr)':'var(--re)'};">${brl(lucMes)}</p>
+ </div>
+ <div style="background:var(--sf);border-radius:8px;padding:7px;">
+  <p style="font-size:9px;color:var(--mu);">CMV</p>
+  <p style="font-size:13px;font-weight:800;color:${cmvOk?'var(--gr)':'var(--re)'};">${cmvMes==='--'?'--':cmvMes+'%'}</p>
+ </div>
+</div>
+<div style="margin-top:8px;background:var(--sf);border-radius:8px;padding:8px;display:flex;justify-content:space-between;font-size:11px;">
+ <span style="color:var(--mu);">Projeção do mês</span>
+ <span style="font-weight:800;">${brl(projecaoMes)}</span>
+</div>
+</div>
+
+<!-- ALERTAS -->
+${totalUrgente>0||estCritico.length>0?`<div style="background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.3);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:10px;color:#ffaa00;font-weight:700;margin-bottom:6px;">⚠️ ATENÇÃO</p>
+${totalUrgente>0?`<p style="font-size:12px;margin-bottom:4px;">💳 ${contasUrgentes.length} conta(s) vencendo: <strong>${brl(totalUrgente)}</strong></p>`:''}
+${estCritico.length>0?`<p style="font-size:12px;">📦 Estoque crítico: <strong>${estCritico.slice(0,3).map(p=>p.n).join(', ')}${estCritico.length>3?'...':''}</strong></p>`:''}
+</div>`:''}
+
+<!-- ACOES RAPIDAS -->
+<p style="font-size:10px;color:var(--mu);font-weight:700;margin-bottom:6px;">ACESSO RÁPIDO</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+ <button onclick="ir('saida')" style="padding:12px;border-radius:10px;border:none;background:var(--sf2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">📤 Saída Estoque</button>
+ <button onclick="ir('ponto')" style="padding:12px;border-radius:10px;border:none;background:var(--sf2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">⏱️ Ponto</button>
+ <button onclick="ir('dre')" style="padding:12px;border-radius:10px;border:none;background:var(--sf2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">📊 DRE</button>
+ <button onclick="ir('forn')" style="padding:12px;border-radius:10px;border:none;background:var(--sf2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;">🧾 Fornecedores</button>
+</div>
+</div>`;
+}
+
+
 function rIndicadores2(){
  const db=ldb();
  const hoje=hj();
@@ -8281,9 +8410,10 @@ Máx 200 palavras, seja prático e direto.`}]});
  if(el)el.innerHTML=`<div class="ial ar" style="margin-bottom:8px;"><span>❌</span><span>${e.message}</span></div>`;
  }
 }
-let aba="dre", mt="", fs="idle", fd=null, va=false, vt="", vr=null, diaAtual=null;
+let aba=_abaInicial||"resumo", mt="", fs="idle", fd=null, va=false, vt="", vr=null, diaAtual=null;
 let dreVista="diario";
 let dreVistaPeriodo={de:"",ate:""};
+const _abaInicial="resumo";
 let vendaVista="diario", vendaPeriodo={de:"",ate:""};
 let cfoHistorico=[];
 let _compObsId="";
@@ -9930,7 +10060,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
