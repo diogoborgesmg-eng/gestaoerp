@@ -530,6 +530,17 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    // Rota de teste: gerar e enviar relatorio PDF agora
+    if (req.url === '/relatorio-pdf') {
+      gerarEnviarRelatorioPDF().then(result => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(result));
+      }).catch(e => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     res.writeHead(200); res.end(JSON.stringify({status:'ok v8'})); return;
   }
   let body = '';
