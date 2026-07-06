@@ -8410,10 +8410,10 @@ Máx 200 palavras, seja prático e direto.`}]});
  if(el)el.innerHTML=`<div class="ial ar" style="margin-bottom:8px;"><span>❌</span><span>${e.message}</span></div>`;
  }
 }
-let aba=_abaInicial||"resumo", mt="", fs="idle", fd=null, va=false, vt="", vr=null, diaAtual=null;
+const _abaInicial="resumo";
+let aba=_abaInicial, mt="", fs="idle", fd=null, va=false, vt="", vr=null, diaAtual=null;
 let dreVista="diario";
 let dreVistaPeriodo={de:"",ate:""};
-const _abaInicial="resumo";
 let vendaVista="diario", vendaPeriodo={de:"",ate:""};
 let cfoHistorico=[];
 let _compObsId="";
@@ -18325,8 +18325,10 @@ async function limparDadosTeste(){
    const rows=await r.json();
    if(rows&&rows.length){
     const d=JSON.parse(rows[0].data);
+    const _bkFiscal=d.dadosFiscais,_bkNSU=d.sefazUltNSU,_bkBancos=d.bancos,_bkFuncs=d.funcionarios,_bkEscala=d.escala;
     d.est=[];d.contasPagar=[];
-    Object.keys(d).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(k=>delete d[k]);
+    Object.keys(d).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(k=>delete d[k])
+    if(_bkFiscal)d.dadosFiscais=_bkFiscal;if(_bkNSU)d.sefazUltNSU=_bkNSU;if(_bkBancos)d.bancos=_bkBancos;if(_bkFuncs)d.funcionarios=_bkFuncs;if(_bkEscala)d.escala=_bkEscala;
     await fetch(`${cfg2.url}/rest/v1/erp_sync`,{
      method:'POST',
      headers:{'apikey':cfg2.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
