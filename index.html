@@ -20292,6 +20292,31 @@ async function sincronizarBlobAutomatico(){
   const dadosServidor=JSON.parse(row.data);
   const db=ldb();
   let mudou=false;
+  // Mescla funcionarios cadastrados pelo bot
+  if(dadosServidor.funcionarios&&dadosServidor.funcionarios.length>0){
+   if(!db.funcionarios)db.funcionarios=[];
+   const idsLocais=new Set((db.funcionarios).map(f=>f.id));
+   const nomesLocais=new Set((db.funcionarios).map(f=>(f.nome||'').toLowerCase()));
+   dadosServidor.funcionarios.forEach(f=>{
+    if(!idsLocais.has(f.id)&&!nomesLocais.has((f.nome||'').toLowerCase())){
+     db.funcionarios.push(f);
+     mudou=true;
+    }
+   });
+  }
+  // Mescla ponto (presencas registradas pelo bot)
+  if(dadosServidor.ponto){
+   if(!db.ponto)db.ponto={};
+   Object.keys(dadosServidor.ponto).forEach(dia=>{
+    if(!db.ponto[dia])db.ponto[dia]={};
+    Object.keys(dadosServidor.ponto[dia]).forEach(funcId=>{
+     if(!db.ponto[dia][funcId]){
+      db.ponto[dia][funcId]=dadosServidor.ponto[dia][funcId];
+      mudou=true;
+     }
+    });
+   });
+  }
   // Mescla estoque (produtos com _sefaz:true sao do servidor)
   if(dadosServidor.est&&dadosServidor.est.length>0){
    const idsLocais=new Set((db.est||[]).map(p=>p.id));
