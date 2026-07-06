@@ -508,7 +508,7 @@ async function claudeAPI(payload, tentativa=1){
 }
 
 const SEGS=[{id:"restaurante",n:"Restaurante",i:"🍽️",c:"#f59e0b"},{id:"hamburgueria",n:"Hamburgueria",i:"🍔",c:"#ef4444"},{id:"espetaria",n:"Espetaria",i:"🍢",c:"#f97316"},{id:"pizzaria",n:"Pizzaria",i:"🍕",c:"#ec4899"},{id:"bar",n:"Bar",i:"🍺",c:"#06b6d4"}];
-const CATS=["❓ Classificar","🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","⚠️ Extravio / Perda","🔄 Outros"];
+const CATS=["❓ Classificar","🥩 Matéria Prima","👥 RH / Mão de Obra","🔧 Manutenção","💡 Energia / Utilidades","🚚 Frete / Entregador","🏢 Aluguel / Fixos","📦 Embalagem","🍺 Bebidas / Bar","🧹 Limpeza / Higiene","⚠️ Juros / Multa","💳 Taxas / Impostos","📱 Telecom / Internet","🎤 Shows / Eventos","📣 Marketing","⚠️ Extravio / Perda","🔄 Outros"];
 const brl=v=>"R$"+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const uid=()=>Math.random().toString(36).slice(2,9);
 const hj=()=>{
@@ -4968,7 +4968,7 @@ function rFluxoCaixa(){
  const metas=db.metasMes||{recMeta:0,lucMeta:0,cmvMeta:35,rhMeta:15,fixoMeta:20};
 
  // Calcular DRE completo do mes
- const dre={rec:0,matPrima:0,rh:0,embalagem:0,limpeza:0,fixo:0,taxas:0,outros:0};
+ const dre={rec:0,matPrima:0,rh:0,embalagem:0,limpeza:0,fixo:0,juros:0,taxas:0,outros:0};
  diasMes.forEach(d=>{
   dre.rec+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
   (db[d].c||[]).forEach(x=>{
@@ -4979,12 +4979,13 @@ function rFluxoCaixa(){
    else if(cat.includes('embalagem'))dre.embalagem+=v;
    else if(cat.includes('limpeza')||cat.includes('higiene'))dre.limpeza+=v;
    else if(cat.includes('fixo')||cat.includes('aluguel')||cat.includes('energia')||cat.includes('agua')||cat.includes('internet'))dre.fixo+=v;
-   else if(cat.includes('taxa')||cat.includes('imposto')||cat.includes('juros'))dre.taxas+=v;
+   else if(cat.includes('juros')||cat.includes('multa')||cat.includes('mora'))dre.juros+=v;
+   else if(cat.includes('taxa')||cat.includes('imposto')||cat.includes('simples')||cat.includes('iss')||cat.includes('icms'))dre.taxas+=v;
    else dre.outros+=v;
   });
  });
 
- const cusTot=dre.matPrima+dre.rh+dre.embalagem+dre.limpeza+dre.fixo+dre.taxas+dre.outros;
+ const cusTot=dre.matPrima+dre.rh+dre.embalagem+dre.limpeza+dre.fixo+dre.juros+dre.taxas+dre.outros;
  const lucBruto=dre.rec-dre.matPrima-dre.embalagem;
  const lucLiq=dre.rec-cusTot;
  const margBruta=dre.rec>0?((lucBruto/dre.rec)*100).toFixed(1):'-';
@@ -5054,6 +5055,7 @@ function rFluxoCaixa(){
  ${linha('👥 RH / Mão de Obra',dre.rh,rhPct,metas.rhMeta)}
  ${linha('🧹 Limpeza/Higiene',dre.limpeza,dre.rec>0?((dre.limpeza/dre.rec)*100).toFixed(1):'-',0)}
  ${linha('🏢 Custos Fixos',dre.fixo,dre.rec>0?((dre.fixo/dre.rec)*100).toFixed(1):'-',metas.fixoMeta)}
+ ${dre.juros>0?linha('⚠️ Juros/Multa',dre.juros,dre.rec>0?((dre.juros/dre.rec)*100).toFixed(1):'-',0):''}
  ${linha('💳 Taxas/Impostos',dre.taxas,dre.rec>0?((dre.taxas/dre.rec)*100).toFixed(1):'-',0)}
  ${dre.outros>0?linha('🔄 Outros',dre.outros,dre.rec>0?((dre.outros/dre.rec)*100).toFixed(1):'-',0):''}
  <div style="padding:8px 0;display:flex;justify-content:space-between;font-size:12px;font-weight:800;border-top:1px solid var(--br);margin-top:4px;">
