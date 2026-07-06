@@ -18317,6 +18317,8 @@ async function limparDadosTeste(){
  keys.forEach(k=>{if(cfg[k])localStorage.setItem(k,cfg[k]);});
  localStorage.setItem('erp',JSON.stringify(keep));
  localStorage.setItem('erp_ultimo_blob_sync','cleared_'+Date.now());
+ // Chama o servidor pra limpar tabela lancamentos de teste
+ fetch('https://gestaoerp-webhook.onrender.com/limpar-teste-sefaz').catch(()=>{});
  // Limpa tambem o blob no Supabase ANTES de renderizar (evita sync trazer de volta)
  const cfg2=getSupabaseCfg();
  if(cfg2.url&&cfg2.key){
