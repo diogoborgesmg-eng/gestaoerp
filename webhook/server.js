@@ -646,39 +646,53 @@ if (num === NF_GROUP_ID && ['imageMessage','documentMessage'].includes(tipo)) {
               for (const pre of _prefixos) { if (_dest.toLowerCase().startsWith(pre.toLowerCase())) { _dest = _dest.slice(pre.length).trim(); break; } }
               const _desc = p.descricao && p.descricao !== p.destinatario && p.descricao !== 'SEM_DESCRICAO' ? p.descricao : '';
               const lanc = { valor: p.valor, categoria: p.categoria || 'Outros', descricao: _desc, destinatario: _dest, tipo: p.tipo || 'pix', data: p.data || new Date().toLocaleDateString('pt-BR'), hora: p.hora || '', confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
-              // Deteccao automatica de diaria/pagamento de funcionario
+              // Deteccao automatica de diaria/salario/vale
               const _obsDesc = (lanc.descricao||'').toLowerCase();
-              const _ehDiaria = /(diar|func|salario|pagto|pagamento|ajudante|bico|serv).*(func|dia|trab)?/i.test(_obsDesc) ||
-                /(diaria|diaria|salario|pagamento funcionario|pagto func)/i.test(_obsDesc) ||
-                _obsDesc.includes('diaria') || _obsDesc.includes('diária');
-              if (_ehDiaria) {
+              const _destDesc = (lanc.destinatario||'').toLowerCase();
+              const _tipoRH = _obsDesc.includes('diaria') || _obsDesc.includes('diária') ? 'diaria'
+                : _obsDesc.includes('salario') || _obsDesc.includes('salário') || _obsDesc.includes('pagamento') ? 'salario'
+                : _obsDesc.includes('vale') ? 'vale'
+                : _obsDesc.includes('bico') || _obsDesc.includes('ajudante') || _obsDesc.includes('diarista') ? 'diaria'
+                : null;
+              if (_tipoRH) {
                 lanc.categoria = '👥 RH / Mão de Obra';
                 lanc.setor = 'rh';
-                // Tenta marcar presenca do funcionario no blob
-                const _nomeFunc = lanc.destinatario || lanc.descricao || '';
+                const _nomeFunc = (lanc.destinatario||'').trim();
                 const SB_RH = 'https://bxppiwshjyddiieazoqx.supabase.co';
                 const SK_RH = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
                 req2('GET', SB_RH+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SK_RH})
                   .then(rows => {
                     if (!Array.isArray(rows)||!rows.length) return;
                     const dd = JSON.parse(rows[0].data);
-                    const funcs = dd.funcionarios||[];
+                    if (!dd.funcionarios) dd.funcionarios = [];
+                    if (!dd.ponto) dd.ponto = {};
                     // Busca funcionario por nome aproximado
-                    const funcEncontrado = funcs.find(f => {
+                    let funcEncontrado = dd.funcionarios.find(f => {
                       const fn = (f.nome||'').toLowerCase();
                       const dest = _nomeFunc.toLowerCase();
-                      return dest.includes(fn.split(' ')[0]) || fn.includes(dest.split(' ')[0]);
+                      return fn && dest && (dest.includes(fn.split(' ')[0]) || fn.includes(dest.split(' ')[0]));
                     });
+                    // Se nao encontrou e temos um nome, cadastra automaticamente
+                    if (!funcEncontrado && _nomeFunc && _nomeFunc.length > 2) {
+                      const novoId = 'func_bot_'+Date.now().toString(36);
+                      const tipoFuncRH = _tipoRH === 'salario' ? 'mensalista' : 'diarista';
+                      funcEncontrado = { id: novoId, nome: _nomeFunc, cargo: 'Funcionário', tipo: tipoFuncRH,
+                        valorDia: _tipoRH === 'diaria' ? lanc.valor : 0, salario: _tipoRH === 'salario' ? lanc.valor : 0,
+                        ativo: true, admissao: lanc.data || new Date().toLocaleDateString('pt-BR') };
+                      dd.funcionarios.push(funcEncontrado);
+                      console.log('Funcionario cadastrado automaticamente:', _nomeFunc);
+                    }
                     if (funcEncontrado) {
-                      if (!dd.ponto) dd.ponto = {};
-                      if (!dd.ponto[lanc.data]) dd.ponto[lanc.data] = {};
-                      if (!dd.ponto[lanc.data][funcEncontrado.id]) dd.ponto[lanc.data][funcEncontrado.id] = {};
-                      dd.ponto[lanc.data][funcEncontrado.id].presente = true;
-                      dd.ponto[lanc.data][funcEncontrado.id].valorPago = lanc.valor;
+                      const diaLanc = lanc.data || new Date().toLocaleDateString('pt-BR');
+                      if (!dd.ponto[diaLanc]) dd.ponto[diaLanc] = {};
+                      if (!dd.ponto[diaLanc][funcEncontrado.id]) dd.ponto[diaLanc][funcEncontrado.id] = {};
+                      dd.ponto[diaLanc][funcEncontrado.id].presente = true;
+                      dd.ponto[diaLanc][funcEncontrado.id].valorPago = lanc.valor;
+                      dd.ponto[diaLanc][funcEncontrado.id].tipo = _tipoRH;
                       req2('POST', SB_RH+'/rest/v1/erp_sync',
                         { device_id: rows[0].device_id, data: JSON.stringify(dd) },
                         { 'apikey': SK_RH, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' })
-                        .then(()=>console.log('Ponto marcado automaticamente:', funcEncontrado.nome, lanc.data))
+                        .then(()=>console.log('Ponto/funcionario atualizado:', funcEncontrado.nome, diaLanc, _tipoRH))
                         .catch(e=>console.log('Erro ponto auto:', e.message));
                     }
                   }).catch(()=>{});
