@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="relmes" onclick="ir('relmes')" style="font-size:16px;padding:6px 10px;" title="Relatório Mensal">📄</button>
 <button class="tb" data-tab="cc" onclick="ir('cc')" style="font-size:16px;padding:6px 10px;" title="Centro de Custo">🏭</button>
 <button class="tb" data-tab="aforn" onclick="ir('aforn')" style="font-size:16px;padding:6px 10px;" title="Fornecedores">🤝</button>
 <button class="tb" data-tab="csv" onclick="ir('csv')" style="font-size:16px;padding:6px 10px;" title="Extrato Bancário">🏦</button>
@@ -5577,6 +5578,179 @@ function importarCsvSelecionados(transacoes){
 // ═══════════════════════════════════════════════════════
 // CENTRO DE CUSTO — P&L por segmento
 // ═══════════════════════════════════════════════════════
+function rRelatorioMensal(){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const [mm,yy]=mes.split('/');
+ const nomesMes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+ const nomeMes=nomesMes[parseInt(mm)-1]+' 20'+yy;
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📄 Relatório Mensal</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">${nomeMes} — Di Casa Laranjinha</p>
+
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:10px;">
+<p style="font-size:11px;color:var(--mu);margin-bottom:10px;">Selecione o que incluir no relatório:</p>
+${[
+ {id:'rel-dre',label:'💰 DRE Completo (Receita, Custos, Lucro)',checked:true},
+ {id:'rel-cc',label:'🏭 P&L por Segmento',checked:true},
+ {id:'rel-cmv',label:'📊 CMV por Segmento',checked:true},
+ {id:'rel-contas',label:'💳 Contas a Pagar do Mês',checked:true},
+ {id:'rel-forn',label:'🤝 Top 10 Fornecedores',checked:true},
+ {id:'rel-rh',label:'👥 Resumo de RH',checked:false},
+ {id:'rel-fluxo',label:'🌊 Fluxo de Caixa 30 dias',checked:false},
+].map(op=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer;">
+ <input type="checkbox" id="${op.id}" ${op.checked?'checked':''} style="width:16px;height:16px;"/>
+ ${op.label}
+</label>`).join('')}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+ <button onclick="gerarRelatorioMensal('whatsapp')" style="padding:12px;border-radius:10px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📱 Enviar WhatsApp</button>
+ <button onclick="gerarRelatorioMensal('copiar')" style="padding:12px;border-radius:10px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📋 Copiar texto</button>
+</div>
+
+<div id="rel-preview" style="display:none;margin-top:12px;background:var(--sf2);border-radius:12px;padding:12px;">
+ <p style="font-size:11px;color:var(--mu);margin-bottom:8px;">Preview:</p>
+ <pre id="rel-texto" style="font-size:10px;color:#fff;white-space:pre-wrap;word-break:break-word;"></pre>
+</div>
+</div>`;
+}
+
+function gerarRelatorioMensal(acao){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const [mm,yy]=mes.split('/');
+ const nomesMes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+ const nomeMes=nomesMes[parseInt(mm)-1]+'/20'+yy;
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mes).sort();
+
+ // Calcular dados
+ let rec=0,matPrima=0,rh=0,emb=0,limp=0,fixo=0,juros=0,tarifas=0,taxas=0,outros=0;
+ diasMes.forEach(d=>{
+  rec+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  (db[d].c||[]).forEach(x=>{
+   const cat=(x.cat||'').toLowerCase();const v=Number(x.v||0);
+   if(cat.includes('materia')||cat.includes('insumo'))matPrima+=v;
+   else if(cat.includes('rh')||cat.includes('mao de obra'))rh+=v;
+   else if(cat.includes('embalagem'))emb+=v;
+   else if(cat.includes('limpeza'))limp+=v;
+   else if(cat.includes('fixo')||cat.includes('aluguel'))fixo+=v;
+   else if(cat.includes('juros')||cat.includes('multa'))juros+=v;
+   else if(cat.includes('tarifa')||cat.includes('iof')||cat.includes('manutencao'))tarifas+=v;
+   else if(cat.includes('taxa')||cat.includes('imposto'))taxas+=v;
+   else outros+=v;
+  });
+ });
+ const cusTot=matPrima+rh+emb+limp+fixo+juros+tarifas+taxas+outros;
+ const lucro=rec-cusTot;
+ const marg=rec>0?((lucro/rec)*100).toFixed(1):'0';
+ const cmv=rec>0?(((matPrima+emb)/rec)*100).toFixed(1):'0';
+
+ // Fornecedores top 5
+ const fornMap={};
+ diasMes.forEach(d=>(db[d].c||[]).forEach(x=>{
+  const n=(x.d||'').trim().slice(0,25);
+  if(!n)return;
+  if(!fornMap[n])fornMap[n]=0;
+  fornMap[n]+=Number(x.v||0);
+ }));
+ const top5=Object.entries(fornMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+ // Monta texto
+ let txt=`*📊 RELATÓRIO MENSAL — Di Casa Laranjinha*
+*${nomeMes}*
+`;
+ txt+=`_Gerado em ${hoje}_
+`;
+
+ if(document.getElementById('rel-dre')?.checked){
+  txt+=`
+*━━ DRE MENSAL ━━*
+`;
+  txt+=`💰 Receita Total: ${brl(rec)}
+`;
+  txt+=`
+Custos:
+`;
+  if(matPrima>0)txt+=`  🥩 Matéria Prima: ${brl(matPrima)} (${(matPrima/rec*100).toFixed(1)}%)
+`;
+  if(rh>0)txt+=`  👥 RH/Mão de Obra: ${brl(rh)} (${(rh/rec*100).toFixed(1)}%)
+`;
+  if(emb>0)txt+=`  📦 Embalagem: ${brl(emb)}
+`;
+  if(limp>0)txt+=`  🧹 Limpeza: ${brl(limp)}
+`;
+  if(fixo>0)txt+=`  🏢 Fixos: ${brl(fixo)}
+`;
+  if(juros>0)txt+=`  ⚠️ Juros/Multa: ${brl(juros)}
+`;
+  if(tarifas>0)txt+=`  🏦 Tarifas/IOF: ${brl(tarifas)}
+`;
+  if(taxas>0)txt+=`  💳 Taxas/Impostos: ${brl(taxas)}
+`;
+  txt+=`
+✅ Lucro Líquido: ${brl(lucro)} (${marg}%)
+`;
+  txt+=`📊 CMV: ${cmv}%
+`;
+  txt+=`📅 Dias com dados: ${diasMes.length}
+`;
+ }
+
+ if(document.getElementById('rel-forn')?.checked&&top5.length>0){
+  txt+=`
+*━━ TOP FORNECEDORES ━━*
+`;
+  top5.forEach(([n,v],i)=>txt+=`${i+1}. ${n}: ${brl(v)}
+`);
+ }
+
+ if(document.getElementById('rel-contas')?.checked){
+  const cpMes=(db.contasPagar||[]).filter(cp=>{
+   const v=cp.venc||cp.vencimento||'';
+   return v.slice(3)===mes;
+  });
+  const totalCP=cpMes.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
+  if(cpMes.length>0){
+   txt+=`
+*━━ CONTAS A PAGAR ━━*
+`;
+   txt+=`Total: ${brl(totalCP)} (${cpMes.length} contas)
+`;
+   txt+=`Pagas: ${cpMes.filter(c=>c.pago).length} | Pendentes: ${cpMes.filter(c=>!c.pago).length}
+`;
+  }
+ }
+
+ if(document.getElementById('rel-rh')?.checked){
+  const funcs=gFuncs();
+  if(funcs.length>0){
+   txt+=`
+*━━ RH ━━*
+`;
+   txt+=`Funcionários ativos: ${funcs.filter(f=>f.ativo).length}
+`;
+   txt+=`Custo RH: ${brl(rh)}
+`;
+  }
+ }
+
+ txt+=`
+_Di Casa Laranjinha — GestaoERP_`;
+
+ if(acao==='whatsapp'){
+  if(navigator.share){navigator.share({text:txt}).catch(()=>{});}
+  else{const el=document.createElement('textarea');el.value=txt;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);alert('✅ Copiado! Cole no WhatsApp.');}
+ }else{
+  const el=document.createElement('textarea');el.value=txt;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);
+  document.getElementById('rel-preview').style.display='block';
+  document.getElementById('rel-texto').textContent=txt;
+  alert('✅ Relatório copiado!');
+ }
+}
 function rCentroCusto(){
  const db=ldb();
  const hoje=hj();
@@ -11095,7 +11269,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,csv:rCsvBanco,cc:rCentroCusto,aforn:rAnalForn,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,csv:rCsvBanco,cc:rCentroCusto,aforn:rAnalForn,relmes:rRelatorioMensal,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
