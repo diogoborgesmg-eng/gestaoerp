@@ -745,7 +745,7 @@ if (num === NF_GROUP_ID && ['imageMessage','documentMessage'].includes(tipo)) {
               }
               lancamentosFeitos.push(lanc);
               if (p.valorJuros && p.valorJuros > 0) {
-                const lancJuros = { valor: p.valorJuros, categoria: '💳 Taxas / Impostos', descricao: 'Juros/multa', destinatario: _dest + ' (juros)', tipo: lanc.tipo, data: lanc.data, confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
+                const lancJuros = { valor: p.valorJuros, categoria: '⚠️ Juros / Multa', descricao: 'Juros/multa', destinatario: _dest + ' (juros)', tipo: lanc.tipo, data: lanc.data, confianca: 'alta', setor: 'Geral', origem: 'whatsapp' };
                 lancamentosFeitos.push(lancJuros);
               }
             }
