@@ -4983,12 +4983,13 @@ function rFluxoCaixa(){
    else if(cat.includes('limpeza')||cat.includes('higiene'))dre.limpeza+=v;
    else if(cat.includes('fixo')||cat.includes('aluguel')||cat.includes('energia')||cat.includes('agua')||cat.includes('internet'))dre.fixo+=v;
    else if(cat.includes('juros')||cat.includes('multa')||cat.includes('mora'))dre.juros+=v;
+   else if(cat.includes('cheque especial')||cat.includes('iof')||cat.includes('manutencao')||cat.includes('manutenção')||cat.includes('tarifas bancarias')||cat.includes('tarifa'))dre.tarifas=(dre.tarifas||0)+v;
    else if(cat.includes('taxa')||cat.includes('imposto')||cat.includes('simples')||cat.includes('iss')||cat.includes('icms'))dre.taxas+=v;
    else dre.outros+=v;
   });
  });
 
- const cusTot=dre.matPrima+dre.rh+dre.embalagem+dre.limpeza+dre.fixo+dre.juros+dre.taxas+dre.outros;
+ const cusTot=dre.matPrima+dre.rh+dre.embalagem+dre.limpeza+dre.fixo+dre.juros+(dre.tarifas||0)+dre.taxas+dre.outros;
  const lucBruto=dre.rec-dre.matPrima-dre.embalagem;
  const lucLiq=dre.rec-cusTot;
  const margBruta=dre.rec>0?((lucBruto/dre.rec)*100).toFixed(1):'-';
@@ -5059,6 +5060,7 @@ function rFluxoCaixa(){
  ${linha('🧹 Limpeza/Higiene',dre.limpeza,dre.rec>0?((dre.limpeza/dre.rec)*100).toFixed(1):'-',0)}
  ${linha('🏢 Custos Fixos',dre.fixo,dre.rec>0?((dre.fixo/dre.rec)*100).toFixed(1):'-',metas.fixoMeta)}
  ${dre.juros>0?linha('⚠️ Juros/Multa',dre.juros,dre.rec>0?((dre.juros/dre.rec)*100).toFixed(1):'-',0):''}
+ ${(dre.tarifas||0)>0?linha('🏦 Tarifas/IOF/Cheque Esp.',dre.tarifas||0,dre.rec>0?(((dre.tarifas||0)/dre.rec)*100).toFixed(1):'-',0):''}
  ${linha('💳 Taxas/Impostos',dre.taxas,dre.rec>0?((dre.taxas/dre.rec)*100).toFixed(1):'-',0)}
  ${dre.outros>0?linha('🔄 Outros',dre.outros,dre.rec>0?((dre.outros/dre.rec)*100).toFixed(1):'-',0):''}
  <div style="padding:8px 0;display:flex;justify-content:space-between;font-size:12px;font-weight:800;border-top:1px solid var(--br);margin-top:4px;">
@@ -5473,16 +5475,34 @@ function parsearCsvBanco(linhas,banco,filename){
 function classificarTransacao(desc,valor){
  const d=(desc||'').toLowerCase();
  if(valor>0)return '💰 Receita/Transferência recebida';
- if(/(alcatra|frango|carne|bovino|suino|peixe|hortifruti|verdura|legume)/.test(d))return '🥩 Matéria Prima';
- if(/(embalagem|bandeja|sacola|copo|prato descart)/.test(d))return '📦 Embalagem';
- if(/(limpeza|detergente|sabao|desinf|alcool|cloro)/.test(d))return '🧹 Limpeza/Higiene';
- if(/(salario|pagamento|diaria|funcionario|colaborador)/.test(d))return '👥 RH / Mão de Obra';
- if(/(aluguel|locacao|condominio)/.test(d))return '🏢 Custos Fixos';
- if(/(energia|eletric|cemig|copasa|agua|gas)/.test(d))return '🏢 Custos Fixos';
- if(/(internet|telefon|claro|vivo|tim|oi)/.test(d))return '📱 Telecom/Internet';
- if(/(juros|multa|mora|atraso)/.test(d))return '⚠️ Juros/Multa';
- if(/(taxa|tarifa|ted|pix|transf)/.test(d))return '💳 Taxas/Impostos';
- if(/(ifood|rappi|uber|delivery)/.test(d))return '🚚 Frete/Entregador';
+ // Encargos bancarios (mais especifico primeiro)
+ if(/(cheque especial|limite especial|cred.especial|credito especial)/.test(d))return '🏦 Cheque Especial';
+ if(/\biof\b|imposto.*opera|iof/.test(d))return '🏦 IOF';
+ if(/(manutencao|manutenção).*(conta|cartao|cc|cta)/.test(d))return '🏦 Manutenção de Conta';
+ if(/(tarifa|taxa).*(banco|bancaria|cob|cobranca|servico|emissao|boleto|extrato)/.test(d))return '🏦 Tarifas Bancárias';
+ if(/(seguro|seg ).*(cartao|cart|conta|prestamista)/.test(d))return '🏦 Tarifas Bancárias';
+ if(/(pacote|mensalidade).*(servico|banco|conta)/.test(d))return '🏦 Tarifas Bancárias';
+ // Juros e multas
+ if(/(juros|multa|mora|atraso|encargo)/.test(d))return '⚠️ Juros/Multa';
+ // Insumos / materia prima
+ if(/(alcatra|frango|carne|bovino|suino|peixe|hortifruti|verdura|legume|tomate|cebola|alho|batata|queijo|leite|manteiga|ovo|ovos)/.test(d))return '🥩 Matéria Prima';
+ if(/(distribuidora|frigorif|atacado|mercearia|lacticin)/.test(d))return '🥩 Matéria Prima';
+ // Embalagem
+ if(/(embalagem|bandeja|sacola|copo descart|prato descart|garfo descart|canudo|isopor)/.test(d))return '📦 Embalagem';
+ // Limpeza
+ if(/(limpeza|detergente|sabao|sabão|desinf|alcool|cloro|multiuso|vassoura|rodo)/.test(d))return '🧹 Limpeza/Higiene';
+ // RH
+ if(/(salario|salário|pagamento|diaria|funcionario|colaborador|diarista|ajudante|vale)/.test(d))return '👥 RH / Mão de Obra';
+ // Fixos
+ if(/(aluguel|locacao|locação|condominio|condomínio|iptu)/.test(d))return '🏢 Custos Fixos';
+ if(/(energia|eletric|cemig|copasa|agua|água|gas|gás|saneam)/.test(d))return '🏢 Custos Fixos';
+ // Telecom
+ if(/(internet|telefon|claro|vivo|tim|oi |net |fibra)/.test(d))return '📱 Telecom/Internet';
+ // Taxas / impostos
+ if(/(simples nacional|das|iss|icms|imposto|pgto.*tribut)/.test(d))return '💳 Taxas/Impostos';
+ if(/(taxa|tarifa|ted|doc|transf)/.test(d))return '💳 Taxas/Impostos';
+ // Delivery / frete
+ if(/(ifood|rappi|uber|delivery|entrega|motoboy|logistic)/.test(d))return '🚚 Frete/Entregador';
  return '🔄 Outros';
 }
 
@@ -5518,7 +5538,7 @@ function mostrarPreviewCsv(transacoes,banco){
   <div style="text-align:right;flex-shrink:0;">
    <p style="font-weight:700;color:${t.valor<0?'var(--re)':'var(--gr)'};">${brl(Math.abs(t.valor))}</p>
    <select onchange="_csvTrans[${i}].categoria=this.value" style="font-size:9px;background:var(--sf);border:none;color:var(--mu);max-width:100px;">
-    ${['🥩 Matéria Prima','📦 Embalagem','🧹 Limpeza/Higiene','👥 RH / Mão de Obra','🏢 Custos Fixos','📱 Telecom/Internet','⚠️ Juros/Multa','💳 Taxas/Impostos','🚚 Frete/Entregador','💰 Receita/Transferência recebida','🔄 Outros'].map(cat=>`<option value="${cat}" ${t.categoria===cat?'selected':''}>${cat}</option>`).join('')}
+    ${['🥩 Matéria Prima','📦 Embalagem','🧹 Limpeza/Higiene','👥 RH / Mão de Obra','🏢 Custos Fixos','📱 Telecom/Internet','⚠️ Juros/Multa','🏦 Cheque Especial','🏦 IOF','🏦 Manutenção de Conta','🏦 Tarifas Bancárias','💳 Taxas/Impostos','🚚 Frete/Entregador','💰 Receita/Transferência recebida','🔄 Outros'].map(cat=>`<option value="${cat}" ${t.categoria===cat?'selected':''}>${cat}</option>`).join('')}
    </select>
   </div>
  </div>`).join('')}
