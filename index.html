@@ -8425,15 +8425,13 @@ function ir(n){
  aba=n;
  if(n!=="nf"){fs="idle"; fd=null; }
  document.querySelectorAll(".tb,.ni").forEach(b=>b.classList.remove("a"));
- const tabs=["dre","est","fila","vendas","voz","forn","ficha","compras","fixos","conf","ia","bi","mkt","fin","cfo","comp","aval","rh","pdv"];
- const ti=tabs.indexOf(n);
- if(ti>=0) document.querySelectorAll(".tb")[ti]?.classList.add("a");
+ // Destaca o botao pelo data-tab (funciona para todos os modulos)
+ document.querySelectorAll(".tb[data-tab='"+n+"']").forEach(b=>b.classList.add("a"));
  document.getElementById("n-"+n)?.classList.add("a");
  render();
- // Busca automaticamente lancamentos de outros dispositivos pras telas que mostram dados financeiros
- if(["dre","vendas","forn","pdv","fin"].includes(n)){
+ if(["dre","vendas","forn","pdv","fin","resumo","ind","cmv"].includes(n)){
   puxarLancamentosOutrosDispositivos(getDia()).then(r=>{
-   if(r.novos>0&&aba===n)render(); // so re-renderiza se ainda estiver na mesma tela
+   if(r.novos>0&&aba===n)render();
   });
  }
 }
