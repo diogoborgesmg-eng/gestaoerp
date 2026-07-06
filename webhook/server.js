@@ -216,9 +216,19 @@ async function salvarGitHub(lanc, reciboUrl) {
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
     // Bot registra SEMPRE custos (pagamentos feitos pela Di Casa)
-    fd.lancamentos.push({ id: Date.now().toString(36), ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
+    const _lancId = Date.now().toString(36)+'_bot';
+    fd.lancamentos.push({ id: _lancId, ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
+    // Grava tambem na tabela lancamentos (para PDF das 6h e sync automatico)
+    const SB_URL_BOT = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY_BOT = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    req2('POST', SB_URL_BOT+'/rest/v1/lancamentos',
+      { id: _lancId, tipo: 'custo', dia_comercial: lanc.data||new Date().toLocaleDateString('pt-BR'),
+        descricao: lanc.desc||lanc.fornecedor||'Pagamento', categoria: lanc.categoria||'Outros',
+        segmento: lanc.setor||null, valor: Number(lanc.valor||0), device_id: 'bot_whatsapp' },
+      { 'apikey': SB_KEY_BOT, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+    ).catch(e => console.log('Erro gravar lancamento tabela:', e.message));
     await req2('PUT',
       'https://api.github.com/repos/'+REPO+'/contents/bot_lancamentos.json?ref=dados',
       { message: 'bot:'+lanc.valor, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
@@ -1377,7 +1387,7 @@ async function consultarNFsRecebidas() {
 function agendarConsultaSEFAZ() {
   const agora = new Date();
   const prox3h = new Date();
-  prox3h.setUTCHours(6, 0, 0, 0);
+  prox3h.setUTCHours(6, 0, 0, 0); // 3h Brasilia = 6h UTC
   if (prox3h <= agora) prox3h.setUTCDate(prox3h.getUTCDate() + 1);
   const msAte3h = prox3h - agora;
   console.log(`SEFAZ: próxima consulta em ${Math.round(msAte3h/60000)} minutos`);
