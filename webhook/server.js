@@ -1006,91 +1006,6 @@ async function checarEstoqueBaixo() {
   } catch(e) { console.error('Erro checarEstoqueBaixo:', e.message); }
 }
 
-// Roda 2x por dia: 8h e 14h (horário Brasília = 11h e 17h UTC)
-function agendarAlertsEstoque() {
-  const agora = new Date();
-  const horarios = [11, 17]; // UTC
-  const proximos = horarios.map(h => {
-    const d = new Date();
-    d.setUTCHours(h, 0, 0, 0);
-    if (d <= agora) d.setUTCDate(d.getUTCDate() + 1);
-    return d;
-  });
-  const prox = proximos.reduce((a, b) => a < b ? a : b);
-  const ms = prox - agora;
-  console.log(`Estoque: próximo alerta em ${Math.round(ms/60000)} minutos`);
-  setTimeout(() => {
-    checarEstoqueBaixo();
-    setInterval(checarEstoqueBaixo, 12 * 60 * 60 * 1000); // depois a cada 12h
-  }, ms);
-}
-agendarAlertsEstoque();
-
-
-// ═══════════════════════════════════════════════════════════════
-// ALERTA DE CONTAS VENCENDO — avisa 3, 2, 1 dia antes e no dia
-// ═══════════════════════════════════════════════════════════════
-async function checarContasVencendo() {
-  try {
-    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
-    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
-    if (!Array.isArray(rows) || !rows.length) return;
-    const d = JSON.parse(rows[0].data);
-    const contas = d.contasPagar || [];
-    const agora = new Date();
-    agora.setHours(0,0,0,0);
-
-    const alertas = [];
-    contas.filter(cp => !cp.pago).forEach(cp => {
-      const vStr = cp.venc || cp.vencimento || '';
-      if (!vStr) return;
-      let vDate;
-      if (vStr.includes('/')) {
-        const [dd, mm, yyyy] = vStr.split('/');
-        vDate = new Date(yyyy, mm-1, dd);
-      } else {
-        vDate = new Date(vStr);
-      }
-      if (isNaN(vDate)) return;
-      vDate.setHours(0,0,0,0);
-      const dias = Math.round((vDate - agora) / (1000*60*60*24));
-      if (dias >= 0 && dias <= 3) {
-        const emoji = dias === 0 ? '🔴' : dias === 1 ? '🟠' : '🟡';
-        const texto = dias === 0 ? 'VENCE HOJE' : dias === 1 ? 'vence amanhã' : `vence em ${dias} dias`;
-        alertas.push({ emoji, texto, forn: cp.forn || cp.desc || 'Fornecedor', val: Number(cp.val || cp.valor || 0), venc: vStr, dias });
-      }
-    });
-
-    if (alertas.length === 0) return;
-
-    // Ordena do mais urgente pro menos urgente
-    alertas.sort((a, b) => a.dias - b.dias);
-    const totalVencendo = alertas.reduce((s, a) => s + a.val, 0);
-    const brl = v => 'R$' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-
-    const linhas = alertas.map(a => a.emoji + " " + a.forn + ": " + brl(a.val) + " — " + a.texto).join("\n");
-    const msg = "*💳 Contas Vencendo — Di Casa Laranjinha*\n\n" + linhas + "\n\n*Total: " + brl(totalVencendo) + "*";
-
-    const destinos = ['5534996853258', '5534997692282'];
-    for (const num of destinos) await wpp(num, msg);
-    console.log('Alerta contas vencendo:', alertas.length, 'contas');
-  } catch(e) { console.error('Erro checarContasVencendo:', e.message); }
-}
-
-// Roda todo dia as 7h da manha (10h UTC)
-function agendarAlertaContas() {
-  const agora = new Date();
-  const prox = new Date();
-  prox.setUTCHours(10, 0, 0, 0);
-  if (prox <= agora) prox.setUTCDate(prox.getUTCDate() + 1);
-  const ms = prox - agora;
-  console.log('Contas: proximo alerta em ' + Math.round(ms/60000) + ' minutos');
-  setTimeout(() => {
-    checarContasVencendo();
-    setInterval(checarContasVencendo, 24 * 60 * 60 * 1000);
-  }, ms);
-}
 agendarAlertaContas();
 
 
@@ -1432,8 +1347,22 @@ async function consultarNFsRecebidas() {
     const nfesDados = parsearDocZips(r.xml);
     if (nfesDados.length > 0) {
       console.log('SEFAZ: encontradas', nfesDados.length, 'NFs novas com dados');
-      const hoje = new Date().toLocaleDateString('pt-BR');
+      const hojeObj = new Date();
+      const hoje = hojeObj.toLocaleDateString('pt-BR');
+      const mesAtual = hojeObj.getMonth();
+      const anoAtual = hojeObj.getFullYear();
       for (const nfe of nfesDados) {
+        // Filtra apenas NFs do mes atual
+        if (nfe.data) {
+          const p = nfe.data.split('/');
+          if (p.length === 3) {
+            const nfeDate = new Date(p[2], p[1]-1, p[0]);
+            if (nfeDate.getMonth() !== mesAtual || nfeDate.getFullYear() !== anoAtual) {
+              console.log('NF ignorada mes anterior:', nfe.data, nfe.emitente);
+              continue;
+            }
+          }
+        }
         const dia = nfe.data || hoje;
         // Sequencial — evita race condition: primeiro estoque, depois conta
         try {
@@ -1480,20 +1409,39 @@ async function consultarNFsRecebidas() {
   } catch(e) { console.error('SEFAZ consulta erro:', e.message); }
 }
 
-// Roda 1x por dia às 3h da manhã (horário Brasília = 6h UTC)
-function agendarConsultaSEFAZ() {
+// Verificacao a cada 30min — sobrevive a restarts do servidor
+// Roda SEFAZ às 3h, alertas de contas às 7h, alertas de estoque às 8h e 14h
+let _ultimoSefazDia = '';
+let _ultimoContasDia = '';
+let _ultimoEstoqueDia = '';
+let _ultimoEstoque14hDia = '';
+setInterval(() => {
   const agora = new Date();
-  const prox3h = new Date();
-  prox3h.setUTCHours(6, 0, 0, 0); // 3h Brasilia = 6h UTC
-  if (prox3h <= agora) prox3h.setUTCDate(prox3h.getUTCDate() + 1);
-  const msAte3h = prox3h - agora;
-  console.log(`SEFAZ: próxima consulta em ${Math.round(msAte3h/60000)} minutos`);
-  setTimeout(() => {
-    consultarNFsRecebidas();
-    setInterval(consultarNFsRecebidas, 24 * 60 * 60 * 1000); // depois a cada 24h
-  }, msAte3h);
-}
-agendarConsultaSEFAZ();
+  const hUTC = agora.getUTCHours();
+  const diaKey = agora.toISOString().slice(0,10);
+  // SEFAZ às 3h Brasilia = 6h UTC
+  if (hUTC === 6 && _ultimoSefazDia !== diaKey) {
+    _ultimoSefazDia = diaKey;
+    console.log('SEFAZ: rodando consulta automatica', diaKey);
+    consultarNFsRecebidas().catch(e=>console.error('SEFAZ erro:', e.message));
+  }
+  // Contas às 7h Brasilia = 10h UTC
+  if (hUTC === 10 && _ultimoContasDia !== diaKey) {
+    _ultimoContasDia = diaKey;
+    checarContasVencendo().catch(()=>{});
+  }
+  // Estoque às 8h Brasilia = 11h UTC
+  if (hUTC === 11 && _ultimoEstoqueDia !== diaKey) {
+    _ultimoEstoqueDia = diaKey;
+    checarEstoqueBaixo().catch(()=>{});
+  }
+  // Estoque às 14h Brasilia = 17h UTC
+  if (hUTC === 17 && _ultimoEstoque14hDia !== diaKey) {
+    _ultimoEstoque14hDia = diaKey;
+    checarEstoqueBaixo().catch(()=>{});
+  }
+}, 30 * 60 * 1000); // a cada 30 minutos
+console.log('Agendador iniciado — verifica a cada 30min');
 
 async function checarCaixaAberto6h(){
   try{
