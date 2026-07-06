@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="cmv" onclick="ir('cmv')" style="font-size:16px;padding:6px 10px;" title="CMV por Segmento">📊</button>
 <button class="tb" data-tab="ponto" onclick="ir('ponto')" style="font-size:16px;padding:6px 10px;" title="Ponto">⏱️</button>
 <button class="tb" data-tab="saida" onclick="ir('saida')" style="font-size:16px;padding:6px 10px;" title="Saída de Estoque">📤</button>
 <button class="tb" data-tab="pdv" onclick="ir('pdv')" style="color:#f59e0b;font-weight:800;">🍽️ PDV</button>
@@ -4912,6 +4913,87 @@ function lancarPagamentoAvulso(){
 }
 
 
+function calcCMVPorSegmento(de,ate){
+ const db=ldb();
+ const dias=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
+ const segs={
+  restaurante:{nome:'🍽️ Restaurante',receita:0,custo:0},
+  espetaria:{nome:'🍢 Espetaria',receita:0,custo:0},
+  pizzaria:{nome:'🍕 Pizzaria',receita:0,custo:0},
+  hamburgueria:{nome:'🍔 Hamburgueria',receita:0,custo:0}
+ };
+ dias.forEach(dia=>{
+  const[d,m,y]=dia.split('/');
+  const dt=new Date(y,m-1,d);
+  if(de&&ate){
+   const[dd,dm,dy]=de.split('/');const[ad,am,ay]=ate.split('/');
+   if(dt<new Date(dy,dm-1,dd)||dt>new Date(ay,am-1,ad))return;
+  }
+  // Receita por segmento (STI3 vai como 'restaurante' por padrao, iFood separa por loja)
+  (db[dia].r||[]).forEach(r=>{
+   const seg=(r.seg||r.s||'restaurante').toLowerCase().replace(/[^a-z]/g,'');
+   if(segs[seg])segs[seg].receita+=Number(r.v||0);
+   else segs.restaurante.receita+=Number(r.v||0);
+  });
+  // Custo por segmento (saidas de estoque ficam com seg preenchido)
+  (db[dia].c||[]).forEach(c=>{
+   const seg=(c.seg||'').toLowerCase().replace(/[^a-z]/g,'');
+   if(segs[seg]&&c._saidaEst)segs[seg].custo+=Number(c.v||0);
+  });
+ });
+ return Object.entries(segs).map(([id,s])=>({
+  id,nome:s.nome,receita:s.receita,custo:s.custo,
+  cmv:s.receita>0?((s.custo/s.receita)*100).toFixed(1):'-',
+  resultado:s.receita-s.custo
+ })).filter(s=>s.receita>0||s.custo>0);
+}
+
+function rCMV(){
+ const db=ldb();
+ const hoje=hj();
+ const primeiroDiaMes=`01/${hoje.slice(3)}`;
+ const dados=calcCMVPorSegmento(primeiroDiaMes,hoje);
+ const totalReceita=dados.reduce((a,s)=>a+s.receita,0);
+ const totalCusto=dados.reduce((a,s)=>a+s.custo,0);
+ const cmvTotal=totalReceita>0?((totalCusto/totalReceita)*100).toFixed(1):'-';
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:4px;">📊 CMV por Segmento</p>
+<p style="font-size:11px;color:var(--mu);margin-bottom:12px;">${primeiroDiaMes} a ${hoje}</p>
+
+${dados.length===0?`<div style="background:var(--sf2);border-radius:12px;padding:20px;text-align:center;">
+<p style="color:var(--mu);font-size:12px;">Nenhum dado ainda.</p>
+<p style="color:var(--mu);font-size:11px;margin-top:8px;">Registre saídas de estoque em 📤 e importe STi3 em Vendas.</p>
+</div>`:''}
+
+${dados.map(s=>{
+ const cmvNum=parseFloat(s.cmv)||0;
+ const corCMV=cmvNum===0?'var(--mu)':cmvNum<35?'var(--gr)':cmvNum<45?'var(--ye)':'var(--re)';
+ return`<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <p style="font-size:13px;font-weight:800;">${s.nome}</p>
+  <p style="font-size:20px;font-weight:800;color:${corCMV};">${s.cmv==='--'?'--':s.cmv+'%'}</p>
+ </div>
+ <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);">
+  <span>💰 Receita: ${brl(s.receita)}</span>
+  <span>💸 Custo MP: ${brl(s.custo)}</span>
+ </div>
+ <div style="background:var(--sf);border-radius:6px;height:6px;margin-top:8px;overflow:hidden;">
+  <div style="height:100%;background:${corCMV};width:${Math.min(100,parseFloat(s.cmv)||0)}%;transition:width 0.5s;"></div>
+ </div>
+ </div>`;
+}).join('')}
+
+${dados.length>0?`<div style="background:var(--sf2);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex;justify-content:space-between;">
+ <p style="font-size:12px;font-weight:800;">Total Consolidado</p>
+ <p style="font-size:16px;font-weight:800;color:${parseFloat(cmvTotal)<35?'var(--gr)':parseFloat(cmvTotal)<45?'var(--ye)':'var(--re)'};">${cmvTotal}%</p>
+</div>
+<p style="font-size:10px;color:var(--mu);margin-top:4px;">Meta ideal: abaixo de 35%</p>
+</div>`:''}
+</div>`;
+}
+
 function rSaidaEstoque(){
  const db=ldb();
  const est=db.est||[];
@@ -9709,7 +9791,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
