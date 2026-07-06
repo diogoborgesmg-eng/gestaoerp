@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="dash" onclick="ir('dash')" style="font-size:16px;padding:6px 10px;" title="Dashboard">📈</button>
 <button class="tb" data-tab="fluxo" onclick="ir('fluxo')" style="font-size:16px;padding:6px 10px;" title="Fluxo de Caixa">🌊</button>
 <button class="tb" data-tab="fin2" onclick="ir('fin2')" style="font-size:16px;padding:6px 10px;" title="DRE Completo">💰</button>
 <button class="tb" data-tab="compras" onclick="ir('compras')" style="font-size:16px;padding:6px 10px;" title="Lista de Compras">🛒</button>
@@ -5229,6 +5230,139 @@ ${contasProximas.length===0
   </div>
  </div>`;
  }).join('')}
+</div>
+</div>`;
+}
+
+
+function rDashboard(){
+ const db=ldb();
+ const hoje=hj();
+ const anoAtual=parseInt(hoje.slice(6));
+
+ // Agrupa dados por mes
+ function dadosMes(mm,yy){
+  const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3,5)===String(mm).padStart(2,'0')&&k.slice(6)===String(yy));
+  let rec=0,cus=0,matPrima=0,rh=0,juros=0;
+  diasMes.forEach(d=>{
+   rec+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+   (db[d].c||[]).forEach(x=>{
+    const v=Number(x.v||0);cus+=v;
+    const cat=(x.cat||'').toLowerCase();
+    if(cat.includes('materia')||cat.includes('insumo')||cat.includes('carne'))matPrima+=v;
+    else if(cat.includes('rh')||cat.includes('mao de obra'))rh+=v;
+    else if(cat.includes('juros')||cat.includes('multa'))juros+=v;
+   });
+  });
+  return{rec,cus,luc:rec-cus,matPrima,rh,juros,dias:diasMes.length};
+ }
+
+ // Ultimos 6 meses
+ const meses=[];
+ for(let i=5;i>=0;i--){
+  const d=new Date(anoAtual,parseInt(hoje.slice(3,5))-1-i,1);
+  const mm=d.getMonth()+1;const yy=d.getFullYear();
+  const nomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  meses.push({label:nomes[mm-1]+'/'+String(yy).slice(2),mm,yy,...dadosMes(mm,yy)});
+ }
+
+ const maxRec=Math.max(...meses.map(m=>m.rec),1);
+ const maxCus=Math.max(...meses.map(m=>m.cus),1);
+
+ function barChart(items,maxVal,colorFn,height=80){
+  return`<div style="display:flex;align-items:flex-end;gap:4px;height:${height}px;padding-bottom:16px;position:relative;">
+  ${items.map((item,i)=>{
+   const h=Math.max(2,Math.round((item.val/maxVal)*height*0.85));
+   const cor=colorFn(item,i);
+   return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+    <div title="${brl(item.val)}" style="width:100%;height:${h}px;background:${cor};border-radius:3px 3px 0 0;position:relative;">
+     ${item.val>0?`<span style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--mu);white-space:nowrap;">${item.val>=1000?(item.val/1000).toFixed(0)+'k':item.val.toFixed(0)}</span>`:''}
+    </div>
+    <span style="font-size:8px;color:var(--mu);position:absolute;bottom:0;">${item.label}</span>
+   </div>`;
+  }).join('')}
+ </div>`;
+ }
+
+ // Tendencia (ultimo mes vs anterior)
+ const ultimo=meses[5];const penultimo=meses[4];
+ const tendRec=penultimo.rec>0?((ultimo.rec-penultimo.rec)/penultimo.rec*100).toFixed(1):'-';
+ const tendLuc=penultimo.luc>0?((ultimo.luc-penultimo.luc)/penultimo.luc*100).toFixed(1):'-';
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:12px;">📈 Dashboard — Últimos 6 meses</p>
+
+<!-- TENDENCIA -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+ <div style="background:var(--sf2);border-radius:10px;padding:10px;text-align:center;">
+  <p style="font-size:9px;color:var(--mu);">Receita ${meses[5].label}</p>
+  <p style="font-size:16px;font-weight:800;color:var(--gr);">${brl(ultimo.rec)}</p>
+  ${tendRec!=='-'?`<p style="font-size:10px;color:${parseFloat(tendRec)>=0?'var(--gr)':'var(--re)'};">${parseFloat(tendRec)>=0?'▲':'▼'} ${Math.abs(parseFloat(tendRec))}% vs mês ant.</p>`:''}
+ </div>
+ <div style="background:var(--sf2);border-radius:10px;padding:10px;text-align:center;">
+  <p style="font-size:9px;color:var(--mu);">Lucro ${meses[5].label}</p>
+  <p style="font-size:16px;font-weight:800;color:${ultimo.luc>=0?'var(--gr)':'var(--re)'};">${brl(ultimo.luc)}</p>
+  ${tendLuc!=='-'?`<p style="font-size:10px;color:${parseFloat(tendLuc)>=0?'var(--gr)':'var(--re)'};">${parseFloat(tendLuc)>=0?'▲':'▼'} ${Math.abs(parseFloat(tendLuc))}% vs mês ant.</p>`:''}
+ </div>
+</div>
+
+<!-- GRAFICO RECEITA -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">💰 Receita mensal</p>
+${barChart(meses.map(m=>({val:m.rec,label:m.label})),maxRec,(item,i)=>`rgba(0,255,136,${0.4+i*0.1})`)}
+</div>
+
+<!-- GRAFICO LUCRO -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">✅ Lucro mensal</p>
+${barChart(meses.map(m=>({val:Math.max(0,m.luc),label:m.label})),Math.max(...meses.map(m=>m.luc),1),(item,i)=>{
+ const mes=meses[i];return mes.luc<0?'var(--re)':`rgba(0,150,255,${0.4+i*0.1})`;
+})}
+</div>
+
+<!-- TABELA COMPARATIVA -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">📊 Comparativo mensal</p>
+<div style="overflow-x:auto;">
+<table style="width:100%;border-collapse:collapse;font-size:11px;">
+ <tr style="color:var(--mu);">
+  <th style="text-align:left;padding:4px 0;">Mês</th>
+  <th style="text-align:right;padding:4px;">Receita</th>
+  <th style="text-align:right;padding:4px;">Custo</th>
+  <th style="text-align:right;padding:4px;">Lucro</th>
+  <th style="text-align:right;padding:4px;">Margem</th>
+ </tr>
+ ${meses.map(m=>`<tr style="border-top:1px solid var(--br);">
+  <td style="padding:5px 0;font-weight:${m.label===meses[5].label?'800':'400'}">${m.label}</td>
+  <td style="text-align:right;padding:5px 4px;color:var(--gr);">${m.rec>0?brl(m.rec):'-'}</td>
+  <td style="text-align:right;padding:5px 4px;color:var(--re);">${m.cus>0?brl(m.cus):'-'}</td>
+  <td style="text-align:right;padding:5px 4px;color:${m.luc>=0?'var(--gr)':'var(--re)'};">${m.rec>0?brl(m.luc):'-'}</td>
+  <td style="text-align:right;padding:5px 4px;color:${m.rec>0&&m.luc/m.rec>=0.15?'var(--gr)':'var(--ye)'};">${m.rec>0?((m.luc/m.rec)*100).toFixed(1)+'%':'-'}</td>
+ </tr>`).join('')}
+</table>
+</div>
+</div>
+
+<!-- EVOLUCAO CMV -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">🥩 Evolução CMV % (meta: abaixo de 35%)</p>
+<div style="display:flex;gap:6px;align-items:flex-end;">
+${meses.map(m=>{
+ const cmv=m.rec>0?((m.matPrima/m.rec)*100):0;
+ const h=Math.max(4,Math.min(60,cmv*1.5));
+ const cor=cmv===0?'var(--sf)':cmv<35?'var(--gr)':cmv<45?'var(--ye)':'var(--re)';
+ return`<div style="flex:1;text-align:center;">
+  <p style="font-size:8px;color:var(--mu);">${cmv>0?cmv.toFixed(0)+'%':'-'}</p>
+  <div style="height:${h}px;background:${cor};border-radius:3px;margin:0 1px;"></div>
+  <p style="font-size:8px;color:var(--mu);margin-top:2px;">${m.label}</p>
+ </div>`;
+}).join('')}
+</div>
+<div style="border-top:1px dashed rgba(255,255,255,0.2);margin-top:6px;padding-top:4px;display:flex;gap:12px;font-size:10px;">
+ <span style="color:var(--gr);">■ Ótimo (&lt;35%)</span>
+ <span style="color:var(--ye);">■ Atenção (35-45%)</span>
+ <span style="color:var(--re);">■ Crítico (&gt;45%)</span>
+</div>
 </div>
 </div>`;
 }
@@ -10596,7 +10730,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={resumo:rResumo,fin2:rFluxoCaixa,metas:rMetas,fluxo:rFluxo,dash:rDashboard,compras:rListaCompras,precos:rHistoricoPrecos,escala:rEscala,semanal:rRelatorioSemanal,ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
