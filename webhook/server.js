@@ -283,6 +283,48 @@ const server = http.createServer((req, res) => {
       });
       return;
     }
+    if (req.url === '/restaurar-bot-lancamentos') { (async () => {
+      try {
+        const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+        const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+        // Busca bot_lancamentos.json do GitHub
+        const botRaw = await req2('GET','https://raw.githubusercontent.com/'+REPO+'/main/bot_lancamentos.json?t='+Date.now(),null,{});
+        const lancamentos = (botRaw.lancamentos||[]);
+        // Busca blob atual
+        const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+        const blobData = JSON.parse(rows[0].data);
+        const deviceId = rows[0].device_id;
+        let restaurados = 0;
+        lancamentos.forEach(l => {
+          const dia = l.data;
+          if (!dia) return;
+          // Ignora lançamentos onde Di Casa é o destinatário (recebeu, não pagou)
+          const dest = (l.destinatario||'').toLowerCase();
+          if (dest.includes('di casa') || dest.includes('gastronomia')) return;
+          if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
+          const ids = new Set([...(blobData[dia].c||[]), ...(blobData[dia].r||[])].map(x=>x.id));
+          if (ids.has(l.id)) return;
+          const item = {id:l.id, d:l.destinatario||l.descricao||'Pagamento', v:Number(l.valor||0), cat:l.categoria||'Outros', seg:'fixo', dt:dia};
+          if (l.tipo_lancamento==='custo') {
+            if (!blobData[dia].c) blobData[dia].c = [];
+            blobData[dia].c.push(item);
+          } else {
+            if (!blobData[dia].r) blobData[dia].r = [];
+            blobData[dia].r.push(item);
+          }
+          restaurados++;
+        });
+        await req2('POST', SB_URL+'/rest/v1/erp_sync',
+          { device_id: deviceId, data: JSON.stringify(blobData) },
+          { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, restaurados, total:lancamentos.length}));
+      } catch(e) {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      }
+    })(); return;
+    }
     if (req.url && req.url.startsWith('/limpar-teste-sefaz')) { (async () => {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
