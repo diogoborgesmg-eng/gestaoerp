@@ -20303,17 +20303,36 @@ async function sincronizarBlobAutomatico(){
     }
    });
   }
-  // Mescla contas a pagar (contas com _sefaz:true sao do servidor)
+  // Mescla contas a pagar com deduplicacao por id E por valor+fornecedor
   if(dadosServidor.contasPagar&&dadosServidor.contasPagar.length>0){
    const idsLocais=new Set((db.contasPagar||[]).map(cp=>cp.id));
+   const chavesLocais=new Set((db.contasPagar||[]).map(cp=>String(cp.val||cp.valor||0)+'_'+(cp.forn||cp.desc||'').slice(0,15)));
    dadosServidor.contasPagar.forEach(cp=>{
-    if(!idsLocais.has(cp.id)){
+    const chave=String(cp.val||cp.valor||0)+'_'+(cp.forn||cp.desc||'').slice(0,15);
+    if(!idsLocais.has(cp.id)&&!chavesLocais.has(chave)){
      if(!db.contasPagar)db.contasPagar=[];
      db.contasPagar.push(cp);
      mudou=true;
     }
    });
   }
+  // Mescla lancamentos DRE do servidor sem duplicar por id E por valor+descricao
+  const diasServidor=Object.keys(dadosServidor).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
+  diasServidor.forEach(dia=>{
+   if(!db[dia])db[dia]={r:[],c:[]};
+   ['r','c'].forEach(tipo=>{
+    const itensServidor=dadosServidor[dia][tipo]||[];
+    const idsLocais=new Set((db[dia][tipo]||[]).map(x=>x.id));
+    const chavesLocais=new Set((db[dia][tipo]||[]).map(x=>String(x.v||0)+'_'+(x.d||'').slice(0,15)));
+    itensServidor.forEach(item=>{
+     const chave=String(item.v||0)+'_'+(item.d||'').slice(0,15);
+     if(!idsLocais.has(item.id)&&!chavesLocais.has(chave)){
+      db[dia][tipo].push(item);
+      mudou=true;
+     }
+    });
+   });
+  });
   if(mudou){
    sdb(db);
    localStorage.setItem('erp_ultimo_blob_sync',row.updated_at);
