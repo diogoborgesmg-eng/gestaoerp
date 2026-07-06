@@ -243,6 +243,19 @@ async function salvarGitHub(lanc, reciboUrl) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
+    if (req.url === '/relatorio-pdf') {
+      (async () => {
+        try {
+          const result = await gerarEnviarRelatorioPDF();
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify(result));
+        } catch(e) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false,erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url && req.url.startsWith('/recuperar-backup')) {
       const SB_URL2 = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY2 = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
@@ -452,16 +465,6 @@ const server = http.createServer((req, res) => {
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ ok: false, erro: e.message }));
         }
-      });
-      return;
-    }
-    if (req.url === '/relatorio-pdf') {
-      gerarEnviarRelatorioPDF().then(result => {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify(result));
-      }).catch(e => {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false,erro:e.message}));
       });
       return;
     }
