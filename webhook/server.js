@@ -1019,7 +1019,6 @@ async function checarEstoqueBaixo() {
   } catch(e) { console.error('Erro checarEstoqueBaixo:', e.message); }
 }
 
-agendarAlertaContas();
 
 
 let _ultimoCaixaAlertado = null;
