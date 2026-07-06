@@ -303,11 +303,12 @@ const server = http.createServer((req, res) => {
     }
     if (req.url && req.url.startsWith('/test-nfe-simulada')) { (async () => {
       // Simula uma NF chegando da SEFAZ com itens reais de restaurante
+      const tsAgora = Date.now().toString();
       const nfeSimulada = {
         emitente: 'DISTRIBUIDORA TESTE LTDA',
         cnpjEmit: '99999999000199',
         nNF: '000001',
-        chNFe: '31' + Date.now().toString().padStart(42,'0'),
+        chNFe: '31' + tsAgora.padStart(42,'0').slice(0,42),
         data: new Date().toLocaleDateString('pt-BR'),
         vencimento: new Date(Date.now()+7*24*60*60*1000).toLocaleDateString('pt-BR'),
         valor: 1250.80,
@@ -1192,11 +1193,10 @@ async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
   const deviceId = rows[0].device_id || 'sefaz_auto';
   if (!d.contasPagar) d.contasPagar = [];
 
-  // Evita duplicar conta da mesma NF
-  const jaExiste = d.contasPagar.some(cp => cp.nf === dados.nNF && cp.forn === dados.emitente);
-  if (jaExiste) return false;
-
+  // Evita duplicar conta da mesma NF (usa chNFe que e unico)
   const idConta = 'sefaz_cp_' + nfe.chNFe;
+  const jaExiste = d.contasPagar.some(cp => cp.id === idConta);
+  if (jaExiste) return false;
   d.contasPagar.push({
     id: idConta,
     forn: dados.emitente || 'Fornecedor',
