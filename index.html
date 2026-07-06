@@ -17967,7 +17967,24 @@ function limparDadosTeste(){
  localStorage.clear();
  keys.forEach(k=>{if(cfg[k])localStorage.setItem(k,cfg[k]);});
  localStorage.setItem('erp',JSON.stringify(keep));
- alert('✅ Dados de teste limpos!\nCardápio, fichas, fornecedores e configurações mantidos.');
+ localStorage.setItem('erp_ultimo_blob_sync','');
+ // Limpa tambem o blob no Supabase (evita que o sync traga de volta)
+ const cfg2=getSupabaseCfg();
+ if(cfg2.url&&cfg2.key){
+  fetch(`${cfg2.url}/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1`,{headers:{'apikey':cfg2.key}})
+   .then(r=>r.json()).then(rows=>{
+    if(!rows||!rows.length)return;
+    const d=JSON.parse(rows[0].data);
+    d.est=[]; d.contasPagar=[];
+    Object.keys(d).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)).forEach(k=>delete d[k]);
+    fetch(`${cfg2.url}/rest/v1/erp_sync`,{
+     method:'POST',
+     headers:{'apikey':cfg2.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+     body:JSON.stringify({device_id:cfg2.deviceId,data:JSON.stringify(d)})
+    });
+   }).catch(()=>{});
+ }
+ alert('✅ Dados de teste limpos local e na nuvem!\nCardápio, fichas, fornecedores e configurações mantidos.');
  render();
 }
 
