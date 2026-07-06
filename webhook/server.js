@@ -297,9 +297,9 @@ const server = http.createServer((req, res) => {
         const cpAntes = (d.contasPagar||[]).length;
         d.contasPagar = (d.contasPagar||[]).filter(cp => !cp.id?.startsWith('sefaz_cp_'));
         // Remove lancamentos de teste da tabela lancamentos
+        // Apaga APENAS os de teste (sefaz_teste) - nao apaga os reais (sefaz_auto)
         await req2('DELETE', SB_URL+'/rest/v1/lancamentos?device_id=eq.sefaz_teste', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
-        await req2('DELETE', SB_URL+'/rest/v1/lancamentos?device_id=eq.sefaz_auto', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
-        await req2('DELETE', SB_URL+'/rest/v1/movimentos_estoque?device_id=eq.sefaz_auto', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
+        await req2('DELETE', SB_URL+'/rest/v1/movimentos_estoque?device_id=eq.sefaz_teste', null, {'apikey':SB_KEY, 'Content-Type':'application/json'}).catch(()=>{});
         // Salva blob limpo
         await req2('POST', SB_URL+'/rest/v1/erp_sync', { device_id: deviceId, data: JSON.stringify(d) },
           { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
