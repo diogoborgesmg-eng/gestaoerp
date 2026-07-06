@@ -5145,14 +5145,32 @@ function salvarFachada(url){
  render();
 }
 
-function limparEstoqueCompleto(){
- if(!confirm('Isso vai apagar TODOS os produtos do estoque.\n\nTem certeza?'))return;
+async function limparEstoqueCompleto(){
+ if(!confirm('Isso vai apagar TODOS os produtos do estoque local e na nuvem.\n\nTem certeza?'))return;
  if(!confirm('CONFIRMAÇÃO FINAL: apagar estoque completo?'))return;
  const db=ldb();
  const qtd=(db.est||[]).length;
  db.est=[];
  sdb(db);
- alert('✅ '+qtd+' produto(s) removido(s) do estoque.');
+ // Limpa tambem no blob do Supabase
+ const cfg=getSupabaseCfg();
+ if(cfg.url&&cfg.key){
+  try{
+   const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1`,{headers:{'apikey':cfg.key}});
+   const rows=await resp.json();
+   if(rows&&rows.length){
+    const d=JSON.parse(rows[0].data);
+    d.est=[];
+    await fetch(`${cfg.url}/rest/v1/erp_sync`,{
+     method:'POST',
+     headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+     body:JSON.stringify({device_id:cfg.deviceId,data:JSON.stringify(d)})
+    });
+   }
+  }catch(e){console.error('Erro ao limpar estoque na nuvem:',e.message);}
+ }
+ localStorage.setItem('erp_ultimo_blob_sync','');
+ alert('✅ '+qtd+' produto(s) removido(s) do estoque local e na nuvem.');
  render();
 }
 
