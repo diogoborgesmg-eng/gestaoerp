@@ -111,6 +111,7 @@ input,select,button,textarea{font-family:'Syne',sans-serif;}
 <button onclick="ir('cfg')" style="background:rgba(68,136,255,0.15);border:1px solid rgba(68,136,255,0.4);color:var(--bl);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;flex-shrink:0;" title="Configurações">⚙️ Config</button>
 </div></div></div>
 <div class="tnav">
+<button class="tb" data-tab="ind" onclick="ir('ind')" style="font-size:16px;padding:6px 10px;" title="Indicadores">💼</button>
 <button class="tb" data-tab="cmv" onclick="ir('cmv')" style="font-size:16px;padding:6px 10px;" title="CMV por Segmento">📊</button>
 <button class="tb" data-tab="ponto" onclick="ir('ponto')" style="font-size:16px;padding:6px 10px;" title="Ponto">⏱️</button>
 <button class="tb" data-tab="saida" onclick="ir('saida')" style="font-size:16px;padding:6px 10px;" title="Saída de Estoque">📤</button>
@@ -4946,6 +4947,144 @@ function calcCMVPorSegmento(de,ate){
   cmv:s.receita>0?((s.custo/s.receita)*100).toFixed(1):'-',
   resultado:s.receita-s.custo
  })).filter(s=>s.receita>0||s.custo>0);
+}
+
+function rIndicadores2(){
+ const db=ldb();
+ const hoje=hj();
+ const mes=hoje.slice(3);
+ const diasMes=Object.keys(db).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k)&&k.slice(3)===mes).sort();
+
+ // Totais do dia
+ const diaHoje=db[hoje]||{r:[],c:[]};
+ const recHoje=(diaHoje.r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ const cusHoje=(diaHoje.c||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ const lucHoje=recHoje-cusHoje;
+
+ // Totais do mes
+ let recMes=0,cusMes=0;
+ diasMes.forEach(d=>{
+  recMes+=(db[d].r||[]).reduce((a,x)=>a+Number(x.v||0),0);
+  cusMes+=(db[d].c||[]).reduce((a,x)=>a+Number(x.v||0),0);
+ });
+ const lucMes=recMes-cusMes;
+
+ // Contas vencendo proximos 7 dias
+ const contasProx=[];
+ const agora=new Date(); agora.setHours(0,0,0,0);
+ (db.contasPagar||[]).filter(cp=>!cp.pago).forEach(cp=>{
+  const vStr=cp.venc||cp.vencimento||'';
+  if(!vStr)return;
+  let vDate;
+  if(vStr.includes('/')){const[dd,mm,yy]=vStr.split('/');vDate=new Date(yy,mm-1,dd);}
+  else vDate=new Date(vStr);
+  if(isNaN(vDate))return;
+  vDate.setHours(0,0,0,0);
+  const dias=Math.round((vDate-agora)/(1000*60*60*24));
+  if(dias>=0&&dias<=7)contasProx.push({...cp,diasRestantes:dias});
+ });
+ contasProx.sort((a,b)=>a.diasRestantes-b.diasRestantes);
+ const totalContasProx=contasProx.reduce((a,c)=>a+Number(c.val||c.valor||0),0);
+
+ // Saldo projetado = lucro do mes - contas a vencer
+ const saldoProjetado=lucMes-totalContasProx;
+
+ // Bancos cadastrados
+ const bancos=db.bancos||[];
+
+ // Media diaria do mes
+ const mediaDiaria=diasMes.length>0?recMes/diasMes.length:0;
+
+ return`<div style="padding:12px;">
+<p style="font-weight:800;font-size:14px;margin-bottom:12px;">💼 Indicadores Financeiros</p>
+
+<!-- HOJE -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">📅 HOJE — ${hoje}</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+ <div><p style="font-size:9px;color:var(--mu);">Receita</p><p style="font-size:14px;font-weight:800;color:var(--gr);">${brl(recHoje)}</p></div>
+ <div><p style="font-size:9px;color:var(--mu);">Custos</p><p style="font-size:14px;font-weight:800;color:var(--re);">${brl(cusHoje)}</p></div>
+ <div><p style="font-size:9px;color:var(--mu);">Resultado</p><p style="font-size:14px;font-weight:800;color:${lucHoje>=0?'var(--gr)':'var(--re)'};">${brl(lucHoje)}</p></div>
+</div>
+</div>
+
+<!-- MES -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">📆 MÊS — ${mes} (${diasMes.length} dias)</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+ <div><p style="font-size:9px;color:var(--mu);">Receita</p><p style="font-size:14px;font-weight:800;color:var(--gr);">${brl(recMes)}</p></div>
+ <div><p style="font-size:9px;color:var(--mu);">Custos</p><p style="font-size:14px;font-weight:800;color:var(--re);">${brl(cusMes)}</p></div>
+ <div><p style="font-size:9px;color:var(--mu);">Lucro</p><p style="font-size:14px;font-weight:800;color:${lucMes>=0?'var(--gr)':'var(--re)'};">${brl(lucMes)}</p></div>
+</div>
+<div style="border-top:1px solid var(--br);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-size:11px;">
+ <span style="color:var(--mu);">Média/dia</span>
+ <span style="font-weight:700;">${brl(mediaDiaria)}</span>
+</div>
+</div>
+
+<!-- CONTAS PROXIMOS 7 DIAS -->
+<div style="background:var(--sf2);border-radius:12px;padding:12px;margin-bottom:8px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">⚠️ CONTAS — próximos 7 dias</p>
+${contasProx.length===0
+ ?`<p style="font-size:11px;color:var(--gr);">✅ Nenhuma conta vencendo nos próximos 7 dias!</p>`
+ :`${contasProx.slice(0,5).map(cp=>{
+  const emoji=cp.diasRestantes===0?'🔴':cp.diasRestantes<=2?'🟠':'🟡';
+  const texto=cp.diasRestantes===0?'HOJE':cp.diasRestantes===1?'amanhã':`em ${cp.diasRestantes}d`;
+  return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:11px;">
+  <span>${emoji} ${(cp.forn||cp.desc||'?').slice(0,22)}</span>
+  <span style="font-weight:700;">${brl(Number(cp.val||cp.valor||0))} <span style="color:var(--mu);font-weight:400;">${texto}</span></span>
+  </div>`;
+ }).join('')}
+ <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:800;">
+  <span>Total</span><span style="color:var(--re);">${brl(totalContasProx)}</span>
+ </div>`}
+</div>
+
+<!-- SALDO PROJETADO -->
+<div style="background:${saldoProjetado>=0?'rgba(0,255,136,0.08)':'rgba(255,51,102,0.08)'};border:1px solid ${saldoProjetado>=0?'rgba(0,255,136,0.3)':'rgba(255,51,102,0.3)'};border-radius:12px;padding:12px;margin-bottom:8px;">
+<div style="display:flex;justify-content:space-between;align-items:center;">
+ <div>
+  <p style="font-size:11px;color:var(--mu);">Saldo Projetado</p>
+  <p style="font-size:10px;color:var(--mu);">Lucro do mês − contas próximas 7d</p>
+ </div>
+ <p style="font-size:22px;font-weight:800;color:${saldoProjetado>=0?'var(--gr)':'var(--re)'};">${brl(saldoProjetado)}</p>
+</div>
+</div>
+
+<!-- BANCOS -->
+${bancos.length>0?`<div style="background:var(--sf2);border-radius:12px;padding:12px;">
+<p style="font-size:11px;color:var(--mu);font-weight:700;margin-bottom:8px;">🏦 SALDOS BANCÁRIOS</p>
+${bancos.map(b=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:12px;">
+ <span>${b.nome||'Banco'}</span>
+ <span style="font-weight:700;">${brl(Number(b.saldo||0))}</span>
+</div>`).join('')}
+<button onclick="atualizarSaldoBanco()" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--mu);font-size:11px;cursor:pointer;">✏️ Atualizar saldos</button>
+</div>`:`<div style="background:var(--sf2);border-radius:12px;padding:12px;">
+<p style="font-size:11px;color:var(--mu);margin-bottom:8px;">🏦 Saldos Bancários</p>
+<p style="font-size:11px;color:var(--mu);">Nenhum banco cadastrado ainda.</p>
+<button onclick="atualizarSaldoBanco()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Cadastrar Bancos</button>
+</div>`}
+</div>`;
+}
+
+function atualizarSaldoBanco(){
+ const db=ldb();
+ if(!db.bancos)db.bancos=[];
+ const bancos=['Sicoob','Santander','C6 Bank','Stone','iFood Pago'];
+ let html='Informe o saldo atual de cada banco (deixe em branco pra pular):\n\n';
+ const novos=[];
+ bancos.forEach(nome=>{
+  const atual=db.bancos.find(b=>b.nome===nome);
+  const val=prompt(`${nome} — Saldo atual (R$):`,atual?atual.saldo:'');
+  if(val!==null&&val.trim()!==''){
+   novos.push({nome,saldo:parseFloat(val.replace(',','.'))||0,atualizado:hj()});
+  }else if(atual){
+   novos.push(atual);
+  }
+ });
+ db.bancos=novos;
+ sdb(db);
+ render();
 }
 
 function rCMV(){
@@ -9791,7 +9930,7 @@ function aplicarFiltroPapel(){
 
 function render(){
  const el=document.getElementById("main");
- const m={cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
+ const m={ind:rIndicadores2,cmv:rCMV,ponto:rPonto,saida:rSaidaEstoque,fachada:rFachada,dre:rDRE,setores:rDreSetores,indicadores:rIndicadores,planejamento:rPlanejamento,cad:rCadastros,est:rEst,fila:rFila,vendas:rVendas,voz:rVoz,forn:rForn,ficha:rFicha,compras:rCompras,pedido:rPedidoCompra,fixos:rFixos,ia:rIA,cfg:rCfg,conf:rConf,bi:rBI,mkt:rMkt,fin:rFin,cfo:rCFO,comp:rComp,aval:rAval,rh:rRH,desemp:rDesempenho,pdv:rPDV,cozinha:rCozinha,cozinha:rCozinha,plano:rPlanoContas,lancm:rLancMensal,planfin:rPlanFin,dashm:rDashMensal,dasha:rDashAnual,dashc:rDashContas,dashcc:rCentroCusto,bancos:rBancos,openfinance:rOpenFinance,cpagar:rContasPagar,fluxo:rFluxoCaixa,inst:rInstrucoes,bot:rBotWhatsapp,buffet:rCustoBuffet,extrav:rExtraviado,caixa:rFechamentoCaixa,conciliacao:rConciliacao,resultado:rResultadoDia};
  const abasBloqueadas=["dre","bi","fin","cfo","rh","fixos","compras","plano","lancm","planfin","dashm","dasha","dashc","dashcc","bancos","cpagar","fluxo","resultado"];
  if(!podeVerRelatorios()&&abasBloqueadas.includes(aba)){
  el.innerHTML=`<div class="si"><div style="text-align:center;padding:32px 16px;">
