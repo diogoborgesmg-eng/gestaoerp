@@ -302,8 +302,12 @@ const server = http.createServer((req, res) => {
           const dest = (l.destinatario||'').toLowerCase();
           if (dest.includes('di casa') || dest.includes('gastronomia')) return;
           if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
-          const ids = new Set([...(blobData[dia].c||[]), ...(blobData[dia].r||[])].map(x=>x.id));
-          if (ids.has(l.id)) return;
+          const existentes = [...(blobData[dia].c||[]), ...(blobData[dia].r||[])];
+          const ids = new Set(existentes.map(x=>x.id));
+          // Chave de deduplicacao: valor + destinatario (evita duplicar mesmo lancamento com ID diferente)
+          const chaves = new Set(existentes.map(x=>String(x.v||x.valor||0)+'_'+(x.d||x.desc||'').slice(0,15)));
+          const chaveNova = String(Number(l.valor||0))+'_'+(l.destinatario||l.descricao||'').slice(0,15);
+          if (ids.has(l.id) || chaves.has(chaveNova)) return;
           const item = {id:l.id, d:l.destinatario||l.descricao||'Pagamento', v:Number(l.valor||0), cat:l.categoria||'Outros', seg:'fixo', dt:dia};
           if (l.tipo_lancamento==='custo') {
             if (!blobData[dia].c) blobData[dia].c = [];
