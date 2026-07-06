@@ -323,10 +323,9 @@ const server = http.createServer((req, res) => {
       const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
       const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
       try {
-        const [estOk, contaOk] = await Promise.all([
-          lancarEstoqueNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY),
-          lancarContaPagarNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY)
-        ]);
+        // Sequencial — evita race condition no blob do Supabase
+        const estOk = await lancarEstoqueNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY);
+        const contaOk = await lancarContaPagarNFeSefaz(nfeSimulada, nfeSimulada, SB_URL, SB_KEY);
         // Lanca custo no DRE
         await req2('POST', SB_URL+'/rest/v1/lancamentos',
           { id: 'teste_nf_'+Date.now(), tipo: 'custo', dia_comercial: nfeSimulada.data,
@@ -1329,18 +1328,17 @@ async function consultarNFsRecebidas() {
       const hoje = new Date().toLocaleDateString('pt-BR');
       for (const nfe of nfesDados) {
         const dia = nfe.data || hoje;
-        // Lanca conta a pagar automaticamente (se NF tem vencimento de boleto)
-        if (nfe.vencimento) {
-          lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY)
-            .then(ok => { if(ok) console.log('Conta a pagar lançada: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor); })
-            .catch(e => console.log('Erro conta a pagar:', e.message));
-        }
-        // Lanca itens no estoque automaticamente (se NF completa com itens)
-        if (nfe.itens && nfe.itens.length > 0) {
-          lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY)
-            .then(n => { if(n>0) console.log('Estoque: '+n+' itens lançados da NF '+nfe.nNF); })
-            .catch(e => console.log('Erro estoque NF:', e.message));
-        }
+        // Sequencial — evita race condition: primeiro estoque, depois conta
+        try {
+          if (nfe.itens && nfe.itens.length > 0) {
+            const n = await lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
+            if(n>0) console.log('Estoque: '+n+' itens lancados da NF '+nfe.nNF);
+          }
+          if (nfe.vencimento) {
+            const ok = await lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
+            if(ok) console.log('Conta a pagar: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor);
+          }
+        } catch(eSeq) { console.log('Erro ao lancar NF:', eSeq.message); }
         // Manifesta ciência automaticamente para receber XML completo na próxima consulta
         if (nfe.chNFe) {
           manifestarCiencia(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod')
