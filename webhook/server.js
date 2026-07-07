@@ -1518,18 +1518,23 @@ let _pluggyApiKeyExpiry = 0;
 
 async function pluggyAuth() {
   if (_pluggyApiKey && Date.now() < _pluggyApiKeyExpiry) return _pluggyApiKey;
+  // Pluggy auth: POST /auth retorna { apiKey: "..." }
   const r = await req2('POST', 'https://api.pluggy.ai/auth', {
     clientId: PLUGGY_CLIENT_ID,
     clientSecret: PLUGGY_CLIENT_SECRET
   }, {'Content-Type':'application/json'});
-  _pluggyApiKey = r.apiKey;
-  _pluggyApiKeyExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6h
+  console.log('Pluggy auth response:', JSON.stringify(r).substring(0,200));
+  _pluggyApiKey = r.apiKey || r.api_key || r.token || r.accessToken;
+  if (!_pluggyApiKey) throw new Error('Pluggy auth falhou: '+JSON.stringify(r));
+  _pluggyApiKeyExpiry = Date.now() + 2 * 60 * 60 * 1000; // 2h (expira em 2h)
   return _pluggyApiKey;
 }
 
 async function pluggyGet(path) {
   const key = await pluggyAuth();
-  return req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
+  const r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
+  console.log('Pluggy GET', path, '->', JSON.stringify(r).substring(0,200));
+  return r;
 }
 
 async function importarTransacoesPluggy() {
