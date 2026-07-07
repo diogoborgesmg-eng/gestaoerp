@@ -1293,24 +1293,50 @@ async function consultarNFsRecebidas() {
     if (!cert?.pfxBase64) { console.log('SEFAZ: certificado não configurado'); return; }
 
     // Busca o ultimo NSU salvo
-    const nsuSalvo = d.sefazUltNSU || _sefazUltNSU;
+    let nsuAtual = d.sefazUltNSU || _sefazUltNSU;
+    const todasNfesDados = [];
+    let totalLotes = 0;
+    const MAX_LOTES = 10; // Maximo de consultas por ciclo (respeita limite SEFAZ)
 
-    console.log('SEFAZ: consultando a partir do NSU', nsuSalvo);
-    const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', nsuSalvo, 'prod');
+    // Loop: consulta ate pegar todos os documentos disponiveis
+    while (totalLotes < MAX_LOTES) {
+      totalLotes++;
+      console.log('SEFAZ: lote', totalLotes, '- consultando NSU', nsuAtual);
+      const r = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, '44686412000100', nsuAtual, 'prod');
 
-    const cStat = (r.xml.match(/<cStat>(\d+)<\/cStat>/) || [])[1] || '';
-    const ultNSUResp = (r.xml.match(/<ultNSU>(\d+)<\/ultNSU>/) || [])[1] || '';
-    console.log('SEFAZ resposta cStat:', cStat, 'ultNSU:', ultNSUResp);
+      const cStat = (r.xml.match(/<cStat>(\d+)<\/cStat>/) || [])[1] || '';
+      const ultNSUResp = (r.xml.match(/<ultNSU>(\d+)<\/ultNSU>/) || [])[1] || '';
+      const maxNSU = (r.xml.match(/<maxNSU>(\d+)<\/maxNSU>/) || [])[1] || '';
+      console.log('SEFAZ lote', totalLotes, '- cStat:', cStat, 'ultNSU:', ultNSUResp, 'maxNSU:', maxNSU);
 
-    if (cStat === '656') { console.log('SEFAZ: consumo indevido, aguardando proximo ciclo'); return; }
+      if (cStat === '656') { console.log('SEFAZ: consumo indevido, parando'); break; }
+      if (!ultNSUResp || ultNSUResp === '000000000000000') break;
 
-    // Extrai chaves das NFs
-    const chaves = [];
-    const xmlDocs = r.xml.matchAll(/<chNFe>(\d{44})<\/chNFe>/g);
-    for (const m of xmlDocs) chaves.push(m[1]);
+      // Parseia documentos deste lote
+      const loteNfes = parsearDocZips(r.xml);
+      todasNfesDados.push(...loteNfes);
+
+      // Atualiza NSU para proximo lote
+      nsuAtual = ultNSUResp;
+
+      // Se ultNSU == maxNSU, chegou ao fim — nao tem mais documentos
+      if (!maxNSU || maxNSU === '000000000000000' || ultNSUResp === maxNSU) {
+        console.log('SEFAZ: todos os documentos recuperados em', totalLotes, 'lote(s)');
+        break;
+      }
+
+      // Pequena pausa entre lotes para nao sobrecarregar SEFAZ
+      await new Promise(res => setTimeout(res, 2000));
+    }
+
+    // Salva o NSU mais recente
+    if (nsuAtual !== (d.sefazUltNSU || _sefazUltNSU)) {
+      d.sefazUltNSU = nsuAtual;
+      _sefazUltNSU = nsuAtual;
+    }
 
     // Parseia os docZips para extrair dados completos das NFs
-    const nfesDados = parsearDocZips(r.xml);
+    const nfesDados = todasNfesDados;
     if (nfesDados.length > 0) {
       console.log('SEFAZ: encontradas', nfesDados.length, 'NFs novas com dados');
       const hoje = new Date().toLocaleDateString('pt-BR');
@@ -1350,14 +1376,7 @@ async function consultarNFsRecebidas() {
       }
     }
 
-    // Atualiza o NSU no blob
-    if (ultNSUResp && ultNSUResp !== '000000000000000') {
-      d.sefazUltNSU = ultNSUResp;
-      _sefazUltNSU = ultNSUResp;
-      await req2('POST', SB_URL+'/rest/v1/erp_sync',
-        { device_id: 'sefaz_auto', data: JSON.stringify(d) },
-        { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
-    }
+    // NSU ja foi salvo no loop acima
   } catch(e) { console.error('SEFAZ consulta erro:', e.message); }
 }
 
