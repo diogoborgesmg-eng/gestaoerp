@@ -244,6 +244,49 @@ async function salvarGitHub(lanc, reciboUrl) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
+    if (req.url === '/pluggy-connect') {
+      // Pagina HTML para conectar bancos ao app de desenvolvimento
+      (async () => {
+        try {
+          const key = await pluggyAuth();
+          // Gera connect token para MeuPluggy
+          const ct = await req2('POST', 'https://api.pluggy.ai/connect_token',
+            { clientUserId: 'dicasalaranjinha', options: { connectorTypes: ['PERSONAL_BANK','BUSINESS_BANK'] } },
+            { 'X-API-KEY': key, 'Content-Type': 'application/json' });
+          const connectToken = ct.accessToken || ct.token || '';
+          const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conectar Bancos — Di Casa Laranjinha</title>
+<script src="https://cdn.pluggy.ai/pluggy-connect/v2/pluggy-connect.js"></script>
+</head><body style="background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;">
+<div style="text-align:center;max-width:400px;">
+<p style="font-size:24px;margin-bottom:8px;">🏦</p>
+<h2 style="margin-bottom:8px;">Conectar Bancos</h2>
+<p style="color:#888;font-size:13px;margin-bottom:24px;">Di Casa Laranjinha — Open Finance</p>
+<button id="btnConectar" onclick="abrirPluggy()" style="padding:14px 32px;border-radius:10px;border:none;background:#0066ff;color:#fff;font-size:15px;font-weight:700;cursor:pointer;width:100%;">🔗 Conectar minha conta bancária</button>
+<p id="status" style="margin-top:16px;color:#888;font-size:12px;"></p>
+</div>
+<script>
+var connectToken = "${connectToken}";
+function abrirPluggy(){
+  document.getElementById('status').textContent = 'Abrindo widget...';
+  var p = PluggyConnect({ connectToken: connectToken,
+    onSuccess: function(d){ document.getElementById('status').textContent = '✅ Conectado! Item ID: '+d.item.id+' — pode fechar esta página.'; },
+    onError: function(e){ document.getElementById('status').textContent = '❌ Erro: '+e.message; },
+    onClose: function(){ document.getElementById('status').textContent = 'Widget fechado.'; }
+  });
+  p.init();
+}
+</script></body></html>`;
+          res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+          res.end(html);
+        } catch(e) {
+          res.writeHead(200, {'Content-Type':'text/plain'});
+          res.end('Erro: '+e.message);
+        }
+      })();
+      return;
+    }
     if (req.url === '/test-pluggy') {
       importarTransacoesPluggy().then(r => {
         res.writeHead(200,{'Content-Type':'application/json'});
