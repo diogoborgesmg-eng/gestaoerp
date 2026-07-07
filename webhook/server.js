@@ -1045,8 +1045,16 @@ function descompactarDocZip(docZipBase64) {
 }
 
 function extrairTagXML(xml, tag) {
-  const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]+)</${tag}>`));
-  return m ? m[1].trim() : '';
+  // Tenta com e sem namespace, com e sem atributos
+  const patterns = [
+    new RegExp('<'+tag+'\\s*>([^<]+)<\/'+tag+'>','i'),
+    new RegExp('<[a-zA-Z0-9]*:?'+tag+'[^>]*>([^<]+)<\/[a-zA-Z0-9]*:?'+tag+'>','i'),
+  ];
+  for (const p of patterns) {
+    const m = xml.match(p);
+    if (m) return m[1].trim();
+  }
+  return '';
 }
 
 function parsearNFeXML(xml) {
@@ -1092,7 +1100,8 @@ function parsearNFeXML(xml) {
 
 function parsearDocZips(xmlResp) {
   const nfes = [];
-  const matches = xmlResp.matchAll(/<docZip[^>]*schema="([^"]*)"[^>]*>([^<]+)<\/docZip>/g);
+  const xmlNorm = xmlResp.replace(/\r?\n/g," ");
+  const matches = xmlNorm.matchAll(/<docZip[^>]*schema="([^"]*)"[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g);
   for (const m of matches) {
     const schema = m[1];
     const b64 = m[2].trim();
@@ -1360,10 +1369,15 @@ async function consultarNFsRecebidas() {
             .catch(e => console.log('Erro manifestação:', e.message));
         }
         // Lança custo no DRE
+        // ID robusto: usa chNFe se disponivel, senao gera por emitente+valor+data
+        const _nfId = nfe.chNFe
+          ? 'nf_'+nfe.chNFe
+          : 'nf_'+Buffer.from((nfe.emitente||'')+nfe.valor+dia).toString('base64').slice(0,20);
+        console.log('SEFAZ lancamento custo: id='+_nfId+' emitente='+nfe.emitente+' valor='+nfe.valor+' dia='+dia);
         await req2('POST', SB_URL+'/rest/v1/lancamentos',
-          { id: 'nf_'+nfe.chNFe, tipo: 'custo', dia_comercial: dia,
+          { id: _nfId, tipo: 'custo', dia_comercial: dia,
             descricao: `NF ${nfe.nNF||''} - ${nfe.emitente||'Fornecedor'}`,
-            categoria: detectarGrupoServidor(nfe.emitente||'').catDRE || '🥩 Matéria Prima', segmento: null, valor: nfe.valor,
+            categoria: detectarGrupoServidor(nfe.emitente||'').catDRE || '🥩 Matéria Prima', segmento: null, valor: Number(nfe.valor||0),
             device_id: 'sefaz_auto' },
           { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
         ).catch(()=>{});
