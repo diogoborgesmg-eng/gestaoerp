@@ -1554,34 +1554,43 @@ const PLUGGY_API_KEY_ENV = process.env.PLUGGY_API_KEY || '';
 let _pluggyApiKey = null;
 let _pluggyApiKeyExpiry = 0;
 
+async function pluggyAuthFetch(method, path, body) {
+  // Funcao dedicada para Pluggy usando fetch nativo (evita problemas do req2)
+  const url = 'https://api.pluggy.ai' + path;
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+
+  // Auth: gera ou reusa token
+  if (path !== '/auth') {
+    if (!_pluggyApiKey || Date.now() >= _pluggyApiKeyExpiry) {
+      const authResp = await pluggyAuthFetch('POST', '/auth', {
+        clientId: PLUGGY_CLIENT_ID,
+        clientSecret: PLUGGY_CLIENT_SECRET
+      });
+      _pluggyApiKey = authResp.apiKey;
+      _pluggyApiKeyExpiry = Date.now() + 1.5 * 60 * 60 * 1000;
+      console.log('Pluggy: novo token gerado, tamanho:', (_pluggyApiKey||'').length);
+    }
+    opts.headers['X-API-KEY'] = _pluggyApiKey;
+  }
+
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  console.log('Pluggy', method, path, 'status:', res.status, 'resp:', text.substring(0, 300));
+  try { return JSON.parse(text); } catch(e) { return { raw: text }; }
+}
+
 async function pluggyAuth() {
-  // Sempre gera token fresco via clientId+clientSecret (API_KEY do env expira em 2h)
   if (_pluggyApiKey && Date.now() < _pluggyApiKeyExpiry) return _pluggyApiKey;
-  console.log('Pluggy: gerando novo token com clientId:', PLUGGY_CLIENT_ID.substring(0,8)+'...');
-  const r = await req2('POST', 'https://api.pluggy.ai/auth', {
+  await pluggyAuthFetch('POST', '/auth', {
     clientId: PLUGGY_CLIENT_ID,
     clientSecret: PLUGGY_CLIENT_SECRET
-  }, {'Content-Type':'application/json'});
-  console.log('Pluggy auth completo:', JSON.stringify(r).substring(0,500));
-  _pluggyApiKey = r.apiKey || r.api_key || r.token || r.accessToken;
-  if (!_pluggyApiKey) throw new Error('Pluggy auth sem token: '+JSON.stringify(r).slice(0,300));
-  _pluggyApiKeyExpiry = Date.now() + 1.5 * 60 * 60 * 1000; // 1.5h (tokens duram 2h)
+  });
   return _pluggyApiKey;
 }
 
 async function pluggyGet(path) {
-  const key = await pluggyAuth();
-  // Tenta as 3 formas de autenticacao que a Pluggy pode aceitar
-  let r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
-  if (r && r.code === 401) {
-    r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'Authorization': 'Bearer '+key});
-  }
-  if (r && r.code === 401) {
-    r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'Authorization': 'ApiKey '+key});
-  }
-  console.log('Pluggy GET', path, ':', JSON.stringify(r).substring(0,400));
-  if (r && r.code === 401) throw new Error('Pluggy unauthorized em '+path+' - verifique credenciais');
-  return r;
+  return pluggyAuthFetch('GET', path, null);
 }
 
 async function importarTransacoesPluggy() {
