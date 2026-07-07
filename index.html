@@ -21594,13 +21594,19 @@ async function puxarLancamentosOutrosDispositivos(diaComercial){
   if(!db[dia])db[dia]={r:[],c:[]};
   if(!db[dia].r)db[dia].r=[];
   if(!db[dia].c)db[dia].c=[];
-  const idsLocais=new Set([...db[dia].r.map(x=>x.id),...db[dia].c.map(x=>x.id)]);
+  const todosLocais=[...( db[dia].r||[]),...(db[dia].c||[])];
+  const idsLocais=new Set(todosLocais.map(x=>x.id));
+  // Chave de deduplicacao: valor + primeiros 20 chars da descricao (evita duplicar mesmo lancamento com ID diferente)
+  const chavesLocais=new Set(todosLocais.map(x=>String(Math.round(Number(x.v||0)*100))+'_'+(x.d||'').slice(0,20).toLowerCase().trim()));
   let novos=0;
   linhas.forEach(l=>{
-   if(idsLocais.has(l.id))return; // ja existe local, nao duplica
+   if(idsLocais.has(l.id))return;
+   const chave=String(Math.round(Number(l.valor||0)*100))+'_'+(l.descricao||'').slice(0,20).toLowerCase().trim();
+   if(chavesLocais.has(chave))return; // mesmo valor+descricao ja existe, nao duplica
    const item={id:l.id,d:l.descricao,v:Number(l.valor),cat:l.categoria,seg:l.segmento,dt:dia,_deOutroDispositivo:true};
    if(l.tipo==='receita')db[dia].r.push(item);
    else db[dia].c.push(item);
+   chavesLocais.add(chave); // atualiza set para evitar duplicar no mesmo batch
    novos++;
   });
   if(novos>0)sdb(db);
