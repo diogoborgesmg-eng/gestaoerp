@@ -244,6 +244,16 @@ async function salvarGitHub(lanc, reciboUrl) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
+    if (req.url === '/test-pluggy') {
+      importarTransacoesPluggy().then(r => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(r));
+      }).catch(e => {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url === '/relatorio-pdf') {
       (async () => {
         try {
@@ -1496,6 +1506,97 @@ async function gerarEnviarRelatorioPDF() {
 }
 
 
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRAÇÃO PLUGGY — Open Finance automático
+// Puxa transações de todos os bancos conectados no Meu Pluggy
+// ═══════════════════════════════════════════════════════════════
+const PLUGGY_CLIENT_ID = process.env.PLUGGY_CLIENT_ID || '';
+const PLUGGY_CLIENT_SECRET = process.env.PLUGGY_CLIENT_SECRET || '';
+let _pluggyApiKey = null;
+let _pluggyApiKeyExpiry = 0;
+
+async function pluggyAuth() {
+  if (_pluggyApiKey && Date.now() < _pluggyApiKeyExpiry) return _pluggyApiKey;
+  const r = await req2('POST', 'https://api.pluggy.ai/auth', {
+    clientId: PLUGGY_CLIENT_ID,
+    clientSecret: PLUGGY_CLIENT_SECRET
+  }, {'Content-Type':'application/json'});
+  _pluggyApiKey = r.apiKey;
+  _pluggyApiKeyExpiry = Date.now() + 6 * 60 * 60 * 1000; // 6h
+  return _pluggyApiKey;
+}
+
+async function pluggyGet(path) {
+  const key = await pluggyAuth();
+  return req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
+}
+
+async function importarTransacoesPluggy() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const brl = v => Number(v||0).toFixed(2);
+
+    // Lista todos os itens (conexoes bancarias)
+    const itens = await pluggyGet('/items');
+    if (!itens || !itens.results || !itens.results.length) {
+      console.log('Pluggy: nenhuma conexao bancaria encontrada');
+      return {ok:false, erro:'Nenhuma conexao bancaria'};
+    }
+
+    let totalImportadas = 0;
+    const hoje = new Date();
+    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-7);
+    const fmtDate = d => d.toISOString().slice(0,10);
+
+    for (const item of itens.results) {
+      const banco = item.connector?.name || 'Banco';
+      // Lista contas do item
+      const contas = await pluggyGet('/accounts?itemId='+item.id);
+      if (!contas || !contas.results) continue;
+
+      for (const conta of contas.results) {
+        // Busca transacoes dos ultimos 7 dias
+        const txUrl = '/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=100';
+        const txs = await pluggyGet(txUrl);
+        if (!txs || !txs.results) continue;
+
+        for (const tx of txs.results) {
+          const valor = Math.abs(Number(tx.amount||0));
+          if (valor < 0.01) continue;
+          const tipo = tx.type === 'CREDIT' ? 'receita' : 'custo';
+          const dia = (tx.date||'').slice(0,10).split('-').reverse().join('/');
+          if (!dia) continue;
+          const desc = (tx.description||tx.merchant?.name||'Transacao '+banco).slice(0,60);
+          const id = 'pluggy_'+tx.id;
+
+          // Classifica automaticamente
+          const cat = classificarTransacao(desc, tipo==='custo'?-valor:valor);
+
+          // Grava na tabela lancamentos
+          await req2('POST', SB_URL+'/rest/v1/lancamentos',
+            { id, tipo, dia_comercial: dia, descricao: desc, categoria: cat,
+              segmento: null, valor, device_id: 'pluggy_auto' },
+            { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates',
+              'Content-Type': 'application/json' }
+          ).catch(()=>{});
+          totalImportadas++;
+        }
+      }
+    }
+
+    console.log('Pluggy: importadas', totalImportadas, 'transacoes');
+    return {ok:true, importadas: totalImportadas};
+  } catch(e) {
+    console.error('Pluggy erro:', e.message);
+    return {ok:false, erro:e.message};
+  }
+}
+
+// Roda Pluggy junto com a consulta SEFAZ às 3h
+// (ja incluido no agendador de 30min)
+
 // Verificacao a cada 30min — sobrevive a restarts do servidor
 // Roda SEFAZ às 3h, alertas de contas às 7h, alertas de estoque às 8h e 14h
 let _ultimoSefazDia = '';
@@ -1506,11 +1607,14 @@ setInterval(() => {
   const agora = new Date();
   const hUTC = agora.getUTCHours();
   const diaKey = agora.toISOString().slice(0,10);
-  // SEFAZ às 3h Brasilia = 6h UTC
+  // SEFAZ + Pluggy às 3h Brasilia = 6h UTC
   if (hUTC === 6 && _ultimoSefazDia !== diaKey) {
     _ultimoSefazDia = diaKey;
     console.log('SEFAZ: rodando consulta automatica', diaKey);
     consultarNFsRecebidas().catch(e=>console.error('SEFAZ erro:', e.message));
+    if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
+      importarTransacoesPluggy().catch(e=>console.error('Pluggy erro:', e.message));
+    }
   }
   // Segunda-feira às 7h Brasilia = 10h UTC — relatório semanal PDF
   if (hUTC === 10 && agora.getUTCDay() === 1 && _ultimoContasDia !== diaKey) {
