@@ -1555,27 +1555,32 @@ let _pluggyApiKey = null;
 let _pluggyApiKeyExpiry = 0;
 
 async function pluggyAuth() {
-  // Usa API Key direta se disponivel (mais simples)
-  if (PLUGGY_API_KEY_ENV) {
-    console.log('Pluggy: usando PLUGGY_API_KEY direta');
-    return PLUGGY_API_KEY_ENV;
-  }
+  // Sempre gera token fresco via clientId+clientSecret (API_KEY do env expira em 2h)
   if (_pluggyApiKey && Date.now() < _pluggyApiKeyExpiry) return _pluggyApiKey;
+  console.log('Pluggy: gerando novo token com clientId:', PLUGGY_CLIENT_ID.substring(0,8)+'...');
   const r = await req2('POST', 'https://api.pluggy.ai/auth', {
     clientId: PLUGGY_CLIENT_ID,
     clientSecret: PLUGGY_CLIENT_SECRET
   }, {'Content-Type':'application/json'});
-  console.log('Pluggy auth response keys:', Object.keys(r||{}).join(','));
+  console.log('Pluggy auth completo:', JSON.stringify(r).substring(0,500));
   _pluggyApiKey = r.apiKey || r.api_key || r.token || r.accessToken;
-  if (!_pluggyApiKey) throw new Error('Pluggy auth falhou: '+JSON.stringify(r).slice(0,200));
-  _pluggyApiKeyExpiry = Date.now() + 2 * 60 * 60 * 1000;
+  if (!_pluggyApiKey) throw new Error('Pluggy auth sem token: '+JSON.stringify(r).slice(0,300));
+  _pluggyApiKeyExpiry = Date.now() + 1.5 * 60 * 60 * 1000; // 1.5h (tokens duram 2h)
   return _pluggyApiKey;
 }
 
 async function pluggyGet(path) {
   const key = await pluggyAuth();
-  const r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
-  console.log('Pluggy GET', path, 'status keys:', Object.keys(r||{}).join(','), JSON.stringify(r).substring(0,150));
+  // Tenta as 3 formas de autenticacao que a Pluggy pode aceitar
+  let r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
+  if (r && r.code === 401) {
+    r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'Authorization': 'Bearer '+key});
+  }
+  if (r && r.code === 401) {
+    r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'Authorization': 'ApiKey '+key});
+  }
+  console.log('Pluggy GET', path, ':', JSON.stringify(r).substring(0,400));
+  if (r && r.code === 401) throw new Error('Pluggy unauthorized em '+path+' - verifique credenciais');
   return r;
 }
 
