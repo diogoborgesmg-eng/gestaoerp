@@ -257,25 +257,38 @@ const server = http.createServer((req, res) => {
           const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Conectar Bancos — Di Casa Laranjinha</title>
-<script src="https://cdn.pluggy.ai/pluggy-connect/v2/pluggy-connect.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pluggy-connect-sdk/dist/pluggy-connect-sdk.min.js"></script>
 </head><body style="background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;">
 <div style="text-align:center;max-width:400px;">
-<p style="font-size:24px;margin-bottom:8px;">🏦</p>
+<p style="font-size:32px;margin-bottom:8px;">🏦</p>
 <h2 style="margin-bottom:8px;">Conectar Bancos</h2>
 <p style="color:#888;font-size:13px;margin-bottom:24px;">Di Casa Laranjinha — Open Finance</p>
-<button id="btnConectar" onclick="abrirPluggy()" style="padding:14px 32px;border-radius:10px;border:none;background:#0066ff;color:#fff;font-size:15px;font-weight:700;cursor:pointer;width:100%;">🔗 Conectar minha conta bancária</button>
-<p id="status" style="margin-top:16px;color:#888;font-size:12px;"></p>
+<button id="btnConectar" onclick="abrirPluggy()" style="padding:14px 32px;border-radius:10px;border:none;background:#0066ff;color:#fff;font-size:15px;font-weight:700;cursor:pointer;width:100%;">🔗 Conectar conta bancária</button>
+<p id="status" style="margin-top:16px;color:#888;font-size:13px;min-height:40px;"></p>
 </div>
 <script>
 var connectToken = "${connectToken}";
 function abrirPluggy(){
-  document.getElementById('status').textContent = 'Abrindo widget...';
-  var p = PluggyConnect({ connectToken: connectToken,
-    onSuccess: function(d){ document.getElementById('status').textContent = '✅ Conectado! Item ID: '+d.item.id+' — pode fechar esta página.'; },
-    onError: function(e){ document.getElementById('status').textContent = '❌ Erro: '+e.message; },
-    onClose: function(){ document.getElementById('status').textContent = 'Widget fechado.'; }
-  });
-  p.init();
+  document.getElementById('status').textContent = 'Iniciando...';
+  try {
+    var pluggyConnect = new PluggyConnect({
+      connectToken: connectToken,
+      includeSandbox: false,
+      onSuccess: function(itemData){
+        document.getElementById('status').textContent = '✅ Banco conectado com sucesso! Pode fechar esta página.';
+        document.getElementById('btnConectar').textContent = '✅ Conectado!';
+      },
+      onError: function(error){
+        document.getElementById('status').textContent = '❌ Erro: '+(error.message||JSON.stringify(error));
+      },
+      onClose: function(){
+        document.getElementById('status').textContent = 'Widget fechado. Clique novamente para conectar outro banco.';
+      }
+    });
+    pluggyConnect.init();
+  } catch(e) {
+    document.getElementById('status').textContent = 'Erro ao iniciar: '+e.message;
+  }
 }
 </script></body></html>`;
           res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
