@@ -1513,31 +1513,32 @@ async function gerarEnviarRelatorioPDF() {
 // ═══════════════════════════════════════════════════════════════
 const PLUGGY_CLIENT_ID = process.env.PLUGGY_CLIENT_ID || '';
 const PLUGGY_CLIENT_SECRET = process.env.PLUGGY_CLIENT_SECRET || '';
+const PLUGGY_API_KEY_ENV = process.env.PLUGGY_API_KEY || '';
 let _pluggyApiKey = null;
 let _pluggyApiKeyExpiry = 0;
 
 async function pluggyAuth() {
+  // Usa API Key direta se disponivel (mais simples)
+  if (PLUGGY_API_KEY_ENV) {
+    console.log('Pluggy: usando PLUGGY_API_KEY direta');
+    return PLUGGY_API_KEY_ENV;
+  }
   if (_pluggyApiKey && Date.now() < _pluggyApiKeyExpiry) return _pluggyApiKey;
-  // Pluggy auth: POST /auth retorna { apiKey: "..." }
   const r = await req2('POST', 'https://api.pluggy.ai/auth', {
     clientId: PLUGGY_CLIENT_ID,
     clientSecret: PLUGGY_CLIENT_SECRET
   }, {'Content-Type':'application/json'});
-  console.log('Pluggy auth response:', JSON.stringify(r).substring(0,200));
+  console.log('Pluggy auth response keys:', Object.keys(r||{}).join(','));
   _pluggyApiKey = r.apiKey || r.api_key || r.token || r.accessToken;
-  if (!_pluggyApiKey) throw new Error('Pluggy auth falhou: '+JSON.stringify(r));
-  _pluggyApiKeyExpiry = Date.now() + 2 * 60 * 60 * 1000; // 2h (expira em 2h)
+  if (!_pluggyApiKey) throw new Error('Pluggy auth falhou: '+JSON.stringify(r).slice(0,200));
+  _pluggyApiKeyExpiry = Date.now() + 2 * 60 * 60 * 1000;
   return _pluggyApiKey;
 }
 
 async function pluggyGet(path) {
   const key = await pluggyAuth();
-  // Tenta X-API-KEY primeiro, fallback para Authorization Bearer
-  let r = await req2('GET', 'https://api.pluggy.ai'+path, null, {
-    'X-API-KEY': key,
-    'Authorization': 'Bearer '+key
-  });
-  console.log('Pluggy GET', path, '->', JSON.stringify(r).substring(0,300));
+  const r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
+  console.log('Pluggy GET', path, 'status keys:', Object.keys(r||{}).join(','), JSON.stringify(r).substring(0,150));
   return r;
 }
 
