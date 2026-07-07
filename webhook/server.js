@@ -923,52 +923,6 @@ async function executarDispatch(diaForcado){
     pdfBase64 = pdfBuffer.toString('base64');
   } catch(ePdf) { erroPdf = ePdf.message; console.log('Erro gerar PDF dispatch:', ePdf.message); }
 
-  // Monta resumo em texto antes do PDF — leitura rapida em 10 segundos
-  const brl = v => 'R$'+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const resultado = receitaOntem - custoOntem;
-  const margem = receitaOntem > 0 ? ((resultado/receitaOntem)*100).toFixed(1) : '0.0';
-  const emoji = resultado >= 0 ? '🟢' : '🔴';
-
-  // Vendas por canal
-  const vendasCanais = (canaisVenda||[]).map(ch => {
-    let linha = `  • ${ch.loja ? ch.nome+' '+ch.loja : ch.nome}: ${brl(ch.vendas)}`;
-    if (ch.qtd > 0) linha += ` (${ch.qtd} ped. | ticket ${brl(ch.ticketMedio)})`;
-    if (ch.investimentoIfood > 0) linha += ` | invest. ${brl(ch.investimentoIfood)}`;
-    return linha;
-  }).join('\n');
-
-  // Top custos do dia
-  const custosDia = (diaOntem.c||[])
-    .sort((a,b)=>Number(b.v||0)-Number(a.v||0))
-    .slice(0,5)
-    .map(c=>`  • ${c.d||c.desc||'?'}: ${brl(c.v||c.valor||0)}`)
-    .join('\n');
-
-  // Contas vencendo hoje
-  const contasHoje = ((r.contasPagar||[]).filter(cp => {
-    if(cp.pago)return false;
-    const v=cp.venc||cp.vencimento||'';
-    return v===ontemBR||v===brDataStr(hojeP.ano,hojeP.mes,hojeP.dia);
-  })).map(cp=>`  • ${cp.forn||cp.desc||'?'}: ${brl(cp.val||cp.valor||0)}`).join('\n');
-
-  const msgResumo = `*🏠 Di Casa Laranjinha — ${ontemBR}*
-
-${emoji} *Resultado do dia: ${brl(resultado)}* (margem ${margem}%)
-
-💰 *Receita: ${brl(receitaOntem)}*
-${vendasCanais ? vendasCanais : '  (sem vendas registradas)'}
-
-💸 *Custos: ${brl(custoOntem)}*
-${custosDia ? custosDia : '  (sem custos registrados)'}
-
-${contasHoje ? `⚠️ *Contas vencendo hoje:*
-${contasHoje}
-` : ''}📄 PDF completo em anexo`;
-
-  for (const num of destinos) {
-    await wpp(num, msgResumo);
-  }
-
   if (pdfBase64) {
     for (const num of destinos) {
       await wppDocumento(num, pdfBase64, 'Fechamento_'+ontemBR.replace(/\//g,'-')+'.pdf', '📄 Relatório completo — '+ontemBR);
@@ -1359,22 +1313,8 @@ async function consultarNFsRecebidas() {
     const nfesDados = parsearDocZips(r.xml);
     if (nfesDados.length > 0) {
       console.log('SEFAZ: encontradas', nfesDados.length, 'NFs novas com dados');
-      const hojeObj = new Date();
-      const hoje = hojeObj.toLocaleDateString('pt-BR');
-      const mesAtual = hojeObj.getMonth();
-      const anoAtual = hojeObj.getFullYear();
+      const hoje = new Date().toLocaleDateString('pt-BR');
       for (const nfe of nfesDados) {
-        // Filtra apenas NFs do mes atual
-        if (nfe.data) {
-          const p = nfe.data.split('/');
-          if (p.length === 3) {
-            const nfeDate = new Date(p[2], p[1]-1, p[0]);
-            if (nfeDate.getMonth() !== mesAtual || nfeDate.getFullYear() !== anoAtual) {
-              console.log('NF ignorada mes anterior:', nfe.data, nfe.emitente);
-              continue;
-            }
-          }
-        }
         const dia = nfe.data || hoje;
         // Sequencial — evita race condition: primeiro estoque, depois conta
         try {
