@@ -216,16 +216,17 @@ async function salvarGitHub(lanc, reciboUrl) {
     const fd = JSON.parse(Buffer.from(fi.content, 'base64').toString());
     if (!fd.lancamentos) fd.lancamentos = [];
     // Bot registra SEMPRE custos (pagamentos feitos pela Di Casa)
-    const _lancId = Date.now().toString(36)+'_bot';
+    // ID unico e consistente - mesmo ID no blob e na tabela (evita duplicata no Forcar Envio)
+    const _lancId = Date.now().toString(36)+'b'+Math.random().toString(36).slice(2,5);
     fd.lancamentos.push({ id: _lancId, ...lanc, tipo_lancamento: 'custo', setor: lanc.setor||'Geral', reciboUrl: reciboUrl||null,
       criadoEm: new Date().toISOString(), sincronizado: false });
     if (fd.lancamentos.length > 200) fd.lancamentos = fd.lancamentos.slice(-200);
-    // Grava tambem na tabela lancamentos (para PDF das 6h e sync automatico)
+    // Grava na tabela lancamentos com MESMO ID do blob - Forcar Envio vai ignorar duplicata
     const SB_URL_BOT = 'https://bxppiwshjyddiieazoqx.supabase.co';
     const SB_KEY_BOT = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
     req2('POST', SB_URL_BOT+'/rest/v1/lancamentos',
       { id: _lancId, tipo: 'custo', dia_comercial: lanc.data||new Date().toLocaleDateString('pt-BR'),
-        descricao: lanc.desc||lanc.fornecedor||'Pagamento', categoria: lanc.categoria||'Outros',
+        descricao: lanc.desc||lanc.destinatario||lanc.fornecedor||'Pagamento', categoria: lanc.categoria||'Outros',
         segmento: lanc.setor||null, valor: Number(lanc.valor||0), device_id: 'bot_whatsapp' },
       { 'apikey': SB_KEY_BOT, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
     ).catch(e => console.log('Erro gravar lancamento tabela:', e.message));
