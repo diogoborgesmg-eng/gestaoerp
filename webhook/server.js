@@ -1532,8 +1532,12 @@ async function pluggyAuth() {
 
 async function pluggyGet(path) {
   const key = await pluggyAuth();
-  const r = await req2('GET', 'https://api.pluggy.ai'+path, null, {'X-API-KEY': key});
-  console.log('Pluggy GET', path, '->', JSON.stringify(r).substring(0,200));
+  // Tenta X-API-KEY primeiro, fallback para Authorization Bearer
+  let r = await req2('GET', 'https://api.pluggy.ai'+path, null, {
+    'X-API-KEY': key,
+    'Authorization': 'Bearer '+key
+  });
+  console.log('Pluggy GET', path, '->', JSON.stringify(r).substring(0,300));
   return r;
 }
 
