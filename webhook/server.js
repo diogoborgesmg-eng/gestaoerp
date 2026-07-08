@@ -871,6 +871,47 @@ function abrirWidget(){
             importarTransacoesPluggy().catch(function(e){ console.log('Pluggy import erro:', e.message); });
           }
         }
+
+        // TRANSACTIONS/CREATED ou TRANSACTIONS/UPDATED — tempo real
+        if (evtName==='transactions/created'||evtName==='transactions/updated') {
+          var accountId2 = evento.accountId;
+          var txLink2 = evento.createdTransactionsLink;
+          if (accountId2||txLink2) {
+            pluggyAuth().then(function(key){
+              var txUrl2 = txLink2 || ('https://api.pluggy.ai/transactions?accountId='+accountId2+'&from='+new Date(Date.now()-2*86400000).toISOString().slice(0,10)+'&pageSize=50');
+              return fetch(txUrl2,{headers:{'X-API-KEY':key,'Content-Type':'application/json'}}).then(function(r){return r.json();});
+            }).then(function(txs){
+              if(!txs||!txs.results)return;
+              var count=0;
+              var processarTx = function(i){
+                if(i>=txs.results.length){console.log('Pluggy tx webhook: '+count+' processadas');return;}
+                var tx=txs.results[i];
+                if(tx.type==='CREDIT'){processarTx(i+1);return;}
+                var valor=Math.abs(Number(tx.amount||0));
+                if(valor<0.01){processarTx(i+1);return;}
+                var dia=(tx.date||'').slice(0,10).split('-').reverse().join('/');
+                if(!dia){processarTx(i+1);return;}
+                var payDest=tx.paymentData&&tx.paymentData.receiver&&tx.paymentData.receiver.name;
+                var desc=(payDest||tx.description||'Transacao').slice(0,80).trim();
+                var cat=classificarTransacao(desc,-valor);
+                req2('POST',SB_URL+'/rest/v1/lancamentos',
+                  {id:'pluggy_'+tx.id,tipo:'custo',dia_comercial:dia,descricao:desc,categoria:cat,segmento:null,valor,device_id:'pluggy_auto'},
+                  {'apikey':SB_KEY,'Prefer':'return=minimal,resolution=ignore-duplicates','Content-Type':'application/json'}
+                ).catch(function(){}).then(function(){count++;processarTx(i+1);});
+              };
+              processarTx(0);
+            }).catch(function(e){console.log('Pluggy tx webhook erro:',e.message);});
+          }
+        }
+
+        // ITEM/ERROR — alerta WhatsApp
+        if (evtName==='item/error'||evtName==='item/waiting_user_input') {
+          var bancoErr=(evento.connector&&evento.connector.name)||'Banco';
+          var msgErr='Banco '+bancoErr+' perdeu conexao. Reconecte em: gestaoerp-webhook.onrender.com/pluggy-connect';
+          wpp('5534996853258','alertas Pluggy: '+msgErr).catch(function(){});
+          wpp('5534997692282','alertas Pluggy: '+msgErr).catch(function(){});
+        }
+
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ok:true}));
       } catch(e) {
