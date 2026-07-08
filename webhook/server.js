@@ -1817,11 +1817,45 @@ async function consultarNFsRecebidas() {
           const ok = await lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
           if(ok) console.log('Conta a pagar: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor);
         } catch(eSeq) { console.log('Erro ao lancar NF:', eSeq.message); }
-        // Manifesta ciência automaticamente para receber XML completo na próxima consulta
+        // Manifesta ciência e consulta procNFe completo pela chave
         if (nfe.chNFe) {
           manifestarCiencia(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod')
-            .then(mr => console.log('Manifestação', nfe.chNFe.substring(0,10)+'...', 'cStat:', (mr.xml.match(/<cStat>(\d+)<\/cStat>/)||[])[1]))
-            .catch(e => console.log('Erro manifestação:', e.message));
+            .then(async mr => {
+              const cStat = (mr.xml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
+              console.log('Manifestacao', nfe.chNFe.slice(0,10), 'cStat:', cStat);
+              // Aguarda 3s e consulta o procNFe completo pela chave
+              await new Promise(r=>setTimeout(r,3000));
+              try {
+                const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod');
+                const nfesCompletas = parsearDocZips(proc.xml);
+                for (const nfeC of nfesCompletas) {
+                  if (!nfeC.chNFe) continue;
+                  console.log('procNFe completo recebido:', nfeC.emitente, 'itens:', (nfeC.itens&&nfeC.itens.length)||0, 'venc:', nfeC.vencimento||'sem venc');
+                  // Lanca estoque com itens reais
+                  if (nfeC.itens && nfeC.itens.length > 0) {
+                    const n = await lancarEstoqueNFeSefaz(nfeC, nfeC, SB_URL, SB_KEY);
+                    if(n>0) console.log('Estoque: '+n+' itens reais da NF '+nfeC.nNF);
+                  }
+                  // Atualiza conta a pagar com vencimento real se estava estimado
+                  if (nfeC.vencimento) {
+                    const rowsUpd = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).catch(()=>[]);
+                    if (Array.isArray(rowsUpd)&&rowsUpd.length) {
+                      const dUpd = JSON.parse(rowsUpd[0].data);
+                      const cpUpd = (dUpd.contasPagar||[]).find(cp=>cp.id==='sefaz_cp_'+nfeC.chNFe);
+                      if (cpUpd && cpUpd._estimado) {
+                        cpUpd.venc = nfeC.vencimento;
+                        cpUpd._estimado = false;
+                        await req2('POST', SB_URL+'/rest/v1/erp_sync',
+                          {device_id:rowsUpd[0].device_id, data:JSON.stringify(dUpd)},
+                          {'apikey':SB_KEY,'Prefer':'resolution=merge-duplicates','Content-Type':'application/json'});
+                        console.log('Vencimento real atualizado:', nfeC.vencimento, nfeC.emitente);
+                      }
+                    }
+                  }
+                }
+              } catch(ep) { console.log('Erro consulta procNFe:', ep.message); }
+            })
+            .catch(e => console.log('Erro manifestacao:', e.message));
         }
         // Lança custo no DRE
         // ID robusto: usa chNFe se disponivel, senao gera por emitente+valor+data
