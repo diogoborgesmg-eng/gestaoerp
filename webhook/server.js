@@ -325,6 +325,16 @@ function abrirWidget(){
       })();
       return;
     }
+    if (req.url === '/test-conciliacao') {
+      conciliarPluggy().then(r=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(r));
+      }).catch(e=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url === '/test-saldos') {
       enviarSaldosBancarios().then(()=>{
         res.writeHead(200,{'Content-Type':'application/json'});
@@ -1790,6 +1800,154 @@ async function enviarSaldosBancarios() {
   }
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// CONCILIACAO BANCARIA PLUGGY
+// 1. Puxa DDA/boletos pendentes → Contas a Pagar
+// 2. Concilia transacoes pagas → baixa Contas a Pagar
+// 3. Transacoes sem match → Estravio (para classificacao manual)
+// ═══════════════════════════════════════════════════════════════
+async function conciliarPluggy() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+
+    const rowsBlob = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rowsBlob)||!rowsBlob.length) return {ok:false,erro:'Sem dados'};
+    const d = JSON.parse(rowsBlob[0].data);
+    const deviceId = rowsBlob[0].device_id;
+    const pluggyItemIds = d.pluggyItemIds || [];
+    if (!pluggyItemIds.length) return {ok:false, erro:'Sem itemIds. Conecte os bancos.'};
+
+    if (!d.contasPagar) d.contasPagar = [];
+    if (!d.estravio) d.estravio = [];
+
+    const hoje = new Date();
+    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-60);
+    const fmtDate = dt => dt.toISOString().slice(0,10);
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+
+    let novosBoletosCP=0, boletosLow=0, estravio=0;
+
+    for (const itemId of pluggyItemIds) {
+      const itemInfo = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
+      const bancoNome = (itemInfo.connector&&itemInfo.connector.name)||'Banco';
+      const contas = await pluggyAuthFetch('GET', '/accounts?itemId='+itemId).catch(()=>({}));
+      if (!contas||!contas.results) continue;
+
+      for (const conta of contas.results) {
+        if ((conta.type||'').toUpperCase()==='CREDIT') continue; // pula cartao aqui
+
+        // ── 1. DDA / BOLETOS AGENDADOS ──
+        const pagAgend = await pluggyAuthFetch('GET', '/payment-schedules?accountId='+conta.id).catch(()=>({}));
+        if (pagAgend && pagAgend.results) {
+          for (const bol of pagAgend.results) {
+            const idCP = 'pluggy_dda_'+bol.id;
+            const jaExiste = d.contasPagar.find(cp=>cp.id===idCP);
+            if (!jaExiste) {
+              const valor = Math.abs(Number(bol.amount||0));
+              const venc = fmtDia(bol.dueDate||bol.date);
+              const forn = (bol.description||bol.beneficiary&&bol.beneficiary.name||'Boleto DDA').slice(0,50);
+              d.contasPagar.push({
+                id:idCP, forn, val:valor, venc, pago:false,
+                cat:'🔄 Outros', banco:bancoNome, _pluggy:true, _dda:true,
+                codigoBarras:bol.barCode||bol.transactionCode||''
+              });
+              novosBoletosCP++;
+            }
+          }
+        }
+
+        // ── 2. TRANSACOES — concilia e detecta estravio ──
+        const txs = await pluggyAuthFetch('GET', '/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=300').catch(()=>({}));
+        if (!txs||!txs.results) continue;
+
+        for (const tx of txs.results) {
+          if (tx.type !== 'DEBIT') continue; // so debitos para conciliar
+          const valor = Math.abs(Number(tx.amount||0));
+          if (valor < 0.01) continue;
+          const dia = fmtDia(tx.date);
+          const payDest = tx.paymentData&&tx.paymentData.receiver&&tx.paymentData.receiver.name;
+          const desc = (payDest||tx.description||'').trim();
+          const isBoleto = (tx.paymentData&&tx.paymentData.paymentMethod==='BOLETO')||
+                           (tx.description||'').toLowerCase().includes('boleto')||
+                           (tx.description||'').toLowerCase().includes('pagto');
+
+          // Tenta conciliar com conta a pagar existente
+          // Match por: valor igual + (fornecedor similar OU codigo de barras)
+          const cpMatch = d.contasPagar.find(cp => {
+            if (cp.pago) return false;
+            const mesmoValor = Math.abs(Number(cp.val||cp.valor||0)-valor) < 0.02;
+            if (!mesmoValor) return false;
+            // Verifica nome similar
+            const fn = (cp.forn||'').toLowerCase();
+            const dn = desc.toLowerCase();
+            const nomeMatch = fn.length>3 && dn.length>3 && (fn.includes(dn.slice(0,8))||dn.includes(fn.slice(0,8)));
+            // Verifica codigo de barras
+            const barMatch = cp.codigoBarras && tx.paymentData && tx.paymentData.paymentMethod==='BOLETO';
+            return nomeMatch || barMatch;
+          });
+
+          if (cpMatch) {
+            // ✅ CONCILIADO — baixa a conta a pagar
+            cpMatch.pago = true;
+            cpMatch.dtPagamento = dia;
+            cpMatch.vlPago = valor;
+            boletosLow++;
+            // Lanca no DRE se ainda nao existe
+            const idLanc = 'pluggy_'+tx.id;
+            await req2('POST', SB_URL+'/rest/v1/lancamentos',
+              {id:idLanc, tipo:'custo', dia_comercial:dia, descricao:desc||cpMatch.forn, categoria:cpMatch.cat||'🔄 Outros', segmento:null, valor, device_id:'pluggy_auto'},
+              {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
+            ).catch(()=>{});
+          } else if (isBoleto) {
+            // ❓ BOLETO PAGO SEM MATCH — cria CP ja marcado como pago
+            const idCP = 'pluggy_bolpago_'+tx.id;
+            if (!d.contasPagar.find(cp=>cp.id===idCP)) {
+              d.contasPagar.push({id:idCP, forn:desc||'Boleto pago', val:valor, venc:dia, pago:true, dtPagamento:dia, vlPago:valor, banco:bancoNome, _pluggy:true});
+              await req2('POST', SB_URL+'/rest/v1/lancamentos',
+                {id:'pluggy_'+tx.id, tipo:'custo', dia_comercial:dia, descricao:desc||'Boleto pago', categoria:classificarTransacao(desc,-valor), segmento:null, valor, device_id:'pluggy_auto'},
+                {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
+              ).catch(()=>{});
+            }
+          } else {
+            // ❌ ESTRAVIO — transacao sem match, vai para classificacao manual
+            const idE = 'pluggy_'+tx.id;
+            const jaNaEstravio = d.estravio.find(e=>e.id===idE);
+            // Verifica se ja lancado no DRE
+            const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?id=eq.'+idE+'&select=id', null, {'apikey':SB_KEY}).catch(()=>[]);
+            const jaNoDRE = Array.isArray(lancRows)&&lancRows.length>0;
+            if (!jaNaEstravio && !jaNoDRE) {
+              d.estravio.push({id:idE, desc, valor, dia, banco:bancoNome, conta:conta.name, tipo:tx.paymentData&&tx.paymentData.paymentMethod||tx.type, revisado:false});
+              estravio++;
+            }
+          }
+        }
+      }
+    }
+
+    // Limpa estravio antigo (mais de 60 dias)
+    const limite = new Date(); limite.setDate(limite.getDate()-60);
+    d.estravio = (d.estravio||[]).filter(e => {
+      if (!e.dia) return false;
+      const [dd,mm,yy] = e.dia.split('/');
+      return new Date(yy,mm-1,dd) >= limite;
+    }).slice(-200); // max 200 itens
+
+    // Salva blob atualizado
+    await req2('POST', SB_URL+'/rest/v1/erp_sync',
+      {device_id:deviceId, data:JSON.stringify(d)},
+      {'apikey':SB_KEY, 'Prefer':'resolution=merge-duplicates', 'Content-Type':'application/json'}
+    );
+
+    console.log('Conciliacao Pluggy: '+novosBoletosCP+' boletos DDA, '+boletosLow+' conciliados, '+estravio+' em estravio');
+    return {ok:true, novosBoletosCP, boletosLow, estravio};
+  } catch(e) {
+    console.error('Conciliacao erro:', e.message);
+    return {ok:false, erro:e.message};
+  }
+}
+
 async function importarTransacoesPluggy() {
   try {
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
@@ -1894,6 +2052,7 @@ setInterval(() => {
     consultarNFsRecebidas().catch(e=>console.error('SEFAZ erro:', e.message));
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
       importarTransacoesPluggy().catch(e=>console.error('Pluggy erro:', e.message));
+      conciliarPluggy().catch(e=>console.error('Conciliacao erro:', e.message));
     }
   }
   // Todos os dias às 7h Brasilia = 10h UTC — alertas de contas
