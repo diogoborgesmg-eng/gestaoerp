@@ -553,8 +553,22 @@ function abrirWidget(){
       return;
     }
     if (req.url && req.url.startsWith('/ultimo-grupo')) {
-      res.writeHead(200,{'Content-Type':'application/json'});
-      res.end(JSON.stringify({ultimoGrupoId: global._ultimoGrupoId||null}));
+      if (req.url.includes('debug')) {
+        (async () => {
+          try {
+            const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
+            const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+            const lr=await req2('GET',SB2+'/rest/v1/lancamentos?select=tipo,dia_comercial,valor,device_id&order=dia_comercial.desc&limit=50',null,{'apikey':SK2});
+            const pd={};
+            if(Array.isArray(lr))lr.forEach(l=>{const d=l.dia_comercial||'?';if(!pd[d])pd[d]={r:0,c:0,tr:0,tc:0};if(l.tipo==='receita'){pd[d].r++;pd[d].tr+=Number(l.valor||0);}else{pd[d].c++;pd[d].tc+=Number(l.valor||0);}});
+            res.writeHead(200,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({total:Array.isArray(lr)?lr.length:0,porDia:pd},null,2));
+          }catch(e){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({erro:e.message}));}
+        })();
+      } else {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ultimoGrupoId:global._ultimoGrupoId||null}));
+      }
       return;
     }
     if (req.url && req.url.startsWith('/test-ifood-auth')) {
