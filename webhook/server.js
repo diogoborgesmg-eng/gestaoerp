@@ -739,14 +739,86 @@ function abrirWidget(){
         const evento = JSON.parse(body);
         console.log('Pluggy webhook:', evento.event, 'itemId:', evento.itemId || (evento.item&&evento.item.id));
         const itemId = evento.itemId || (evento.item&&evento.item.id);
+        const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+        const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+        const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+        const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
+        const deviceId = Array.isArray(rows)&&rows.length ? rows[0].device_id : 'pluggy_setup';
+        if (!d.pluggyItemIds) d.pluggyItemIds = [];
+        if (!d.contasPagar) d.contasPagar = [];
+        if (!d.estravio) d.estravio = [];
+
+        const evtName = evento.event || '';
+        console.log('Pluggy webhook evento:', evtName, 'itemId:', itemId);
+
+        // ── BOLETO/UPDATED ──────────────────────────────────────
+        if (evtName === 'boleto/updated' || evtName === 'boleto.updated') {
+          const bol = evento.data || evento.boleto || {};
+          const valor = Math.abs(Number(bol.amount||bol.value||0));
+          const venc = (bol.dueDate||bol.expirationDate||'').slice(0,10).split('-').reverse().join('/');
+          const cnpjEmit = (bol.beneficiary&&(bol.beneficiary.documentNumber||bol.beneficiary.taxNumber||bol.beneficiary.document||'')||'').replace(/\D/g,'');
+          const nomeEmit = (bol.beneficiary&&bol.beneficiary.name||bol.description||'Boleto DDA').slice(0,60);
+          const barCode = bol.barCode||bol.digitableLine||bol.transactionCode||'';
+          const status = (bol.status||'PENDING').toUpperCase();
+          const idBol = 'dda_'+( bol.id||barCode.slice(0,20)||Date.now().toString(36));
+
+          console.log('Pluggy boleto:', nomeEmit, 'R$'+valor, venc, status, cnpjEmit);
+
+          if (valor > 0) {
+            // Verifica se ja existe
+            const jaExiste = d.contasPagar.find(cp=>cp.id===idBol) || d.estravio.find(e=>e.id===idBol);
+
+            if (!jaExiste) {
+              // Tenta vincular a uma NF pelo CNPJ emitente
+              const nfMatch = d.contasPagar.find(cp => {
+                if (!cp._sefaz || cp.pago) return false;
+                const c1 = (cp.cnpjEmit||'').replace(/\D/g,'');
+                const c2 = cnpjEmit;
+                if (c1 && c2 && c1 === c2) return true;
+                const n1 = (cp.forn||'').toLowerCase().slice(0,12);
+                const n2 = nomeEmit.toLowerCase().slice(0,12);
+                return n1 && n2 && n1 === n2;
+              });
+
+              if (nfMatch) {
+                // ✅ VINCULADO À NF
+                d.contasPagar.push({
+                  id: idBol, forn: nomeEmit, val: valor, venc, pago: status==='PAID',
+                  cat: nfMatch.cat||'🥩 Matéria Prima', cnpjEmit, barCode,
+                  _dda: true, _nfId: nfMatch.id, _pluggy: true,
+                  dtPagamento: status==='PAID' ? venc : null
+                });
+                console.log('Boleto DDA vinculado à NF:', nfMatch.forn);
+              } else {
+                // ❌ SEM NF — vai para estravio
+                d.estravio.push({
+                  id: idBol, desc: nomeEmit, valor, dia: venc,
+                  tipo: 'DDA/Boleto', cnpj: cnpjEmit, barCode, revisado: false, _dda: true
+                });
+                console.log('Boleto DDA sem NF correspondente → estravio:', nomeEmit);
+              }
+
+              // Salva
+              await req2('POST', SB_URL+'/rest/v1/erp_sync',
+                {device_id: deviceId, data: JSON.stringify(d)},
+                {'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json'});
+            } else if (status === 'PAID') {
+              // Boleto ja existia mas foi marcado como pago agora
+              const cp = d.contasPagar.find(cp=>cp.id===idBol);
+              if (cp && !cp.pago) {
+                cp.pago = true;
+                cp.dtPagamento = new Date().toLocaleDateString('pt-BR');
+                await req2('POST', SB_URL+'/rest/v1/erp_sync',
+                  {device_id: deviceId, data: JSON.stringify(d)},
+                  {'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json'});
+                console.log('Boleto DDA marcado como pago:', nomeEmit);
+              }
+            }
+          }
+        }
+
+        // ── ITEM/CREATED ou ITEM/UPDATED ────────────────────────
         if (itemId) {
-          // Salva o itemId no blob se nao existe ainda
-          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
-          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-          const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
-          const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
-          const deviceId = Array.isArray(rows)&&rows.length ? rows[0].device_id : 'pluggy_setup';
-          if (!d.pluggyItemIds) d.pluggyItemIds = [];
           if (!d.pluggyItemIds.includes(itemId)) {
             d.pluggyItemIds.push(itemId);
             await req2('POST', SB_URL+'/rest/v1/erp_sync',
@@ -754,8 +826,7 @@ function abrirWidget(){
               { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
             console.log('Pluggy webhook: novo itemId salvo:', itemId);
           }
-          // Se é item.updated, importa as transacoes imediatamente
-          if (evento.event === 'item/updated' || evento.event === 'item.updated') {
+          if (evtName === 'item/updated' || evtName === 'item.updated') {
             importarTransacoesPluggy().catch(e => console.log('Pluggy import erro:', e.message));
           }
         }
