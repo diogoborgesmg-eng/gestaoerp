@@ -1794,66 +1794,80 @@ async function importarTransacoesPluggy() {
   try {
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-    const brl = v => Number(v||0).toFixed(2);
-
-    // Busca itemIds salvos via /pluggy-save-item (plano dev nao permite listar /items)
-    const rowsBlob = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    const rowsBlob = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
     const blobData = Array.isArray(rowsBlob)&&rowsBlob.length ? JSON.parse(rowsBlob[0].data) : {};
+    const deviceId = Array.isArray(rowsBlob)&&rowsBlob.length ? rowsBlob[0].device_id : 'pluggy_auto';
     const pluggyItemIds = blobData.pluggyItemIds || [];
-    if (!pluggyItemIds.length) {
-      console.log('Pluggy: nenhum itemId salvo. Acesse /pluggy-connect para conectar bancos.');
-      return {ok:false, erro:'Nenhuma conexao bancaria. Acesse /pluggy-connect para conectar.'};
-    }
-    console.log('Pluggy: usando', pluggyItemIds.length, 'item(s) salvos:', pluggyItemIds);
-    // Monta estrutura de itens a partir dos IDs salvos
-    const itens = { results: pluggyItemIds.map(id => ({id})) };
+    if (!pluggyItemIds.length) return {ok:false, erro:'Nenhum itemId. Acesse /pluggy-connect'};
 
-    let totalImportadas = 0;
     const hoje = new Date();
-    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-7);
+    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-30);
     const fmtDate = d => d.toISOString().slice(0,10);
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+    let totalTx=0, totalInv=0, blobAtualizado=false;
 
-    for (const item of itens.results) {
-      const banco = item.connector?.name || 'Banco';
-      // Lista contas do item
-      // Busca item completo para validar
-      const itemInfo = await pluggyGet('/items/'+item.id).catch(()=>({id:item.id}));
-      console.log('Pluggy item info:', JSON.stringify(itemInfo).substring(0,200));
-      const contas = await pluggyGet('/accounts?itemId='+item.id);
-      if (!contas || !contas.results) continue;
+    for (const itemId of pluggyItemIds) {
+      const itemInfo = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
+      const bancoNome = (itemInfo.connector && itemInfo.connector.name) || 'Banco';
+      console.log('Pluggy processando:', bancoNome, itemId);
 
-      for (const conta of contas.results) {
-        // Busca transacoes dos ultimos 7 dias
-        const txUrl = '/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=100';
-        const txs = await pluggyGet(txUrl);
-        if (!txs || !txs.results) continue;
+      // CONTAS + TRANSACOES
+      const contas = await pluggyAuthFetch('GET', '/accounts?itemId='+itemId).catch(()=>({}));
+      if (contas && contas.results) {
+        for (const conta of contas.results) {
+          const isCartao = (conta.type||'').toUpperCase()==='CREDIT';
+          const txs = await pluggyAuthFetch('GET', '/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=200').catch(()=>({}));
+          if (txs && txs.results) {
+            for (const tx of txs.results) {
+              const valor = Math.abs(Number(tx.amount||0));
+              if (valor < 0.01) continue;
+              const tipotx = tx.type==='CREDIT' ? 'receita' : 'custo';
+              const dia = fmtDia(tx.date);
+              if (!dia) continue;
+              const payDest = tx.paymentData && tx.paymentData.receiver && tx.paymentData.receiver.name;
+              const desc = (payDest || tx.description || tx.merchant && tx.merchant.businessName || bancoNome).slice(0,80).trim();
+              const cat = classificarTransacao(desc, tipotx==='custo' ? -valor : valor);
+              await req2('POST', SB_URL+'/rest/v1/lancamentos',
+                {id:'pluggy_'+tx.id, tipo:tipotx, dia_comercial:dia, descricao:desc, categoria:cat, segmento:null, valor, device_id:'pluggy_auto'},
+                {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
+              ).catch(()=>{});
+              totalTx++;
+            }
+          }
+          // Fatura cartao
+          if (isCartao) {
+            const fat = await pluggyAuthFetch('GET', '/credit-cards/'+conta.id).catch(()=>({}));
+            if (fat && fat.dueAmount > 0 && fat.dueDate) {
+              if (!blobData.contasPagar) blobData.contasPagar = [];
+              const idFat = 'pluggy_fat_'+conta.id;
+              if (!blobData.contasPagar.find(cp=>cp.id===idFat)) {
+                blobData.contasPagar.push({id:idFat, forn:bancoNome+' Fatura '+conta.name, val:fat.dueAmount, venc:fmtDia(fat.dueDate), pago:false, _pluggy:true});
+                blobAtualizado = true;
+              }
+            }
+          }
+        }
+      }
 
-        for (const tx of txs.results) {
-          const valor = Math.abs(Number(tx.amount||0));
-          if (valor < 0.01) continue;
-          const tipo = tx.type === 'CREDIT' ? 'receita' : 'custo';
-          const dia = (tx.date||'').slice(0,10).split('-').reverse().join('/');
-          if (!dia) continue;
-          const desc = (tx.description||tx.merchant?.name||'Transacao '+banco).slice(0,60);
-          const id = 'pluggy_'+tx.id;
-
-          // Classifica automaticamente
-          const cat = classificarTransacao(desc, tipo==='custo'?-valor:valor);
-
-          // Grava na tabela lancamentos
-          await req2('POST', SB_URL+'/rest/v1/lancamentos',
-            { id, tipo, dia_comercial: dia, descricao: desc, categoria: cat,
-              segmento: null, valor, device_id: 'pluggy_auto' },
-            { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates',
-              'Content-Type': 'application/json' }
-          ).catch(()=>{});
-          totalImportadas++;
+      // INVESTIMENTOS
+      const invs = await pluggyAuthFetch('GET', '/investments?itemId='+itemId).catch(()=>({}));
+      if (invs && invs.results && invs.results.length) {
+        if (!blobData.investimentos) blobData.investimentos = [];
+        for (const inv of invs.results) {
+          const idInv = 'pluggy_inv_'+inv.id;
+          const obj = {id:idInv, nome:inv.name||'Investimento', tipo:inv.type||'Renda Fixa', valor:Number(inv.value||inv.amount||0), banco:bancoNome, atualizado:hoje.toLocaleDateString('pt-BR')};
+          const idx2 = blobData.investimentos.findIndex(x=>x.id===idInv);
+          if (idx2>=0) blobData.investimentos[idx2]=obj; else blobData.investimentos.push(obj);
+          totalInv++; blobAtualizado=true;
         }
       }
     }
 
-    console.log('Pluggy: importadas', totalImportadas, 'transacoes');
-    return {ok:true, importadas: totalImportadas};
+    if (blobAtualizado) {
+      await req2('POST', SB_URL+'/rest/v1/erp_sync', {device_id:deviceId, data:JSON.stringify(blobData)}, {'apikey':SB_KEY, 'Prefer':'resolution=merge-duplicates', 'Content-Type':'application/json'});
+    }
+    console.log('Pluggy: '+totalTx+' transacoes, '+totalInv+' investimentos importados');
+    return {ok:true, transacoes:totalTx, investimentos:totalInv};
   } catch(e) {
     console.error('Pluggy erro:', e.message);
     return {ok:false, erro:e.message};
