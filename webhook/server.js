@@ -1544,10 +1544,17 @@ async function consultarNFsRecebidas() {
             const n = await lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
             if(n>0) console.log('Estoque: '+n+' itens lancados da NF '+nfe.nNF);
           }
-          if (nfe.vencimento) {
-            const ok = await lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
-            if(ok) console.log('Conta a pagar: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor);
+          // Cria conta a pagar para TODA NF - se nao tem vencimento estima 30 dias
+          if (!nfe.vencimento && nfe.data) {
+            const pts = nfe.data.split('/');
+            if (pts.length===3) {
+              const base = new Date(pts[2], pts[1]-1, parseInt(pts[0])+30);
+              nfe.vencimento = base.toLocaleDateString('pt-BR');
+              console.log('SEFAZ: vencimento estimado 30 dias:', nfe.vencimento);
+            }
           }
+          const ok = await lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY);
+          if(ok) console.log('Conta a pagar: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor);
         } catch(eSeq) { console.log('Erro ao lancar NF:', eSeq.message); }
         // Manifesta ciência automaticamente para receber XML completo na próxima consulta
         if (nfe.chNFe) {
