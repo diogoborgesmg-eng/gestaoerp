@@ -325,6 +325,16 @@ function abrirWidget(){
       })();
       return;
     }
+    if (req.url === '/test-saldos') {
+      enviarSaldosBancarios().then(()=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true}));
+      }).catch(e=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url === '/pluggy-save-item' && req.method === 'POST') {
       let body = '';
       req.on('data', chunk => body += chunk);
@@ -1702,6 +1712,49 @@ async function pluggyAuth() {
 
 async function pluggyGet(path) {
   return pluggyAuthFetch('GET', path, null);
+}
+
+
+async function enviarSaldosBancarios() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    // Busca itemIds salvos
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
+    const itemIds = d.pluggyItemIds || [];
+    if (!itemIds.length) { console.log('Saldos: nenhum itemId configurado'); return; }
+
+    const linhas = ['*🏦 Saldos Bancários — Di Casa Laranjinha*'];
+    linhas.push(new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'}).slice(0,16));
+    linhas.push('');
+    let totalGeral = 0;
+
+    for (const itemId of itemIds) {
+      const contas = await pluggyGet('/accounts?itemId='+itemId);
+      if (!contas || !contas.results) continue;
+      for (const conta of contas.results) {
+        const nome = conta.name || conta.type || 'Conta';
+        const banco = conta.institution?.name || conta.institutionId || '';
+        const saldo = Number(conta.balance||0);
+        totalGeral += saldo;
+        linhas.push('  • '+banco+(banco?' - ':'')+nome+': *'+brl(saldo)+'*');
+      }
+    }
+
+    linhas.push('');
+    linhas.push('*Total: '+brl(totalGeral)+'*');
+    linhas.push('_Atualizado às 10h_');
+
+    const msg = linhas.join('\n');
+    const destinos = ['5534996853258','5534997692282'];
+    for (const num of destinos) await wpp(num, msg);
+    console.log('Saldos enviados:', totalGeral);
+  } catch(e) {
+    console.error('Erro saldos:', e.message);
+  }
 }
 
 async function importarTransacoesPluggy() {
