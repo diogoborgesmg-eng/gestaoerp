@@ -558,7 +558,7 @@ function abrirWidget(){
           try {
             const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
             const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-            const lr=await req2('GET',SB2+'/rest/v1/lancamentos?select=tipo,dia_comercial,valor,device_id&order=created_at.desc&limit=200',null,{'apikey':SK2});
+            const lr=await req2('GET',SB2+'/rest/v1/lancamentos?select=tipo,dia_comercial,valor,device_id&limit=2000',null,{'apikey':SK2});
             const pd={};
             if(Array.isArray(lr))lr.forEach(l=>{const d=l.dia_comercial||'?';if(!pd[d])pd[d]={r:0,c:0,tr:0,tc:0};if(l.tipo==='receita'){pd[d].r++;pd[d].tr+=Number(l.valor||0);}else{pd[d].c++;pd[d].tc+=Number(l.valor||0);}});
             res.writeHead(200,{'Content-Type':'application/json'});
@@ -1294,7 +1294,7 @@ async function executarDispatch(diaForcado){
     // Busca lancamentos do mes atual E do mes anterior (cobre virada de mes)
     const mesAtualISO = new Date(hojeP.ano, hojeP.mes-1, 1).toISOString().slice(0,7);
     const mesAnteriorISO = new Date(hojeP.ano, hojeP.mes-2, 1).toISOString().slice(0,7);
-    const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&order=created_at.desc&limit=5000', null, {'apikey':SB_KEY});
+    const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&limit=5000', null, {'apikey':SB_KEY});
     console.log('lancamentos na tabela:', Array.isArray(lancRows) ? lancRows.length : 0);
     if (Array.isArray(lancRows) && lancRows.length) {
       if (!r) r = {};
