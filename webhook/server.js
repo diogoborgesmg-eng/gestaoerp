@@ -1155,6 +1155,7 @@ async function checarEstoqueBaixo() {
 
 
 let _ultimoCaixaAlertado = null;
+let _ultimoSaldoDia = '';
 let _ifoodTokenCache = { token: null, expiresAt: 0 };
 async function obterTokenIfood() {
   if (_ifoodTokenCache.token && Date.now() < _ifoodTokenCache.expiresAt) return _ifoodTokenCache.token;
@@ -2064,8 +2065,8 @@ setInterval(() => {
     if (agora.getUTCDay() === 1) gerarEnviarRelatorioPDF().catch(()=>{});
   }
   // Todos os dias às 10h Brasilia = 13h UTC — saldos bancários Pluggy
-  if (hUTC === 13 && _ultimoSefazDia !== diaKey+'_saldo') {
-    _ultimoSefazDia = diaKey+'_saldo';
+  if (hUTC === 13 && _ultimoSaldoDia !== diaKey) {
+    _ultimoSaldoDia = diaKey;
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
       enviarSaldosBancarios().catch(e=>console.error('Saldos erro:', e.message));
     }
