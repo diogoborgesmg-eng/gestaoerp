@@ -285,9 +285,22 @@ function abrirWidget(){
     var p = new PluggyConnect({
       connectToken: TOKEN,
       onSuccess: function(d){
-        document.getElementById("status").textContent = "✅ Banco conectado! Pode fechar esta página.";
+        var itemId = d && d.item && d.item.id ? d.item.id : '';
+        document.getElementById("status").textContent = "✅ Conectado! Salvando item ID...";
+        if (itemId) {
+          fetch('/pluggy-save-item', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({itemId: itemId})
+          }).then(function(r){ return r.json(); }).then(function(r){
+            document.getElementById("status").textContent = r.ok
+              ? "✅ Banco " + itemId.slice(0,8) + "... conectado com sucesso! Clique para conectar outro banco."
+              : "⚠️ Banco conectado mas erro ao salvar: " + r.erro;
+          });
+        }
         document.getElementById("btn").textContent = "✅ Conectado!";
         document.getElementById("btn").style.background = "#00cc66";
+        setTimeout(function(){ document.getElementById("btn").textContent = "🔗 Conectar outro banco"; document.getElementById("btn").style.background="#0066ff"; }, 3000);
       },
       onError: function(e){
         document.getElementById("status").textContent = "❌ " + (e.message || JSON.stringify(e));
@@ -310,6 +323,33 @@ function abrirWidget(){
           res.end('Erro: '+e.message);
         }
       })();
+      return;
+    }
+    if (req.url === '/pluggy-save-item' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', async () => {
+        try {
+          const { itemId } = JSON.parse(body);
+          if (!itemId) { res.writeHead(400); res.end(JSON.stringify({ok:false,erro:'itemId obrigatorio'})); return; }
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+          const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
+          const deviceId = Array.isArray(rows)&&rows.length ? rows[0].device_id : 'pluggy_setup';
+          if (!d.pluggyItemIds) d.pluggyItemIds = [];
+          if (!d.pluggyItemIds.includes(itemId)) d.pluggyItemIds.push(itemId);
+          await req2('POST', SB_URL+'/rest/v1/erp_sync',
+            { device_id: deviceId, data: JSON.stringify(d) },
+            { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+          console.log('Pluggy item salvo:', itemId, '- total items:', d.pluggyItemIds.length);
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, itemId, total: d.pluggyItemIds.length}));
+        } catch(e) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, erro:e.message}));
+        }
+      });
       return;
     }
     if (req.url === '/test-pluggy') {
@@ -1630,20 +1670,17 @@ async function importarTransacoesPluggy() {
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
     const brl = v => Number(v||0).toFixed(2);
 
-    // Lista todos os itens - tenta varios endpoints
-    let itens = await pluggyGet('/items');
-    if (!itens || !itens.results || !itens.results.length) {
-      // Tenta filtrar por clientUserId
-      itens = await pluggyGet('/items?clientUserId=dicasalaranjinha');
+    // Busca itemIds salvos via /pluggy-save-item (plano dev nao permite listar /items)
+    const rowsBlob = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    const blobData = Array.isArray(rowsBlob)&&rowsBlob.length ? JSON.parse(rowsBlob[0].data) : {};
+    const pluggyItemIds = blobData.pluggyItemIds || [];
+    if (!pluggyItemIds.length) {
+      console.log('Pluggy: nenhum itemId salvo. Acesse /pluggy-connect para conectar bancos.');
+      return {ok:false, erro:'Nenhuma conexao bancaria. Acesse /pluggy-connect para conectar.'};
     }
-    if (!itens || !itens.results || !itens.results.length) {
-      // Tenta v2
-      itens = await pluggyGet('/v2/items');
-    }
-    console.log('Pluggy itens resposta:', JSON.stringify(itens).substring(0,500));
-    if (!itens || !itens.results || !itens.results.length) {
-      return {ok:false, erro:'Nenhuma conexao bancaria. Resposta: '+JSON.stringify(itens).slice(0,200)};
-    }
+    console.log('Pluggy: usando', pluggyItemIds.length, 'item(s) salvos:', pluggyItemIds);
+    // Monta estrutura de itens a partir dos IDs salvos
+    const itens = { results: pluggyItemIds.map(id => ({id})) };
 
     let totalImportadas = 0;
     const hoje = new Date();
@@ -1653,6 +1690,9 @@ async function importarTransacoesPluggy() {
     for (const item of itens.results) {
       const banco = item.connector?.name || 'Banco';
       // Lista contas do item
+      // Busca item completo para validar
+      const itemInfo = await pluggyGet('/items/'+item.id).catch(()=>({id:item.id}));
+      console.log('Pluggy item info:', JSON.stringify(itemInfo).substring(0,200));
       const contas = await pluggyGet('/accounts?itemId='+item.id);
       if (!contas || !contas.results) continue;
 
