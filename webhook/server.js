@@ -1849,16 +1849,19 @@ setInterval(() => {
       importarTransacoesPluggy().catch(e=>console.error('Pluggy erro:', e.message));
     }
   }
-  // Segunda-feira às 7h Brasilia = 10h UTC — relatório semanal PDF
-  if (hUTC === 10 && agora.getUTCDay() === 1 && _ultimoContasDia !== diaKey) {
+  // Todos os dias às 7h Brasilia = 10h UTC — alertas de contas
+  if (hUTC === 10 && _ultimoContasDia !== diaKey) {
     _ultimoContasDia = diaKey;
     checarContasVencendo().catch(()=>{});
-    gerarEnviarRelatorioPDF().catch(()=>{});
+    // Segunda-feira: envia relatório semanal também
+    if (agora.getUTCDay() === 1) gerarEnviarRelatorioPDF().catch(()=>{});
   }
-  // Demais dias às 7h — só alertas de contas
-  if (hUTC === 10 && agora.getUTCDay() !== 1 && _ultimoContasDia !== diaKey) {
-    _ultimoContasDia = diaKey;
-    checarContasVencendo().catch(()=>{});
+  // Todos os dias às 10h Brasilia = 13h UTC — saldos bancários Pluggy
+  if (hUTC === 13 && _ultimoSefazDia !== diaKey+'_saldo') {
+    _ultimoSefazDia = diaKey+'_saldo';
+    if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
+      enviarSaldosBancarios().catch(e=>console.error('Saldos erro:', e.message));
+    }
   }
   // Estoque às 8h Brasilia = 11h UTC
   if (hUTC === 11 && _ultimoEstoqueDia !== diaKey) {
