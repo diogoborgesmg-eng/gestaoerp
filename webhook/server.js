@@ -19,6 +19,68 @@ function carregarCertPFX(pfxBase64, senha){
   return{certPem:forge.pki.certificateToPem(cert),keyPem:forge.pki.privateKeyToPem(key)};
 }
 
+
+// Consulta NF-e pelo chave diretamente (retorna procNFe completo)
+async function consultarNFeByChave(pfxBase64, senha, cnpj, chNFe, ambiente) {
+  const forge = getForge();
+  const pfxDer = forge.util.decode64(pfxBase64);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(pfxDer), senha);
+  let cert = null, key = null;
+  p12.safeContents.forEach(sc => sc.safeBags.forEach(bag => {
+    if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) key = bag.key;
+    if (bag.type === forge.pki.oids.certBag) cert = bag.cert;
+  }));
+  const certPem = forge.pki.certificateToPem(cert);
+  const keyPem = forge.pki.privateKeyToPem(key);
+  const cUF = '31'; // MG
+  const tpAmb = ambiente === 'prod' ? '1' : '2';
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+<distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
+<tpAmb>${tpAmb}</tpAmb>
+<cUFAutor>${cUF}</cUFAutor>
+<CNPJ>${cnpj}</CNPJ>
+<consChNFe>
+<chNFe>${chNFe}</chNFe>
+</consChNFe>
+</distDFeInt>
+</nfeDadosMsg>`;
+
+  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?>
+<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+<soap12:Body>${xml}</soap12:Body>
+</soap12:Envelope>`;
+
+  const url = 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
+  const https = require('https');
+  const tls = require('tls');
+  const ctx = tls.createSecureContext({ cert: certPem, key: keyPem });
+
+  return new Promise((resolve, reject) => {
+    const body = Buffer.from(soapEnv, 'utf8');
+    const opts = {
+      hostname: 'www1.nfe.fazenda.gov.br',
+      path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/soap+xml; charset=utf-8',
+        'Content-Length': body.length,
+        'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse'
+      },
+      secureContext: ctx
+    };
+    const req = https.request(opts, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve({ xml: data, status: res.statusCode }));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 async function sefazDistribuicaoDFe(pfxBase64, senha, cnpj, ultNSU='000000000000000', ambiente='prod'){
   const{certPem,keyPem}=carregarCertPFX(pfxBase64,senha);
   const cnpjLimpo=cnpj.replace(/[^\d]/g,'');
