@@ -1370,10 +1370,17 @@ async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
   const deviceId = rows[0].device_id || 'sefaz_auto';
   if (!d.contasPagar) d.contasPagar = [];
 
-  // Evita duplicar conta da mesma NF (usa chNFe que e unico)
-  const idConta = 'sefaz_cp_' + nfe.chNFe;
+  const idConta = 'sefaz_cp_' + (nfe.chNFe || (nfe.emitente+nfe.valor+dados.nNF).replace(/\s/g,''));
   const jaExiste = d.contasPagar.some(cp => cp.id === idConta);
   if (jaExiste) return false;
+  // Vencimento: usa o da NF ou estima 30 dias se nao tiver
+  if (!dados.vencimento) {
+    const dataEmissao = dados.data || new Date().toLocaleDateString('pt-BR');
+    const [dd,mm,yy] = dataEmissao.split('/');
+    const dtBase = new Date(yy, mm-1, parseInt(dd)+30);
+    dados.vencimento = dtBase.toLocaleDateString('pt-BR');
+    console.log('SEFAZ: vencimento estimado 30 dias:', dados.vencimento);
+  }
   d.contasPagar.push({
     id: idConta,
     forn: dados.emitente || 'Fornecedor',
@@ -2054,7 +2061,22 @@ setInterval(() => {
   if (hUTC === 13 && _ultimoSaldoDia !== diaKey) {
     _ultimoSaldoDia = diaKey;
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
-      enviarSaldosBancarios().catch(e=>console.error('Saldos erro:', e.message));
+      // Força refresh dos itens Pluggy antes de buscar saldos
+      (async () => {
+        try {
+          const SB_URL2 = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY2 = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rb = await req2('GET', SB_URL2+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY2});
+          const bd = Array.isArray(rb)&&rb.length ? JSON.parse(rb[0].data) : {};
+          const ids = bd.pluggyItemIds || [];
+          for (const id of ids) {
+            await pluggyAuthFetch('POST', '/items/'+id+'/update', {}).catch(()=>{});
+            console.log('Pluggy: refresh solicitado para item', id);
+          }
+          await new Promise(r=>setTimeout(r,5000)); // aguarda 5s para processar
+        } catch(e) { console.log('Pluggy refresh erro:', e.message); }
+        enviarSaldosBancarios().catch(e=>console.error('Saldos erro:', e.message));
+      })();
     }
   }
   // Estoque às 8h Brasilia = 11h UTC
