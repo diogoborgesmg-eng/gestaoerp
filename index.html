@@ -5479,6 +5479,12 @@ function parsearCsvBanco(linhas,banco,filename){
 function classificarTransacao(desc,valor){
  const d=(desc||'').toLowerCase();
  if(valor>0)return '💰 Receita/Transferência recebida';
+ // Consulta aprendizado de classificacoes anteriores
+ try{
+  const apr=JSON.parse(localStorage.getItem('erp_classif_aprendizado')||'{}');
+  const chave=d.slice(0,20).trim();
+  if(apr[chave])return apr[chave];
+ }catch(ex){}
  // Encargos bancarios (mais especifico primeiro)
  if(/(cheque especial|limite especial|cred.especial|credito especial)/.test(d))return '🏦 Cheque Especial';
  if(/\biof\b|imposto.*opera|iof/.test(d))return '🏦 IOF';
@@ -5969,6 +5975,13 @@ async function classificarEstravio(id, cat){
  const e=db.estravio[idx];
  e.revisado=true;
  e.catEscolhida=cat;
+ // Salva aprendizado: destinatario -> categoria (para classificacao futura automatica)
+ try{
+  const aprendizado=JSON.parse(localStorage.getItem('erp_classif_aprendizado')||'{}');
+  const chave=(e.desc||'').toLowerCase().slice(0,20).trim();
+  if(chave)aprendizado[chave]=cat;
+  localStorage.setItem('erp_classif_aprendizado',JSON.stringify(aprendizado));
+ }catch(ex){}
 
  // Lanca no DRE
  if(!db[e.dia])db[e.dia]={r:[],c:[]};
