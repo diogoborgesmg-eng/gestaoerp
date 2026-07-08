@@ -245,14 +245,10 @@ async function salvarGitHub(lanc, reciboUrl) {
 const server = http.createServer((req, res) => {
   if (req.method === 'GET') {
     if (req.url === '/pluggy-connect') {
-      // Pagina HTML para conectar bancos ao app de desenvolvimento
       (async () => {
         try {
-          const key = await pluggyAuth();
-          // Gera connect token
-          const ct = await req2('POST', 'https://api.pluggy.ai/connect_token',
-            { clientUserId: 'dicasalaranjinha' },
-            { 'X-API-KEY': key, 'Content-Type': 'application/json' });
+          // Gera connect token usando fetch nativo
+          const ct = await pluggyAuthFetch('POST', '/connect_token', { clientUserId: 'dicasalaranjinha' });
           console.log('Connect token response:', JSON.stringify(ct).substring(0,300));
           const connectToken = ct.accessToken || ct.token || ct.connectToken || '';
           if (!connectToken) {
