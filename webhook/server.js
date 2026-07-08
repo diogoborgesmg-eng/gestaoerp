@@ -817,7 +817,49 @@ function abrirWidget(){
           }
         }
 
-        // ── ITEM/CREATED ou ITEM/UPDATED ────────────────────────
+        // TRANSACTIONS/CREATED - debitos em tempo real
+        if (evtName === 'transactions/created' || evtName === 'transactions/updated') {
+          var accountId2 = evento.accountId;
+          var txLink2 = evento.createdTransactionsLink;
+          if (accountId2 || txLink2) {
+            (async function() {
+              try {
+                var txPath = txLink2 ? txLink2.replace('https://api.pluggy.ai','') : '/transactions?accountId='+accountId2+'&pageSize=50';
+                var txs2 = await pluggyAuthFetch('GET', txPath).catch(function(){ return {}; });
+                if (!txs2 || !txs2.results || !txs2.results.length) return;
+                var fmtD = function(s){ return s ? s.slice(0,10).split('-').reverse().join('/') : ''; };
+                var imp = 0;
+                for (var ti=0; ti<txs2.results.length; ti++) {
+                  var tx2 = txs2.results[ti];
+                  if (tx2.type !== 'DEBIT') continue;
+                  var val2 = Math.abs(Number(tx2.amount||0));
+                  if (val2 < 0.01) continue;
+                  var dia2 = fmtD(tx2.date);
+                  if (!dia2) continue;
+                  var dest2 = tx2.paymentData && tx2.paymentData.receiver && tx2.paymentData.receiver.name;
+                  var desc2 = (dest2||tx2.description||'Transacao').slice(0,80).trim();
+                  var cat2 = classificarTransacao(desc2, -val2);
+                  await req2('POST', SB_URL+'/rest/v1/lancamentos',
+                    {id:'pluggy_'+tx2.id, tipo:'custo', dia_comercial:dia2, descricao:desc2, categoria:cat2, segmento:null, valor:val2, device_id:'pluggy_auto'},
+                    {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
+                  ).catch(function(){});
+                  imp++;
+                }
+                console.log('Pluggy tx webhook: '+imp+' debitos importados');
+              } catch(e2){ console.log('Pluggy tx erro:', e2.message); }
+            })();
+          }
+        }
+        // ITEM/ERROR - avisa WhatsApp
+        if (evtName === 'item/error' || evtName === 'item/waiting_user_input') {
+          var errMsg = (evento.error||evento.message||'Banco desconectado');
+          var alertMsg = 'Pluggy alerta: reconecte o banco em https://gestaoerp-webhook.onrender.com/pluggy-connect
+Motivo: '+errMsg;
+          wpp('5534996853258', alertMsg).catch(function(){});
+          wpp('5534997692282', alertMsg).catch(function(){});
+        }
+
+        // ITEM/CREATED ou ITEM/UPDATED
         if (itemId) {
           if (!d.pluggyItemIds.includes(itemId)) {
             d.pluggyItemIds.push(itemId);
@@ -827,7 +869,7 @@ function abrirWidget(){
             console.log('Pluggy webhook: novo itemId salvo:', itemId);
           }
           if (evtName === 'item/updated' || evtName === 'item.updated') {
-            importarTransacoesPluggy().catch(e => console.log('Pluggy import erro:', e.message));
+            importarTransacoesPluggy().catch(function(e){ console.log('Pluggy import erro:', e.message); });
           }
         }
         res.writeHead(200, {'Content-Type':'application/json'});
