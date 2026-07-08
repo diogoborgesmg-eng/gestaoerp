@@ -1979,7 +1979,8 @@ async function importarTransacoesPluggy() {
             for (const tx of txs.results) {
               const valor = Math.abs(Number(tx.amount||0));
               if (valor < 0.01) continue;
-              const tipotx = tx.type==='CREDIT' ? 'receita' : 'custo';
+              if (tx.type==='CREDIT') continue; // Ignora creditos - receitas vem do STi3/iFood
+              const tipotx = 'custo';
               const dia = fmtDia(tx.date);
               if (!dia) continue;
               const payDest = tx.paymentData && tx.paymentData.receiver && tx.paymentData.receiver.name;
