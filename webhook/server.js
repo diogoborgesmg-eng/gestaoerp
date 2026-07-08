@@ -1630,11 +1630,19 @@ async function importarTransacoesPluggy() {
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
     const brl = v => Number(v||0).toFixed(2);
 
-    // Lista todos os itens (conexoes bancarias)
-    const itens = await pluggyGet('/items');
+    // Lista todos os itens - tenta varios endpoints
+    let itens = await pluggyGet('/items');
     if (!itens || !itens.results || !itens.results.length) {
-      console.log('Pluggy: nenhuma conexao bancaria encontrada');
-      return {ok:false, erro:'Nenhuma conexao bancaria'};
+      // Tenta filtrar por clientUserId
+      itens = await pluggyGet('/items?clientUserId=dicasalaranjinha');
+    }
+    if (!itens || !itens.results || !itens.results.length) {
+      // Tenta v2
+      itens = await pluggyGet('/v2/items');
+    }
+    console.log('Pluggy itens resposta:', JSON.stringify(itens).substring(0,500));
+    if (!itens || !itens.results || !itens.results.length) {
+      return {ok:false, erro:'Nenhuma conexao bancaria. Resposta: '+JSON.stringify(itens).slice(0,200)};
     }
 
     let totalImportadas = 0;
