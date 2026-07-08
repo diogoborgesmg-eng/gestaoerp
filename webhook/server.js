@@ -1730,22 +1730,55 @@ async function enviarSaldosBancarios() {
     const linhas = ['*🏦 Saldos Bancários — Di Casa Laranjinha*'];
     linhas.push(new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'}).slice(0,16));
     linhas.push('');
-    let totalGeral = 0;
+
+    const contasVistas = new Set(); // deduplicar por ID
+    const bancoConta = [];   // contas correntes/poupança
+    const cartoes = [];      // cartões de crédito
 
     for (const itemId of itemIds) {
       const contas = await pluggyGet('/accounts?itemId='+itemId);
       if (!contas || !contas.results) continue;
       for (const conta of contas.results) {
-        const nome = conta.name || conta.type || 'Conta';
-        const banco = conta.institution?.name || conta.institutionId || '';
+        if (contasVistas.has(conta.id)) continue; // dedup
+        contasVistas.add(conta.id);
+        const tipo = (conta.type||'').toUpperCase();
+        const subTipo = (conta.subtype||'').toUpperCase();
+        const banco = (conta.institution?.name || conta.institutionId || '').trim();
+        const nome = (conta.name||'Conta').trim();
         const saldo = Number(conta.balance||0);
-        totalGeral += saldo;
-        linhas.push('  • '+banco+(banco?' - ':'')+nome+': *'+brl(saldo)+'*');
+        if (tipo === 'CREDIT' || subTipo === 'CREDIT_CARD' || nome.toUpperCase().includes('VISA') || nome.toUpperCase().includes('MASTERCARD') || nome.toUpperCase().includes('BANDEIRADO')) {
+          cartoes.push({banco, nome, saldo});
+        } else {
+          bancoConta.push({banco, nome, saldo});
+        }
       }
     }
 
+    // Contas bancárias
+    let totalBanco = 0;
+    if (bancoConta.length) {
+      linhas.push('*💰 Contas Bancárias:*');
+      bancoConta.forEach(c => {
+        totalBanco += c.saldo;
+        linhas.push('  • '+c.banco+': *'+brl(c.saldo)+'*');
+      });
+      linhas.push('  *Total contas: '+brl(totalBanco)+'*');
+    }
+
+    // Cartões de crédito (fatura = dívida, não somar no total)
+    if (cartoes.length) {
+      linhas.push('');
+      linhas.push('*💳 Faturas de Cartão:*');
+      let totalCartao = 0;
+      cartoes.forEach(c => {
+        totalCartao += c.saldo;
+        linhas.push('  • '+c.nome.trim()+': *'+brl(c.saldo)+'*');
+      });
+      linhas.push('  *Total faturas: '+brl(totalCartao)+'*');
+    }
+
     linhas.push('');
-    linhas.push('*Total: '+brl(totalGeral)+'*');
+    linhas.push('*Saldo líquido: '+brl(totalBanco)+'*');
     linhas.push('_Atualizado às 10h_');
 
     const msg = linhas.join('\n');
