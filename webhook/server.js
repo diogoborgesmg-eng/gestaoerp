@@ -429,6 +429,30 @@ function abrirWidget(){
       processarDDA().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
       return;
     }
+    if (req.url === '/debug-lancamentos') {
+      (async () => {
+        try {
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=tipo,dia_comercial,valor,device_id,descricao&order=dia_comercial.desc&limit=30', null, {'apikey':SB_KEY});
+          const total = Array.isArray(rows) ? rows.length : 0;
+          // Agrupa por dia
+          const porDia = {};
+          if (Array.isArray(rows)) rows.forEach(r => {
+            const d = r.dia_comercial || '?';
+            if (!porDia[d]) porDia[d] = {receitas:0, custos:0, total_rec:0, total_cus:0};
+            if (r.tipo === 'receita') { porDia[d].receitas++; porDia[d].total_rec += Number(r.valor||0); }
+            else { porDia[d].custos++; porDia[d].total_cus += Number(r.valor||0); }
+          });
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({total, porDia, amostra:(rows||[]).slice(0,10)}, null, 2));
+        } catch(e) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url === '/test-pluggy-info') {
       diagnosticoPluggy().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r,null,2));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
       return;
