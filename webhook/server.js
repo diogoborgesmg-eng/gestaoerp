@@ -1747,6 +1747,9 @@ async function enviarSaldosBancarios() {
     const cartoes = [];      // cartões de crédito
 
     for (const itemId of itemIds) {
+      // Busca info do item para pegar nome do banco
+      const itemInf = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
+      const bancoItem = (itemInf.connector&&itemInf.connector.name) || '';
       const contas = await pluggyGet('/accounts?itemId='+itemId);
       if (!contas || !contas.results) continue;
       for (const conta of contas.results) {
@@ -1754,7 +1757,7 @@ async function enviarSaldosBancarios() {
         contasVistas.add(conta.id);
         const tipo = (conta.type||'').toUpperCase();
         const subTipo = (conta.subtype||'').toUpperCase();
-        const banco = (conta.institution?.name || conta.institutionId || '').trim();
+        const banco = bancoItem || (conta.institution&&conta.institution.name) || conta.institutionId || 'Banco';
         const nome = (conta.name||'Conta').trim();
         const saldo = Number(conta.balance||0);
         if (tipo === 'CREDIT' || subTipo === 'CREDIT_CARD' || nome.toUpperCase().includes('VISA') || nome.toUpperCase().includes('MASTERCARD') || nome.toUpperCase().includes('BANDEIRADO')) {
@@ -1839,25 +1842,8 @@ async function conciliarPluggy() {
       for (const conta of contas.results) {
         if ((conta.type||'').toUpperCase()==='CREDIT') continue; // pula cartao aqui
 
-        // ── 1. DDA / BOLETOS AGENDADOS ──
-        const pagAgend = await pluggyAuthFetch('GET', '/payment-schedules?accountId='+conta.id).catch(()=>({}));
-        if (pagAgend && pagAgend.results) {
-          for (const bol of pagAgend.results) {
-            const idCP = 'pluggy_dda_'+bol.id;
-            const jaExiste = d.contasPagar.find(cp=>cp.id===idCP);
-            if (!jaExiste) {
-              const valor = Math.abs(Number(bol.amount||0));
-              const venc = fmtDia(bol.dueDate||bol.date);
-              const forn = (bol.description||bol.beneficiary&&bol.beneficiary.name||'Boleto DDA').slice(0,50);
-              d.contasPagar.push({
-                id:idCP, forn, val:valor, venc, pago:false,
-                cat:'🔄 Outros', banco:bancoNome, _pluggy:true, _dda:true,
-                codigoBarras:bol.barCode||bol.transactionCode||''
-              });
-              novosBoletosCP++;
-            }
-          }
-        }
+        // DDA desativado por ora — evita duplicacao com contas a pagar manuais
+        // Será ativado como funcionalidade separada no futuro
 
         // ── 2. TRANSACOES — concilia e detecta estravio ──
         const txs = await pluggyAuthFetch('GET', '/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=300').catch(()=>({}));
