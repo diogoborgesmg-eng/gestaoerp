@@ -248,12 +248,17 @@ const server = http.createServer((req, res) => {
       (async () => {
         try {
           // Gera connect token usando fetch nativo
-          const ct = await pluggyAuthFetch('POST', '/connect_token', { clientUserId: 'dicasalaranjinha' });
+          // Tenta os dois formatos do endpoint
+          let ct = await pluggyAuthFetch('POST', '/connect_token', { clientUserId: 'dicasalaranjinha' });
+          if (!ct.accessToken && !ct.token && !ct.connectToken) {
+            ct = await pluggyAuthFetch('POST', '/connect-token', { clientUserId: 'dicasalaranjinha' });
+          }
           console.log('Connect token response:', JSON.stringify(ct).substring(0,300));
-          const connectToken = ct.accessToken || ct.token || ct.connectToken || '';
+          const connectToken = ct.accessToken || ct.token || ct.connectToken || ct.access_token || '';
+          console.log('Connect token campos:', Object.keys(ct||{}).join(','), 'token len:', connectToken.length);
           if (!connectToken) {
             res.writeHead(200,{'Content-Type':'text/plain'});
-            res.end('Erro ao gerar connect token: '+JSON.stringify(ct));
+            res.end('Erro ao gerar connect token. Resposta: '+JSON.stringify(ct));
             return;
           }
           const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -262,7 +267,7 @@ const server = http.createServer((req, res) => {
 </head>
 <body style="margin:0;padding:0;background:#0a0a0f;">
 <iframe 
-  src="https://connect.pluggy.ai?token=${connectToken}&theme=dark"
+  src="https://connect.pluggy.ai?connectToken=${connectToken}"
   style="width:100%;height:100vh;border:none;"
   allow="camera; microphone; geolocation"
   title="Pluggy Connect">
