@@ -853,8 +853,7 @@ function abrirWidget(){
         // ITEM/ERROR - avisa WhatsApp
         if (evtName === 'item/error' || evtName === 'item/waiting_user_input') {
           var errMsg = (evento.error||evento.message||'Banco desconectado');
-          var alertMsg = 'Pluggy alerta: reconecte o banco em https://gestaoerp-webhook.onrender.com/pluggy-connect
-Motivo: '+errMsg;
+          var alertMsg = 'Pluggy alerta: reconecte o banco.\nAcesse /pluggy-connect\nMotivo: '+errMsg;
           wpp('5534996853258', alertMsg).catch(function(){});
           wpp('5534997692282', alertMsg).catch(function(){});
         }
