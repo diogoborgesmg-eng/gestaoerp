@@ -664,6 +664,46 @@ function abrirWidget(){
     }
     res.writeHead(200); res.end(JSON.stringify({status:'ok v8'})); return;
   }
+  // Handler do webhook Pluggy (item.created / item.updated)
+  if (req.url === '/pluggy-webhook') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const evento = JSON.parse(body);
+        console.log('Pluggy webhook:', evento.event, 'itemId:', evento.itemId || (evento.item&&evento.item.id));
+        const itemId = evento.itemId || (evento.item&&evento.item.id);
+        if (itemId) {
+          // Salva o itemId no blob se nao existe ainda
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+          const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
+          const deviceId = Array.isArray(rows)&&rows.length ? rows[0].device_id : 'pluggy_setup';
+          if (!d.pluggyItemIds) d.pluggyItemIds = [];
+          if (!d.pluggyItemIds.includes(itemId)) {
+            d.pluggyItemIds.push(itemId);
+            await req2('POST', SB_URL+'/rest/v1/erp_sync',
+              { device_id: deviceId, data: JSON.stringify(d) },
+              { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' });
+            console.log('Pluggy webhook: novo itemId salvo:', itemId);
+          }
+          // Se é item.updated, importa as transacoes imediatamente
+          if (evento.event === 'item/updated' || evento.event === 'item.updated') {
+            importarTransacoesPluggy().catch(e => console.log('Pluggy import erro:', e.message));
+          }
+        }
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true}));
+      } catch(e) {
+        console.error('Pluggy webhook erro:', e.message);
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false, erro:e.message}));
+      }
+    });
+    return;
+  }
+
   let body = '';
   req.on('data', c => body += c);
   req.on('end', async () => {
