@@ -1253,7 +1253,11 @@ async function executarDispatch(diaForcado){
   }
   // Funde com a tabela lancamentos (novos lancamentos que ainda nao foram pro blob via Forcar Envio)
   try {
-    const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&order=created_at.desc&limit=2000', null, {'apikey':SB_KEY});
+    // Busca lancamentos do mes atual E do mes anterior (cobre virada de mes)
+    const mesAtualISO = new Date(hojeP.ano, hojeP.mes-1, 1).toISOString().slice(0,7);
+    const mesAnteriorISO = new Date(hojeP.ano, hojeP.mes-2, 1).toISOString().slice(0,7);
+    const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&order=dia_comercial.desc&limit=5000', null, {'apikey':SB_KEY});
+    console.log('lancamentos na tabela:', Array.isArray(lancRows) ? lancRows.length : 0);
     if (Array.isArray(lancRows) && lancRows.length) {
       if (!r) r = {};
       lancRows.forEach(l => {
