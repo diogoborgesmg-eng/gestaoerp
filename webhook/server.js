@@ -325,6 +325,44 @@ function abrirWidget(){
       })();
       return;
     }
+    if (req.url === '/limpar-pluggy-duplicados') {
+      (async () => {
+        try {
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+          const d = JSON.parse(rows[0].data);
+          const deviceId = rows[0].device_id;
+          const ids = d.pluggyItemIds || [];
+          
+          // Para cada item, busca as contas e guarda o set de account IDs
+          const contasVistas = new Set();
+          const idsUnicos = [];
+          for (const itemId of ids) {
+            const contas = await pluggyAuthFetch('GET', '/accounts?itemId='+itemId).catch(()=>({}));
+            if (!contas||!contas.results||!contas.results.length) continue;
+            // Verifica se alguma conta deste item já foi vista
+            const contasNovas = contas.results.filter(ct=>!contasVistas.has(ct.id));
+            if (contasNovas.length > 0) {
+              idsUnicos.push(itemId);
+              contas.results.forEach(ct=>contasVistas.add(ct.id));
+            }
+          }
+          
+          d.pluggyItemIds = idsUnicos;
+          await req2('POST', SB_URL+'/rest/v1/erp_sync',
+            {device_id:deviceId, data:JSON.stringify(d)},
+            {'apikey':SB_KEY, 'Prefer':'resolution=merge-duplicates', 'Content-Type':'application/json'});
+          
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, antes:ids.length, depois:idsUnicos.length, idsUnicos}));
+        } catch(e) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url === '/test-dda') {
       processarDDA().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
       return;
