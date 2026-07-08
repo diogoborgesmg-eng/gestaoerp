@@ -325,6 +325,14 @@ function abrirWidget(){
       })();
       return;
     }
+    if (req.url === '/test-dda') {
+      processarDDA().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
+      return;
+    }
+    if (req.url === '/test-pluggy-info') {
+      diagnosticoPluggy().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r,null,2));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
+      return;
+    }
     if (req.url === '/test-conciliacao') {
       conciliarPluggy().then(r=>{
         res.writeHead(200,{'Content-Type':'application/json'});
@@ -1825,6 +1833,172 @@ async function enviarSaldosBancarios() {
 // 2. Concilia transacoes pagas → baixa Contas a Pagar
 // 3. Transacoes sem match → Estravio (para classificacao manual)
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// DDA — Domicílio Bancário de Cobrança
+// Vincula boletos DDA às NFs da SEFAZ pelo CNPJ emitente
+// ═══════════════════════════════════════════════════════════════
+async function processarDDA() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    if (!Array.isArray(rows)||!rows.length) return {ok:false};
+    const d = JSON.parse(rows[0].data);
+    const deviceId = rows[0].device_id;
+    const itemIds = d.pluggyItemIds || [];
+    if (!itemIds.length) return {ok:false, erro:'Sem itemIds'};
+
+    if (!d.contasPagar) d.contasPagar = [];
+    if (!d.estravio) d.estravio = [];
+    if (!d.ddaBoletos) d.ddaBoletos = []; // historico de boletos DDA
+
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+    let novos=0, vinculados=0, estravio=0;
+
+    for (const itemId of itemIds) {
+      const contas = await pluggyAuthFetch('GET', '/accounts?itemId='+itemId).catch(()=>({}));
+      if (!contas||!contas.results) continue;
+
+      for (const conta of contas.results) {
+        if ((conta.type||'').toUpperCase()==='CREDIT') continue;
+
+        // Busca boletos DDA desta conta
+        const pagAgend = await pluggyAuthFetch('GET', '/payment-schedules?accountId='+conta.id).catch(()=>({}));
+        if (!pagAgend||!pagAgend.results||!pagAgend.results.length) continue;
+
+        for (const bol of pagAgend.results) {
+          const idBol = 'dda_'+bol.id;
+          if (d.ddaBoletos.find(b=>b.id===idBol)) continue; // ja processado
+
+          const valor = Math.abs(Number(bol.amount||0));
+          const venc = fmtDia(bol.dueDate||bol.date);
+          const cnpjEmit = (bol.beneficiary&&(bol.beneficiary.documentNumber||bol.beneficiary.taxNumber||''))||'';
+          const nomeEmit = (bol.beneficiary&&bol.beneficiary.name||bol.description||'Boleto DDA').slice(0,50);
+          const barCode = bol.barCode||bol.transactionCode||'';
+
+          // Tenta vincular ao CNPJ de uma NF em contas a pagar
+          const nfMatch = d.contasPagar.find(cp => {
+            if (cp.pago || !cp._sefaz) return false;
+            // Match por CNPJ emitente
+            if (cnpjEmit && cp.cnpjEmit) {
+              const cnpj1 = cnpjEmit.replace(/\D/g,'');
+              const cnpj2 = (cp.cnpjEmit||'').replace(/\D/g,'');
+              if (cnpj1 && cnpj2 && cnpj1===cnpj2) return true;
+            }
+            // Match por nome (fallback)
+            const nome1 = (cp.forn||'').toLowerCase().slice(0,10);
+            const nome2 = nomeEmit.toLowerCase().slice(0,10);
+            return nome1 && nome2 && nome1===nome2;
+          });
+
+          if (nfMatch) {
+            // ✅ VINCULADO — cria parcela de pagamento vinculada à NF
+            const idParcela = 'dda_parcela_'+bol.id;
+            if (!d.contasPagar.find(cp=>cp.id===idParcela)) {
+              d.contasPagar.push({
+                id: idParcela,
+                forn: nomeEmit,
+                val: valor,
+                venc: venc,
+                pago: false,
+                cat: nfMatch.cat || '🥩 Matéria Prima',
+                cnpjEmit: cnpjEmit,
+                barCode: barCode,
+                _dda: true,
+                _nfId: nfMatch.id, // referencia à NF original
+                _pluggy: true
+              });
+              vinculados++;
+            }
+          } else {
+            // ❌ SEM NF CORRESPONDENTE — vai para estravio
+            const idE = 'dda_estravio_'+bol.id;
+            if (!d.estravio.find(e=>e.id===idE)) {
+              d.estravio.push({
+                id: idE,
+                desc: nomeEmit,
+                valor: valor,
+                dia: venc,
+                tipo: 'DDA/Boleto',
+                cnpj: cnpjEmit,
+                barCode: barCode,
+                revisado: false,
+                _dda: true
+              });
+              estravio++;
+            }
+          }
+
+          d.ddaBoletos.push({id:idBol, processado: new Date().toISOString()});
+          novos++;
+        }
+      }
+    }
+
+    // Limpa historico antigo (60 dias)
+    const limite = new Date(); limite.setDate(limite.getDate()-60);
+    d.ddaBoletos = (d.ddaBoletos||[]).slice(-500);
+
+    await req2('POST', SB_URL+'/rest/v1/erp_sync',
+      {device_id:deviceId, data:JSON.stringify(d)},
+      {'apikey':SB_KEY, 'Prefer':'resolution=merge-duplicates', 'Content-Type':'application/json'});
+
+    console.log('DDA: '+novos+' boletos, '+vinculados+' vinculados a NFs, '+estravio+' em estravio');
+    return {ok:true, novos, vinculados, estravio};
+  } catch(e) {
+    console.error('DDA erro:', e.message);
+    return {ok:false, erro:e.message};
+  }
+}
+
+// ── DIAGNÓSTICO PLUGGY ──────────────────────────────────────
+async function diagnosticoPluggy() {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+    const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
+    const itemIds = d.pluggyItemIds || [];
+    const resultado = {itemIds, bancos:[], resumo:{}};
+
+    for (const itemId of itemIds) {
+      const info = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
+      const banco = {
+        id: itemId,
+        nome: (info.connector&&info.connector.name)||'?',
+        status: info.status||'?',
+        ultimaSync: info.lastUpdatedAt||'?',
+        contas: []
+      };
+      const contas = await pluggyAuthFetch('GET', '/accounts?itemId='+itemId).catch(()=>({}));
+      if (contas&&contas.results) {
+        for (const ct of contas.results) {
+          const hasDDA = await pluggyAuthFetch('GET', '/payment-schedules?accountId='+ct.id).catch(()=>({}));
+          banco.contas.push({
+            id: ct.id,
+            nome: ct.name,
+            tipo: ct.type,
+            saldo: Number(ct.balance||0),
+            moeda: ct.currencyCode||'BRL',
+            temDDA: hasDDA&&hasDDA.results ? hasDDA.results.length : 0
+          });
+        }
+      }
+      resultado.bancos.push(banco);
+    }
+    resultado.resumo = {
+      totalBancos: resultado.bancos.length,
+      totalContas: resultado.bancos.reduce((a,b)=>a+b.contas.length,0),
+      saldoTotal: resultado.bancos.reduce((a,b)=>a+b.contas.filter(c=>c.tipo!=='CREDIT').reduce((x,y)=>x+y.saldo,0),0),
+      boletossDDA: resultado.bancos.reduce((a,b)=>a+b.contas.reduce((x,y)=>x+(y.temDDA||0),0),0)
+    };
+    return resultado;
+  } catch(e) {
+    return {ok:false, erro:e.message};
+  }
+}
+
 async function conciliarPluggy() {
   try {
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
@@ -2055,6 +2229,7 @@ setInterval(() => {
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
       importarTransacoesPluggy().catch(e=>console.error('Pluggy erro:', e.message));
       conciliarPluggy().catch(e=>console.error('Conciliacao erro:', e.message));
+      processarDDA().catch(e=>console.error('DDA erro:', e.message));
     }
   }
   // Todos os dias às 7h Brasilia = 10h UTC — alertas de contas
