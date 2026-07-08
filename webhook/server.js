@@ -265,13 +265,43 @@ const server = http.createServer((req, res) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Conectar Bancos — Di Casa Laranjinha</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0a0f;">
-<iframe 
-  src="https://connect.pluggy.ai?connectToken=${connectToken}"
-  style="width:100%;height:100vh;border:none;"
-  allow="camera; microphone; geolocation"
-  title="Pluggy Connect">
-</iframe>
+<body style="background:#0a0a0f;color:#fff;font-family:sans-serif;padding:20px;box-sizing:border-box;">
+<div style="max-width:400px;margin:40px auto;text-align:center;">
+<p style="font-size:40px;">🏦</p>
+<h2>Conectar Banco</h2>
+<p style="color:#888;font-size:13px;margin-bottom:24px;">Di Casa Laranjinha — Open Finance</p>
+<button onclick="abrirWidget()" id="btn"
+  style="padding:14px 32px;border-radius:10px;border:none;background:#0066ff;color:#fff;font-size:15px;font-weight:700;cursor:pointer;width:100%;">
+  🔗 Conectar conta bancária
+</button>
+<p id="status" style="margin-top:16px;color:#888;font-size:13px;"></p>
+</div>
+<script src="https://cdn.pluggy.ai/pluggy-connect/latest/pluggy-connect.js"></script>
+<script>
+var TOKEN = "${connectToken}";
+function abrirWidget(){
+  document.getElementById("status").textContent = "Abrindo widget...";
+  try {
+    var p = new PluggyConnect({
+      connectToken: TOKEN,
+      onSuccess: function(d){
+        document.getElementById("status").textContent = "✅ Banco conectado! Pode fechar esta página.";
+        document.getElementById("btn").textContent = "✅ Conectado!";
+        document.getElementById("btn").style.background = "#00cc66";
+      },
+      onError: function(e){
+        document.getElementById("status").textContent = "❌ " + (e.message || JSON.stringify(e));
+      },
+      onClose: function(){
+        document.getElementById("status").textContent = "Fechado. Clique para conectar outro banco.";
+      }
+    });
+    p.init();
+  } catch(e) {
+    document.getElementById("status").textContent = "Erro: " + e.message;
+  }
+}
+</script>
 </body></html>`;
           res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
           res.end(html);
