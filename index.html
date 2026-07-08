@@ -12393,9 +12393,13 @@ function limparImportSTI3(){
 
 
 async function importarSTi3(inp){
- const f=inp?.files?.[0]; if(!f)return; inp.value="";
+ // Usa setTimeout para rodar apos qualquer evento de click propagado
+ setTimeout(async ()=>{
+ const f=inp?.files?.[0]; if(!f)return;
+ const abaAntes=aba; // guarda aba atual para nao navegar
  const res=document.getElementById("cfg-sti3-res");
  if(res)res.innerHTML='<div class="ial ay"><span>⟳</span><span>Lendo STi3...</span></div>';
+ console.log("STi3: iniciando importacao, arquivo:",f.name,"tamanho:",f.size);
  try{
   if(!window.XLSX){
    await new Promise((ok,err)=>{
@@ -12514,11 +12518,12 @@ async function importarSTi3(inp){
   const total=Object.values(porDia).reduce((a,b)=>a+b,0);
   const resumo=diasImportados.map(d=>d.slice(0,5)+": "+brl(porDia[d])).join(" · ");
   if(res)res.innerHTML='<div class="ial ag"><span>✅</span><span>STi3 importado! '+diasImportados.length+' dias · '+linhas+' vendas<br/>'+resumo+'<br/><strong>Total: '+brl(total)+'</strong></span></div>';
-  render();
+  // Nao chama render() para nao navegar de tela
  }catch(e){
   console.error("STi3 erro:",e);
   if(res)res.innerHTML='<div class="ial ar"><span>❌</span><span>'+e.message+'</span></div>';
  }
+ },50); // 50ms de delay para evitar propagacao de eventos
 }
 
 
