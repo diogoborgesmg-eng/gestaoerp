@@ -2600,81 +2600,96 @@ async function conciliarPluggy() {
 }
 
 
-// Classifica transação usando dados nativos do Pluggy (category em inglês + paymentMethod + descrição)
+// Classifica transação usando dados nativos do Pluggy (EN ou PT, paymentMethod + descrição)
 function classificarTransacaoPluggy(tx) {
-  const desc = (tx.description||'').toLowerCase();
-  const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toLowerCase();
-  const cat = (tx.category||'').toLowerCase();
+  const desc = (tx.description||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const cat = (tx.category||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const valor = Number(tx.amount||0);
 
   // TRANSFERÊNCIA ENTRE CONTAS PRÓPRIAS — ignorar no DRE
-  if (cat.includes('same person') || desc.includes('transferência | conta stone') ||
-      desc.includes('pix | diogo') || desc.includes('pix | herielly')) {
-    return '__IGNORAR__'; // sinaliza para não lançar
+  // EN: same person transfer | PT: transferencia da mesma pessoa
+  if (cat.includes('same person') || cat.includes('mesma pessoa') ||
+      desc.includes('transferencia | conta stone') ||
+      desc.includes('transferencia | pedra de conta') ||
+      (desc.includes('pix') && (desc.includes('diogo') || desc.includes('herielly')))) {
+    return '__IGNORAR__';
   }
 
   // CHEQUE
-  if (metodo.includes('check') || cat.includes('transfer - check') ||
+  // EN: transfer - check | PT: transferencia - verificacao
+  if (metodo.includes('check') || cat.includes('check') || cat.includes('verificac') ||
       desc.includes('cheque') || desc.includes('saque din ag cheque')) {
     return '🔖 Cheque Compensado';
   }
 
-  // EMPRÉSTIMO / PARCELA STONE
-  if (cat.includes('loans and financing') || cat.includes('loan') ||
-      desc.includes('parcela') || desc.includes('empréstimo') || desc.includes('financiam')) {
+  // EMPRÉSTIMO / PARCELA
+  // EN: loans and financing | PT: emprestimos e financiamento
+  if (cat.includes('loans') || cat.includes('emprestimos') || cat.includes('financiamento') ||
+      desc.includes('parcela') || desc.includes('emprestimo') || desc.includes('financiam')) {
     return '🏦 Empréstimo/Financiamento';
   }
 
   // INVESTIMENTO / RENDIMENTO
-  if (cat.includes('proceeds interests') || cat.includes('dividends') ||
+  // EN: proceeds interests and dividends | PT: rendimentos, juros e dividendos
+  if (cat.includes('proceeds') || cat.includes('dividends') || cat.includes('rendimentos') ||
       desc.includes('rendimento') || desc.includes('aporte') || desc.includes('investimento')) {
-    return valor > 0 ? '📈 Rendimento/Investimento' : '📈 Aporte/Investimento';
+    return valor > 0 ? '📈 Rendimento' : '📈 Aporte/Investimento';
   }
 
   // TARIFAS BANCÁRIAS
   if (desc.startsWith('tar ') || desc.includes('tarifa') || desc.includes('manut') ||
       desc.includes('anuidade') || desc.includes('mensalidade maquininha') ||
-      desc.includes('ccf')) {
+      desc.includes('ccf') || desc.includes('iof')) {
+    if (desc.includes('iof')) return '💳 Taxas/Impostos';
     return '🏦 Tarifas Bancárias';
   }
 
-  // JUROS / IOF / MULTA
-  if (desc.includes('iof') || desc.includes('cpmf')) return '💳 Taxas/Impostos';
-  if (desc.includes('juro') || desc.includes('encargo') || desc.includes('cheque especial')) return '⚠️ Juros/Multa';
+  // JUROS / MULTA
+  if (desc.includes('juro') || desc.includes('encargo') || desc.includes('cheque especial') ||
+      desc.includes('multa')) return '⚠️ Juros/Multa';
 
-  // PIX
-  if (metodo.includes('pix') || desc.includes('pix enviado') || desc.includes('deb pix') ||
-      desc.startsWith('pix ')) {
-    return '🔄 PIX Enviado';
+  // PIX — descrição tem precedência sobre categoria (Pluggy às vezes classifica errado)
+  // EN: healthcare | PT: assistencia medica — mas pode ser PIX classificado errado
+  if (desc.includes('pix') || desc.startsWith('deb pix') || metodo.includes('pix')) {
+    return valor > 0 ? '💰 PIX Recebido' : '🔄 PIX Enviado';
+  }
+
+  // CARTÃO
+  if (metodo.includes('credit') || metodo.includes('debit') || cat.includes('cashback')) {
+    return '💳 Cartão';
   }
 
   // SERVIÇOS / CUSTOS FIXOS
-  if (cat.includes('services') || cat.includes('digital services') ||
-      cat.includes('entrepreneurial') || cat.includes('cashback')) {
+  // EN: services, digital services, entrepreneurial | PT: servicos, servicos digitais
+  if (cat.includes('services') || cat.includes('servicos') || cat.includes('servico') ||
+      cat.includes('entrepreneurial') || cat.includes('atividades empresariais')) {
     return '🏢 Custos Fixos';
   }
 
-  // SAÚDE / OUTROS PAGAMENTOS (Pluggy às vezes classifica PIX errado como Healthcare)
-  if (cat.includes('healthcare') || cat.includes('health')) {
-    if (desc.includes('pix') || desc.includes('deb pix')) return '🔄 PIX Enviado';
+  // SAÚDE — geralmente PIX mal classificado
+  // EN: healthcare | PT: assistencia medica
+  if (cat.includes('healthcare') || cat.includes('assistencia medica') || cat.includes('saude')) {
     return '🏢 Custos Fixos';
   }
 
-  // TRANSFERÊNCIAS GERAIS
-  if (cat.includes('transfers') || metodo.includes('ted') || metodo.includes('doc')) {
-    return '🔄 Transferência';
+  // TED / DOC / TRANSFERÊNCIAS GERAIS
+  if (cat.includes('transfers') || cat.includes('transferencias') || cat.includes('transfere')) {
+    if (metodo.includes('ted')) return '🔄 Transferência TED';
+    if (metodo.includes('doc')) return '🔄 Transferência DOC';
+    return valor > 0 ? '💰 Transferência Recebida' : '🔄 Transferência';
   }
 
   // SAQUE
   if (desc.includes('saque') || desc.includes('sangria')) return '💵 Saque/Sangria';
 
   // RH
-  if (desc.includes('salario') || desc.includes('salário') || desc.includes('folha')) return '👥 RH / Mão de Obra';
+  if (desc.includes('salario') || desc.includes('folha') || desc.includes('diaria')) return '👥 RH / Mão de Obra';
 
-  // CRÉDITOS
-  if (valor > 0) return '💰 Receita/Transferência recebida';
+  // BOLETO
+  if (metodo.includes('boleto') || desc.includes('boleto') || desc.includes('pagto')) return '📄 Boleto Pago';
 
-  return '🔄 Outros';
+  return valor > 0 ? '💰 Receita/Transferência recebida' : '🔄 Outros';
 }
 
 async function importarTransacoesPluggy() {
