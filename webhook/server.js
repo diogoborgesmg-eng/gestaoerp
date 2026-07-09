@@ -568,11 +568,21 @@ function abrirWidget(){
           try {
             const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
             const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+            // Verifica blob e pluggyItemIds
+            const blobRows=await req2('GET',SB2+'/rest/v1/erp_sync?select=data,device_id,updated_at&order=updated_at.desc&limit=1',null,{'apikey':SK2});
+            const blobData=Array.isArray(blobRows)&&blobRows.length?JSON.parse(blobRows[0].data):{};
+            const pluggyIds=blobData.pluggyItemIds||[];
+            // Verifica contas se há itemIds
+            const contasInfo=[];
+            for(const id of pluggyIds.slice(0,4)){
+              const ct=await pluggyAuthFetch('GET','/accounts?itemId='+id).catch(e=>({erro:e.message}));
+              contasInfo.push({itemId:id.slice(0,8),contas:(ct.results||[]).map(c=>({nome:c.name,saldo:c.balance,tipo:c.type}))});
+            }
             const lr=await req2('GET',SB2+'/rest/v1/lancamentos?select=tipo,dia_comercial,valor,device_id&limit=2000',null,{'apikey':SK2});
             const pd={};
             if(Array.isArray(lr))lr.forEach(l=>{const d=l.dia_comercial||'?';if(!pd[d])pd[d]={r:0,c:0,tr:0,tc:0};if(l.tipo==='receita'){pd[d].r++;pd[d].tr+=Number(l.valor||0);}else{pd[d].c++;pd[d].tc+=Number(l.valor||0);}});
             res.writeHead(200,{'Content-Type':'application/json'});
-            res.end(JSON.stringify({total:Array.isArray(lr)?lr.length:0,porDia:pd},null,2));
+            res.end(JSON.stringify({pluggyItemIds:pluggyIds,contasInfo,totalLancamentos:Array.isArray(lr)?lr.length:0,porDia:pd},null,2));
           }catch(e){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({erro:e.message}));}
         })();
       } else {
