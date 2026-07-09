@@ -2261,7 +2261,11 @@ async function enviarSaldosBancarios() {
         for (const tx of txs.results) {
           const desc = (tx.description||'').toLowerCase();
           const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toUpperCase();
-          const isCheque = metodo==='CHECK'||desc.includes('cheque')||desc.includes(' chq ')||desc.includes('compensacao cheque')||desc.includes('ch compensado');
+          const isCheque = metodo==='CHECK'
+            || metodo.includes('check') || metodo.includes('Check')
+            || desc.includes('cheque') || desc.includes('chq')
+            || desc.includes('saque din ag cheque')
+            || desc.includes('cheque compensado');
           if (!isCheque) continue;
           const nomeContaRaw2 = (conta2.name||'').trim();
           const nomeBancoMap2 = {'C6 BANK':'C6 Bank','CAIXA':'Caixa','STONE':'Stone','SANTANDER':'Santander'};
