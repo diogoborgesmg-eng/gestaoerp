@@ -2162,7 +2162,8 @@ async function enviarSaldosBancarios() {
     for (const itemId of itemIds) {
       // Busca info do item para pegar nome do banco
       const itemInf = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
-      const bancoItem = (itemInf.connector&&itemInf.connector.name) || '';
+      // Nome real do banco vem da conta, não do item (que sempre retorna MeuPluggy)
+      const bancoItem = ''; // será substituído pelo nome da conta
       const contas = await pluggyGet('/accounts?itemId='+itemId);
       if (!contas || !contas.results) continue;
       for (const conta of contas.results) {
@@ -2170,8 +2171,19 @@ async function enviarSaldosBancarios() {
         contasVistas.add(conta.id);
         const tipo = (conta.type||'').toUpperCase();
         const subTipo = (conta.subtype||'').toUpperCase();
-        const banco = bancoItem || (conta.institution&&conta.institution.name) || conta.institutionId || 'Banco';
-        const nome = (conta.name||'Conta').trim();
+        // Usa o nome da conta para identificar o banco (ex: "C6 BANK", "CAIXA", "STONE PAGAMENTOS S.A.")
+        const nomeContaRaw = (conta.name||'').trim();
+        // Simplifica o nome para exibição
+        const nomeBancoMap = {
+          'C6 BANK': 'C6 Bank', 'C6': 'C6 Bank',
+          'CAIXA': 'Caixa', 'CAIXA ECONÔMICA': 'Caixa',
+          'STONE': 'Stone', 'STONE PAGAMENTOS': 'Stone',
+          'SANTANDER': 'Santander',
+          'BANDEIRADO': 'Bandeirado (Santander)',
+          'NUBANK': 'Nubank', 'INTER': 'Inter', 'SICOOB': 'Sicoob'
+        };
+        const banco = Object.entries(nomeBancoMap).find(([k])=>nomeContaRaw.toUpperCase().includes(k))?.[1] || nomeContaRaw || 'Banco';
+        const nome = nomeContaRaw;
         const saldo = Number(conta.balance||0);
         if (tipo === 'CREDIT' || subTipo === 'CREDIT_CARD' || nome.toUpperCase().includes('VISA') || nome.toUpperCase().includes('MASTERCARD') || nome.toUpperCase().includes('BANDEIRADO')) {
           cartoes.push({banco, nome, saldo});
