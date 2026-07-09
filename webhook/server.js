@@ -889,6 +889,13 @@ function abrirWidget(){
                   dtPagamento: status==='PAID' ? venc : null
                 });
                 console.log('Boleto DDA vinculado à NF:', nfMatch.forn);
+                // Notifica chegada do boleto
+                const msgBol = '📬 *Boleto DDA recebido*\n'+
+                  '• '+nomeEmit+'\n'+
+                  '• Valor: *'+brl(valor)+'*\n'+
+                  '• Venc: '+venc+'\n'+
+                  '• Vinculado à NF ✅';
+                for(const num of ['5534996853258','5534997692282']) wpp(num,msgBol).catch(()=>{});
               } else {
                 // ❌ SEM NF — vai para estravio
                 d.estravio.push({
@@ -896,6 +903,12 @@ function abrirWidget(){
                   tipo: 'DDA/Boleto', cnpj: cnpjEmit, barCode, revisado: false, _dda: true
                 });
                 console.log('Boleto DDA sem NF correspondente → estravio:', nomeEmit);
+                const msgEstr = '⚠️ *Boleto sem NF correspondente*\n'+
+                  '• '+nomeEmit+'\n'+
+                  '• Valor: *'+brl(valor)+'*\n'+
+                  '• Venc: '+venc+'\n'+
+                  '• Verifique em 🔍 Estravio';
+                for(const num of ['5534996853258','5534997692282']) wpp(num,msgEstr).catch(()=>{});
               }
 
               // Salva
@@ -912,6 +925,12 @@ function abrirWidget(){
                   {device_id: deviceId, data: JSON.stringify(d)},
                   {'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json'});
                 console.log('Boleto DDA marcado como pago:', nomeEmit);
+                const msgPago = '✅ *Boleto baixado automaticamente*\n'+
+                  '• '+nomeEmit+'\n'+
+                  '• Valor: *'+brl(valor)+'*\n'+
+                  '• Pago em: '+new Date().toLocaleDateString('pt-BR')+'\n'+
+                  '• Conta a pagar atualizada ✅';
+                for(const num of ['5534996853258','5534997692282']) wpp(num,msgPago).catch(()=>{});
               }
             }
           }
