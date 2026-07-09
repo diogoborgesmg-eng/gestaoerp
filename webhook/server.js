@@ -2206,6 +2206,45 @@ async function enviarSaldosBancarios() {
       linhas.push('  *Total faturas: '+brl(totalCartao)+'*');
     }
 
+    // Busca cheques pendentes dos ultimos 7 dias
+    const cheques = [];
+    const dataInicio7d = new Date(); dataInicio7d.setDate(dataInicio7d.getDate()-7);
+    const fmtDate = d => d.toISOString().slice(0,10);
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+    for (const itemId of itemIds) {
+      const contas2 = await pluggyGet('/accounts?itemId='+itemId);
+      if (!contas2||!contas2.results) continue;
+      for (const conta2 of contas2.results) {
+        if ((conta2.type||'').toUpperCase()==='CREDIT') continue;
+        const txs = await pluggyGet('/transactions?accountId='+conta2.id+'&from='+fmtDate(dataInicio7d)+'&to='+fmtDate(new Date())+'&pageSize=100');
+        if (!txs||!txs.results) continue;
+        for (const tx of txs.results) {
+          const desc = (tx.description||'').toLowerCase();
+          const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toUpperCase();
+          const isCheque = metodo==='CHECK'||desc.includes('cheque')||desc.includes(' chq ')||desc.includes('compensacao cheque')||desc.includes('ch compensado');
+          if (!isCheque) continue;
+          const nomeContaRaw2 = (conta2.name||'').trim();
+          const nomeBancoMap2 = {'C6 BANK':'C6 Bank','CAIXA':'Caixa','STONE':'Stone','SANTANDER':'Santander'};
+          const bancoNome2 = Object.entries(nomeBancoMap2).find(([k])=>nomeContaRaw2.toUpperCase().includes(k))?.[1]||nomeContaRaw2;
+          const numCheque = tx.paymentData?.checkNumber || (desc.match(/n[o°]?\s*(\d+)/i)||[])[1] || '';
+          cheques.push({
+            banco: bancoNome2,
+            numero: numCheque,
+            valor: Math.abs(Number(tx.amount||0)),
+            data: fmtDia(tx.date),
+            tipo: Number(tx.amount||0)>0 ? '📥' : '📤'
+          });
+        }
+      }
+    }
+    if (cheques.length) {
+      linhas.push('');
+      linhas.push('*🔖 Cheques (últimos 7 dias):*');
+      cheques.forEach(ch => {
+        linhas.push('  '+ch.tipo+' '+ch.banco+(ch.numero?' nº '+ch.numero:'')+': *'+brl(ch.valor)+'* ('+ch.data+')');
+      });
+    }
+
     linhas.push('');
     linhas.push('*Saldo líquido: '+brl(totalBanco)+'*');
     linhas.push('_Atualizado às 10h_');
@@ -2213,7 +2252,7 @@ async function enviarSaldosBancarios() {
     const msg = linhas.join('\n');
     const destinos = ['5534996853258','5534997692282'];
     for (const num of destinos) await wpp(num, msg);
-    console.log('Saldos enviados. Total banco:', totalBanco);
+    console.log('Saldos enviados. Total banco:', totalBanco, 'Cheques:', cheques.length);
   } catch(e) {
     console.error('Erro saldos:', e.message);
   }
