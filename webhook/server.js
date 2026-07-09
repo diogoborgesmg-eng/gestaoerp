@@ -1879,7 +1879,15 @@ async function consultarNFsRecebidas() {
     }
 
     // Parseia os docZips para extrair dados completos das NFs
-    const nfesDados = todasNfesDados;
+    // Deduplica por chNFe — evita processar mesma NF de lotes diferentes
+    const nfesVistas = new Set();
+    const nfesDados = todasNfesDados.filter(nfe => {
+      if (!nfe.chNFe) return true;
+      if (nfesVistas.has(nfe.chNFe)) { console.log('SEFAZ: NF duplicada ignorada:', nfe.emitente); return false; }
+      nfesVistas.add(nfe.chNFe); return true;
+    });
+    if (todasNfesDados.length !== nfesDados.length)
+      console.log('SEFAZ: '+todasNfesDados.length+' NFs -> '+nfesDados.length+' unicas apos dedup');
     if (nfesDados.length > 0) {
       console.log('SEFAZ: encontradas', nfesDados.length, 'NFs novas com dados');
       const hoje = new Date().toLocaleDateString('pt-BR');
