@@ -2621,45 +2621,66 @@ async function processarSTi3WhatsApp(msg, grupoId) {
       console.log('STi3 L'+i+':', nv.join(' | '));
     });
 
-    // Detecta colunas
+    // Detecta colunas buscando a linha onde col[0] = "Venda"
     let colData=-1, colValor=-1, colVenda=0, headerRow=-1;
-    const palavrasData = ['data','emissao','emissão','dtvenda','datahora','data hora'];
-    const palavrasValor = ['valor','total','vltotal','vl.total','valortotal'];
 
-    for (let i=0; i<Math.min(10,rows.length); i++) {
+    // Passo 1: encontra a linha de cabecalho onde col[0] = "Venda"
+    for (let i=0; i<Math.min(50,rows.length); i++) {
       const r = rows[i]; if (!r) continue;
-      let temData=false, temValor=false;
-      for (let j=0; j<r.length; j++) {
-        const cel = String(r[j]||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
-        if (palavrasData.some(p => cel===p || cel.startsWith(p))) { colData=j; temData=true; }
-        if (palavrasValor.some(p => cel===p || cel.startsWith(p))) { colValor=j; temValor=true; }
-        if (['venda','pedido','nrvenda'].some(p => cel===p)) colVenda=j;
-      }
-      if (temData && temValor) { headerRow=i; break; }
-    }
-
-    // Fallback por conteúdo
-    if (colData<0 || colValor<0) {
-      for (let i=1; i<Math.min(20,rows.length); i++) {
-        const r = rows[i]; if (!r || r.length<3) continue;
+      const c0 = String(r[0]||'').trim().toLowerCase();
+      if (c0 === 'venda' || c0 === 'nr venda' || c0 === 'nrvenda') {
+        headerRow = i;
+        // Busca Data e Valor NESSA linha especificamente
         for (let j=0; j<r.length; j++) {
-          const v = r[j];
-          if (colData<0 && typeof v==='string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v.trim())) colData=j;
-          if (colData<0 && v instanceof Date && !isNaN(v) && v.getFullYear()>2020) colData=j;
+          const cel = String(r[j]||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+          if (cel === 'data') { colData=j; }
+          if (cel === 'valor') { colValor=j; }
+          if (cel === 'venda') { colVenda=j; }
         }
-        if (colData>=0) {
-          for (let j=r.length-1; j>=0; j--) {
-            const v = r[j];
-            const n = typeof v==='number' ? v : parseFloat(String(v||'').replace(',','.'));
-            if (!isNaN(n) && n>0.5 && n<100000 && j!==colData) { colValor=j; break; }
+        console.log('STi3: cabecalho na linha '+i+', colData='+colData+', colValor='+colValor);
+        break;
+      }
+    }
+
+    // Passo 2: se nao achou pelo cabecalho, busca por conteudo nas primeiras linhas de dados
+    if (colData<0 || colValor<0) {
+      const startBusca = headerRow>=0 ? headerRow+1 : 1;
+      for (let i=startBusca; i<Math.min(startBusca+30,rows.length); i++) {
+        const r = rows[i]; if (!r || r.length<5) continue;
+        // Linha de dados valida: col[0] deve ser numero inteiro (nr venda)
+        const c0num = Number(String(r[0]||'').replace('.','').trim());
+        if (!Number.isInteger(c0num) || c0num<=0) continue;
+        // Busca data
+        for (let j=1; j<r.length; j++) {
+          const v = r[j];
+          if (colData<0) {
+            if (v instanceof Date && !isNaN(v) && v.getFullYear()>2020) { colData=j; }
+            else if (typeof v==='number' && v>40000 && v<60000) { colData=j; }
+            else if (typeof v==='string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v.trim())) { colData=j; }
           }
-          if (colValor>=0) { headerRow=i-1; break; }
+        }
+        // Busca valor: ultimo numero razoavel antes do fim da linha
+        if (colData>=0) {
+          for (let j=r.length-1; j>=1; j--) {
+            const v = r[j];
+            if (j===colData) continue;
+            const n = typeof v==='number' ? v : parseFloat(String(v||'').replace(',','.'));
+            if (!isNaN(n) && n>0.1 && n<100000) { colValor=j; break; }
+          }
+        }
+        if (colData>=0 && colValor>=0) {
+          console.log('STi3: colunas detectadas por conteudo linha '+i+', colData='+colData+', colValor='+colValor);
+          if (headerRow<0) headerRow=i-1;
+          break;
         }
       }
     }
 
     if (colData<0 || colValor<0) {
-      throw new Error('Não achei as colunas Data e Valor. Verifique o arquivo.');
+      // Log da estrutura para debug
+      const amostra = rows.slice(0,10).map((r,i)=>'L'+i+':'+r.map((v,j)=>v?'['+j+']='+String(v).slice(0,12):null).filter(Boolean).join(','));
+      console.log('STi3 estrutura:\n'+amostra.join('\n'));
+      throw new Error('Colunas Data/Valor nao encontradas. Veja logs do Render.');
     }
 
     // Processa linhas
@@ -2671,11 +2692,9 @@ async function processarSTi3WhatsApp(msg, grupoId) {
       const r = rows[i];
       if (!r || r.length <= Math.max(colData,colValor)) continue;
 
-      // Pula linhas sem numero de venda (totais)
-      if (colVenda>=0) {
-        const vid = String(r[colVenda]||'').trim();
-        if (!vid || isNaN(Number(vid)) || !Number.isInteger(Number(vid))) continue;
-      }
+      // Linha valida: col[0] deve ser numero inteiro (nr venda como 39730)
+      const c0 = String(r[0]||'').replace(/\./g,'').trim();
+      if (!c0 || isNaN(Number(c0)) || !Number.isInteger(Number(c0)) || Number(c0)<=0) continue;
 
       // Data
       let dataFmt = null;
