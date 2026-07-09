@@ -477,6 +477,46 @@ function abrirWidget(){
       });
       return;
     }
+    if (req.url === '/test-transacoes') {
+      (async () => {
+        try {
+          const SB2 = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SK2 = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows2 = await req2('GET', SB2+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SK2});
+          const d2 = Array.isArray(rows2)&&rows2.length ? JSON.parse(rows2[0].data) : {};
+          const ids2 = d2.pluggyItemIds || [];
+          const dataInicio = new Date(); dataInicio.setDate(dataInicio.getDate()-7);
+          const fmtDate2 = d => d.toISOString().slice(0,10);
+          const todasTx = [];
+          for (const itemId of ids2) {
+            const contas2 = await pluggyGet('/accounts?itemId='+itemId);
+            if (!contas2||!contas2.results) continue;
+            for (const conta2 of contas2.results) {
+              if ((conta2.type||'').toUpperCase()==='CREDIT') continue;
+              const txs = await pluggyGet('/transactions?accountId='+conta2.id+'&from='+fmtDate2(dataInicio)+'&to='+fmtDate2(new Date())+'&pageSize=50');
+              if (!txs||!txs.results) continue;
+              txs.results.forEach(tx => {
+                todasTx.push({
+                  banco: conta2.name,
+                  data: tx.date?.slice(0,10),
+                  tipo: tx.type,
+                  valor: tx.amount,
+                  descricao: tx.description,
+                  paymentMethod: tx.paymentData?.paymentMethod,
+                  checkNumber: tx.paymentData?.checkNumber
+                });
+              });
+            }
+          }
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({total:todasTx.length, transacoes:todasTx.slice(0,30)},null,2));
+        } catch(e) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url === '/test-saldos') {
       enviarSaldosBancarios().then(()=>{
         res.writeHead(200,{'Content-Type':'application/json'});
