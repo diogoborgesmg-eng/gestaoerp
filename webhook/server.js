@@ -2733,7 +2733,7 @@ async function processarSTi3WhatsApp(msg, grupoId) {
 
     if (!linhas) throw new Error('Nenhuma venda encontrada. Erros de data: '+erros);
 
-    // Grava no Supabase
+    // Grava na tabela lancamentos
     const diasImportados = Object.keys(porDia).sort();
     let gravados=0;
     for (const dia of diasImportados) {
@@ -2745,6 +2745,28 @@ async function processarSTi3WhatsApp(msg, grupoId) {
       ).catch(()=>{});
       gravados++;
     }
+
+    // Atualiza o blob erp_sync com os totais diários — frontend lê isso na próxima sync
+    const rowsBlob = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).catch(()=>[]);
+    const blobData = Array.isArray(rowsBlob)&&rowsBlob.length ? JSON.parse(rowsBlob[0].data) : {};
+    const blobDeviceId = Array.isArray(rowsBlob)&&rowsBlob.length ? rowsBlob[0].device_id : 'sti3_server';
+    // Mescla cada dia no blob (preserva outros dados existentes)
+    for (const dia of diasImportados) {
+      if (!blobData[dia]) blobData[dia] = { r:[], c:[] };
+      if (!blobData[dia].r) blobData[dia].r = [];
+      // Remove sti3 antigo desse dia e adiciona o novo
+      blobData[dia].r = blobData[dia].r.filter(x => x.fonte !== 'sti3');
+      blobData[dia].r.push({
+        id: 'sti3_'+dia.replace(/\//g,''),
+        d: 'STi3 Vendas', s: 'restaurante',
+        v: porDia[dia], cat: '💰 Receita/Vendas', fonte: 'sti3'
+      });
+    }
+    await req2('POST', SB_URL+'/rest/v1/erp_sync',
+      { device_id: 'sti3_server', data: JSON.stringify(blobData) },
+      { 'apikey': SB_KEY, 'Prefer': 'resolution=merge-duplicates', 'Content-Type': 'application/json' }
+    ).catch(()=>{});
+    console.log('STi3: blob erp_sync atualizado com '+gravados+' dias');
 
     const total = Object.values(porDia).reduce((a,b)=>a+b,0);
     const meses = [...new Set(diasImportados.map(d=>d.slice(3)))];
