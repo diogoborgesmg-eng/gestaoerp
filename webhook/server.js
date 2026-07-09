@@ -425,6 +425,16 @@ function abrirWidget(){
       })();
       return;
     }
+    if (req.url === '/test-ifood-auth') {
+      ifoodAuth().then(tok=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:true, tokenPreview:tok.slice(0,30)+'...'}));
+      }).catch(e=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok:false,erro:e.message}));
+      });
+      return;
+    }
     if (req.url === '/test-dda') {
       processarDDA().then(r=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(r));}).catch(e=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,erro:e.message}));});
       return;
@@ -2579,6 +2589,119 @@ async function importarTransacoesPluggy() {
 // STi3 VIA WHATSAPP — processa Excel de vendas enviado no grupo
 // Uso: envie o arquivo .xlsx com legenda "STi3" no grupo
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRAÇÃO IFOOD — Financial Events + Orders
+// Client ID: caea67bb-0499-4cb6-836c-b5fd71a7a10e
+// Ticket homologacao: #29512378
+// ═══════════════════════════════════════════════════════════════
+const IFOOD_CLIENT_ID = process.env.IFOOD_CLIENT_ID || 'caea67bb-0499-4cb6-836c-b5fd71a7a10e';
+const IFOOD_CLIENT_SECRET = process.env.IFOOD_CLIENT_SECRET || '';
+const IFOOD_BASE = 'https://merchant-api.ifood.com.br';
+let _ifoodToken = null;
+let _ifoodTokenExpiry = 0;
+
+async function ifoodAuth() {
+  if (_ifoodToken && Date.now() < _ifoodTokenExpiry) return _ifoodToken;
+  if (!IFOOD_CLIENT_SECRET) throw new Error('IFOOD_CLIENT_SECRET nao configurado no Render');
+  const body = 'grantType=client_credentials&clientId='+IFOOD_CLIENT_ID+'&clientSecret='+encodeURIComponent(IFOOD_CLIENT_SECRET);
+  const r = await fetch(IFOOD_BASE+'/authentication/v1.0/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const data = await r.json();
+  if (!data.accessToken) throw new Error('iFood auth falhou: '+JSON.stringify(data).slice(0,200));
+  _ifoodToken = data.accessToken;
+  _ifoodTokenExpiry = Date.now() + (data.expiresIn||21600)*1000 - 300000; // 5min antes de expirar
+  console.log('iFood: token obtido, expira em', data.expiresIn, 'segundos');
+  return _ifoodToken;
+}
+
+async function ifoodGet(path, homologation=false) {
+  const tok = await ifoodAuth();
+  const headers = { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json' };
+  if (homologation) headers['x-request-homologation'] = 'true'; // modo teste
+  const r = await fetch(IFOOD_BASE+path, { headers });
+  const text = await r.text();
+  console.log('iFood GET', path, 'status:', r.status, text.slice(0,200));
+  try { return JSON.parse(text); } catch(e) { return { raw: text, status: r.status }; }
+}
+
+// Importa eventos financeiros do iFood (repasses, taxas, cancelamentos)
+async function importarFinancialEventsIFood(merchantId, competencia) {
+  try {
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const hoje = new Date();
+    const comp = competencia || hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+
+    // Busca eventos financeiros com paginacao
+    let page=1, totalImportados=0, hasNext=true;
+    while(hasNext && page<=10) {
+      const path = '/financial/v3.0/financial-events?merchantId='+merchantId+'&competence='+comp+'&page='+page+'&size=100';
+      const resp = await ifoodGet(path);
+      if (!resp || !resp.financialEvents) { console.log('iFood: sem eventos financeiros'); break; }
+
+      for (const ev of resp.financialEvents) {
+        if (!ev.hasTransferImpact) continue; // so eventos que impactam o repasse
+        const valor = Math.abs(Number(ev.amount?.value||0));
+        if (valor < 0.01) continue;
+        const tipo = Number(ev.amount?.value||0) > 0 ? 'receita' : 'custo';
+        const dia = fmtDia(ev.reference?.date||ev.period?.beginDate);
+        if (!dia) continue;
+        const desc = (ev.description||ev.name||'iFood').replace(/_/g,' ').toLowerCase().replace(/\w/g,c=>c.toUpperCase());
+        const cat = tipo==='receita' ? '💰 Receita/Vendas' : (ev.name?.includes('COMMISSION')||ev.name?.includes('TAXA') ? '💳 Taxas/Impostos' : '🔄 Outros');
+        const id = 'ifood_'+ev.reference?.id+'_'+ev.name;
+        await req2('POST', SB_URL+'/rest/v1/lancamentos',
+          { id, tipo, dia_comercial:dia, descricao:'iFood: '+desc, categoria:cat, segmento:'hamburgueria', valor, device_id:'ifood_auto' },
+          { 'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json' }
+        ).catch(()=>{});
+        totalImportados++;
+      }
+      hasNext = resp.hasNextPage;
+      page++;
+    }
+
+    // Busca repasses (settlements)
+    const settl = await ifoodGet('/financial/v3.0/settlements?merchantId='+merchantId+'&beginDate='+comp+'-01&endDate='+comp+'-31');
+    let proximoRepasse = null;
+    if (settl && settl.balance !== undefined) {
+      proximoRepasse = { saldo: settl.balance };
+      console.log('iFood saldo:', settl.balance);
+    }
+
+    console.log('iFood: '+totalImportados+' eventos importados, competencia '+comp);
+    return { ok:true, importados:totalImportados, competencia:comp, proximoRepasse };
+  } catch(e) {
+    console.error('iFood erro:', e.message);
+    return { ok:false, erro:e.message };
+  }
+}
+
+// Polling de pedidos iFood
+async function pollingIFood(merchantId) {
+  try {
+    const events = await ifoodGet('/order/v1.0/events:polling?merchantId='+merchantId);
+    if (!events || !Array.isArray(events)) return;
+    console.log('iFood pedidos:', events.length, 'eventos');
+    for (const ev of events) {
+      console.log('iFood pedido:', ev.fullCode, ev.orderId?.slice(0,8));
+      // Confirma recebimento
+      await fetch(IFOOD_BASE+'/order/v1.0/events/acknowledgment', {
+        method: 'POST',
+        headers: { 'Authorization':'Bearer '+(await ifoodAuth()), 'Content-Type':'application/json' },
+        body: JSON.stringify([{ id: ev.id }])
+      }).catch(()=>{});
+    }
+    return events;
+  } catch(e) {
+    console.error('iFood polling erro:', e.message);
+    return [];
+  }
+}
+
 async function processarSTi3WhatsApp(msg, grupoId) {
   try {
     const XLSX = require('xlsx');
@@ -2807,6 +2930,10 @@ setInterval(() => {
       importarTransacoesPluggy().catch(e=>console.error('Pluggy erro:', e.message));
       conciliarPluggy().catch(e=>console.error('Conciliacao erro:', e.message));
       processarDDA().catch(e=>console.error('DDA erro:', e.message));
+    }
+    if (IFOOD_CLIENT_SECRET) {
+      const IFOOD_MERCHANT = process.env.IFOOD_MERCHANT_ID || '';
+      if (IFOOD_MERCHANT) importarFinancialEventsIFood(IFOOD_MERCHANT).catch(e=>console.error('iFood erro:', e.message));
     }
   }
   // Todos os dias às 7h Brasilia = 10h UTC — alertas de contas
