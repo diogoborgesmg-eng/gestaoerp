@@ -2687,7 +2687,7 @@ async function importarTransacoesPluggy() {
               if (!dia) continue;
               const payDest = tx.paymentData && tx.paymentData.receiver && tx.paymentData.receiver.name;
               const desc = (payDest || tx.description || tx.merchant && tx.merchant.businessName || bancoNome).slice(0,80).trim();
-              const cat = classificarTransacao(desc, tipotx==='custo' ? -valor : valor);
+              const cat = classificarTransacaoPluggy(tx);
               await req2('POST', SB_URL+'/rest/v1/lancamentos',
                 {id:'pluggy_'+tx.id, tipo:tipotx, dia_comercial:dia, descricao:desc, categoria:cat, segmento:null, valor, device_id:'pluggy_auto'},
                 {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
