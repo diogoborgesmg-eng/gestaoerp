@@ -2946,6 +2946,7 @@ setInterval(() => {
   // Todos os dias às 10h Brasilia = 13h UTC — saldos bancários Pluggy
   if (hUTC === 13 && _ultimoSaldoDia !== diaKey) {
     _ultimoSaldoDia = diaKey;
+    console.log('Agendador: rodando saldos bancarios', diaKey, new Date().toISOString());
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
       // Força refresh dos itens Pluggy antes de buscar saldos
       (async () => {
