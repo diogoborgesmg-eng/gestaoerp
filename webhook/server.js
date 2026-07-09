@@ -2605,14 +2605,19 @@ async function processarSTi3WhatsApp(msg, grupoId) {
     const buf = Buffer.from(dlResp.base64, 'base64');
     const wb = XLSX.read(buf, { type: 'buffer', cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '', header: 1, raw: false });
+    // raw:true para preservar tipos nativos (Date objects, numbers)
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '', header: 1, raw: true });
 
     if (!rows || rows.length < 2) throw new Error('Arquivo vazio ou sem dados');
 
-    // Log primeiras linhas
+    // Log detalhado das primeiras linhas para debug
     console.log('STi3 WhatsApp: total linhas:', rows.length);
-    rows.slice(0,3).forEach((r,i) => {
-      const nv = r.map((v,j) => v ? '['+j+']='+String(v).slice(0,15) : null).filter(Boolean);
+    rows.slice(0,5).forEach((r,i) => {
+      const nv = r.map((v,j) => {
+        if (!v && v!==0) return null;
+        const tipo = v instanceof Date ? 'Date:'+v.toISOString().slice(0,10) : typeof v+':'+String(v).slice(0,20);
+        return '['+j+']='+tipo;
+      }).filter(Boolean);
       console.log('STi3 L'+i+':', nv.join(' | '));
     });
 
@@ -2676,12 +2681,26 @@ async function processarSTi3WhatsApp(msg, grupoId) {
       let dataFmt = null;
       const dv = r[colData];
       if (dv instanceof Date && !isNaN(dv)) {
-        dataFmt = String(dv.getDate()).padStart(2,'0')+'/'+String(dv.getMonth()+1).padStart(2,'0')+'/'+dv.getFullYear();
+        // Date object - usar UTC para evitar problema de fuso
+        dataFmt = String(dv.getUTCDate()).padStart(2,'0')+'/'+String(dv.getUTCMonth()+1).padStart(2,'0')+'/'+dv.getUTCFullYear();
+      } else if (typeof dv==='number' && dv>40000 && dv<60000) {
+        // Serial Excel
+        const d = new Date(Math.round((dv-25569)*86400*1000));
+        dataFmt = String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0')+'/'+d.getUTCFullYear();
       } else if (typeof dv==='string' && dv.trim()) {
-        const m = dv.trim().match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-        if (m) { const y=m[3].length===2?'20'+m[3]:m[3]; dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+y; }
+        const s = dv.trim();
+        // DD/MM/YYYY ou MM/DD/YYYY ou YYYY-MM-DD
+        let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) {
+          // Se o primeiro numero > 12, e o segundo <= 12, e DD/MM
+          const a=Number(m[1]), b=Number(m[2]);
+          if (a>12 && b<=12) dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3];
+          else dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3]; // assume DD/MM
+        }
+        if (!m) { m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) dataFmt=m[3]+'/'+m[2]+'/'+m[1]; }
+        if (!m) { m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){const y=m[3].length===2?'20'+m[3]:m[3];dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+y;} }
       }
-      if (!dataFmt) { erros++; continue; }
+      if (!dataFmt) { if(erros<3)console.log('STi3 data nao reconhecida linha',i,typeof dv,String(dv).slice(0,30)); erros++; continue; }
 
       // Valor
       let valor = r[colValor];
