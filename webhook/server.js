@@ -2600,52 +2600,79 @@ async function conciliarPluggy() {
 }
 
 
-// Classifica transação usando os dados nativos do Pluggy (paymentMethod, category, description)
+// Classifica transação usando dados nativos do Pluggy (category em inglês + paymentMethod + descrição)
 function classificarTransacaoPluggy(tx) {
   const desc = (tx.description||'').toLowerCase();
-  const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toUpperCase().replace(/-/g,'_').replace(/ /g,'_');
-  const catPluggy = (tx.category||'').toLowerCase();
-  const subcatPluggy = (tx.subCategory||'').toLowerCase();
+  const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toLowerCase();
+  const cat = (tx.category||'').toLowerCase();
   const valor = Number(tx.amount||0);
 
-  // Créditos (receitas)
-  if (valor > 0) {
-    if (metodo.includes('PIX')) return '💰 Receita/PIX recebido';
-    if (metodo.includes('TED') || metodo.includes('DOC')) return '💰 Receita/Transferência recebida';
-    if (desc.includes('aporte') || catPluggy.includes('income')) return '💰 Aporte/Receita';
-    return '💰 Receita/Transferência recebida';
+  // TRANSFERÊNCIA ENTRE CONTAS PRÓPRIAS — ignorar no DRE
+  if (cat.includes('same person') || desc.includes('transferência | conta stone') ||
+      desc.includes('pix | diogo') || desc.includes('pix | herielly')) {
+    return '__IGNORAR__'; // sinaliza para não lançar
   }
 
-  // Débitos — usa metodo de pagamento do Pluggy
-  const mapa = {
-    'PIX': '🔄 PIX Enviado',
-    'TED': '🔄 Transferência TED',
-    'DOC': '🔄 Transferência DOC',
-    'BOLETO': '📄 Boleto Pago',
-    'TRANSFER_CHECK': '🔖 Cheque Compensado',
-    'CHECK': '🔖 Cheque Compensado',
-    'CREDIT_CARD': '💳 Cartão de Crédito',
-    'DEBIT_CARD': '💳 Cartão Débito',
-  };
-  for (const [k,v] of Object.entries(mapa)) {
-    if (metodo.includes(k)) return v;
+  // CHEQUE
+  if (metodo.includes('check') || cat.includes('transfer - check') ||
+      desc.includes('cheque') || desc.includes('saque din ag cheque')) {
+    return '🔖 Cheque Compensado';
   }
 
-  // Classifica por descrição (juros, IOF, tarifas, etc.)
-  if (desc.includes('iof')) return '💳 Taxas/Impostos';
-  if (desc.includes('juro') || desc.includes('encargo')) return '⚠️ Juros/Multa';
-  if (desc.includes('tarifa') || desc.includes('manut') || desc.includes('anuidade')) return '🏦 Tarifas Bancárias';
-  if (desc.includes('cheque especial') || desc.includes('limite')) return '⚠️ Juros/Multa';
-  if (desc.includes('emprest') || desc.includes('financiam') || desc.includes('parcela')) return '🏦 Empréstimo/Financiamento';
-  if (desc.includes('seguro')) return '🏢 Custos Fixos';
+  // EMPRÉSTIMO / PARCELA STONE
+  if (cat.includes('loans and financing') || cat.includes('loan') ||
+      desc.includes('parcela') || desc.includes('empréstimo') || desc.includes('financiam')) {
+    return '🏦 Empréstimo/Financiamento';
+  }
+
+  // INVESTIMENTO / RENDIMENTO
+  if (cat.includes('proceeds interests') || cat.includes('dividends') ||
+      desc.includes('rendimento') || desc.includes('aporte') || desc.includes('investimento')) {
+    return valor > 0 ? '📈 Rendimento/Investimento' : '📈 Aporte/Investimento';
+  }
+
+  // TARIFAS BANCÁRIAS
+  if (desc.startsWith('tar ') || desc.includes('tarifa') || desc.includes('manut') ||
+      desc.includes('anuidade') || desc.includes('mensalidade maquininha') ||
+      desc.includes('ccf')) {
+    return '🏦 Tarifas Bancárias';
+  }
+
+  // JUROS / IOF / MULTA
+  if (desc.includes('iof') || desc.includes('cpmf')) return '💳 Taxas/Impostos';
+  if (desc.includes('juro') || desc.includes('encargo') || desc.includes('cheque especial')) return '⚠️ Juros/Multa';
+
+  // PIX
+  if (metodo.includes('pix') || desc.includes('pix enviado') || desc.includes('deb pix') ||
+      desc.startsWith('pix ')) {
+    return '🔄 PIX Enviado';
+  }
+
+  // SERVIÇOS / CUSTOS FIXOS
+  if (cat.includes('services') || cat.includes('digital services') ||
+      cat.includes('entrepreneurial') || cat.includes('cashback')) {
+    return '🏢 Custos Fixos';
+  }
+
+  // SAÚDE / OUTROS PAGAMENTOS (Pluggy às vezes classifica PIX errado como Healthcare)
+  if (cat.includes('healthcare') || cat.includes('health')) {
+    if (desc.includes('pix') || desc.includes('deb pix')) return '🔄 PIX Enviado';
+    return '🏢 Custos Fixos';
+  }
+
+  // TRANSFERÊNCIAS GERAIS
+  if (cat.includes('transfers') || metodo.includes('ted') || metodo.includes('doc')) {
+    return '🔄 Transferência';
+  }
+
+  // SAQUE
   if (desc.includes('saque') || desc.includes('sangria')) return '💵 Saque/Sangria';
-  if (desc.includes('folha') || desc.includes('salario') || desc.includes('salário')) return '👥 RH / Mão de Obra';
 
-  // Usa categoria do Pluggy se disponível
-  if (catPluggy.includes('tax') || subcatPluggy.includes('tax')) return '💳 Taxas/Impostos';
-  if (catPluggy.includes('loan') || catPluggy.includes('credit')) return '🏦 Empréstimo/Financiamento';
-  if (catPluggy.includes('food') || catPluggy.includes('supermarket')) return '🥩 Matéria Prima';
-  if (catPluggy.includes('service')) return '🏢 Custos Fixos';
+  // RH
+  if (desc.includes('salario') || desc.includes('salário') || desc.includes('folha')) return '👥 RH / Mão de Obra';
+
+  // CRÉDITOS
+  if (valor > 0) return '💰 Receita/Transferência recebida';
 
   return '🔄 Outros';
 }
@@ -2688,6 +2715,7 @@ async function importarTransacoesPluggy() {
               const payDest = tx.paymentData && tx.paymentData.receiver && tx.paymentData.receiver.name;
               const desc = (payDest || tx.description || tx.merchant && tx.merchant.businessName || bancoNome).slice(0,80).trim();
               const cat = classificarTransacaoPluggy(tx);
+              if (cat === '__IGNORAR__') { console.log('Pluggy: ignorando transferencia propria:', desc.slice(0,40)); continue; }
               await req2('POST', SB_URL+'/rest/v1/lancamentos',
                 {id:'pluggy_'+tx.id, tipo:tipotx, dia_comercial:dia, descricao:desc, categoria:cat, segmento:null, valor, device_id:'pluggy_auto'},
                 {'apikey':SB_KEY, 'Prefer':'return=minimal,resolution=ignore-duplicates', 'Content-Type':'application/json'}
