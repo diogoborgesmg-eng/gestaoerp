@@ -1072,7 +1072,7 @@ function abrirWidget(){
                 if(!dia){processarTx(i+1);return;}
                 var payDest=tx.paymentData&&tx.paymentData.receiver&&tx.paymentData.receiver.name;
                 var desc=(payDest||tx.description||'Transacao').slice(0,80).trim();
-                var cat=classificarTransacao(desc,-valor);
+                var cat=classificarTransacaoPluggy(tx);
                 req2('POST',SB_URL+'/rest/v1/lancamentos',
                   {id:'pluggy_'+tx.id,tipo:'custo',dia_comercial:dia,descricao:desc,categoria:cat,segmento:null,valor,device_id:'pluggy_auto'},
                   {'apikey':SB_KEY,'Prefer':'return=minimal,resolution=ignore-duplicates','Content-Type':'application/json'}
@@ -2597,6 +2597,57 @@ async function conciliarPluggy() {
     console.error('Conciliacao erro:', e.message);
     return {ok:false, erro:e.message};
   }
+}
+
+
+// Classifica transação usando os dados nativos do Pluggy (paymentMethod, category, description)
+function classificarTransacaoPluggy(tx) {
+  const desc = (tx.description||'').toLowerCase();
+  const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toUpperCase().replace(/-/g,'_').replace(/ /g,'_');
+  const catPluggy = (tx.category||'').toLowerCase();
+  const subcatPluggy = (tx.subCategory||'').toLowerCase();
+  const valor = Number(tx.amount||0);
+
+  // Créditos (receitas)
+  if (valor > 0) {
+    if (metodo.includes('PIX')) return '💰 Receita/PIX recebido';
+    if (metodo.includes('TED') || metodo.includes('DOC')) return '💰 Receita/Transferência recebida';
+    if (desc.includes('aporte') || catPluggy.includes('income')) return '💰 Aporte/Receita';
+    return '💰 Receita/Transferência recebida';
+  }
+
+  // Débitos — usa metodo de pagamento do Pluggy
+  const mapa = {
+    'PIX': '🔄 PIX Enviado',
+    'TED': '🔄 Transferência TED',
+    'DOC': '🔄 Transferência DOC',
+    'BOLETO': '📄 Boleto Pago',
+    'TRANSFER_CHECK': '🔖 Cheque Compensado',
+    'CHECK': '🔖 Cheque Compensado',
+    'CREDIT_CARD': '💳 Cartão de Crédito',
+    'DEBIT_CARD': '💳 Cartão Débito',
+  };
+  for (const [k,v] of Object.entries(mapa)) {
+    if (metodo.includes(k)) return v;
+  }
+
+  // Classifica por descrição (juros, IOF, tarifas, etc.)
+  if (desc.includes('iof')) return '💳 Taxas/Impostos';
+  if (desc.includes('juro') || desc.includes('encargo')) return '⚠️ Juros/Multa';
+  if (desc.includes('tarifa') || desc.includes('manut') || desc.includes('anuidade')) return '🏦 Tarifas Bancárias';
+  if (desc.includes('cheque especial') || desc.includes('limite')) return '⚠️ Juros/Multa';
+  if (desc.includes('emprest') || desc.includes('financiam') || desc.includes('parcela')) return '🏦 Empréstimo/Financiamento';
+  if (desc.includes('seguro')) return '🏢 Custos Fixos';
+  if (desc.includes('saque') || desc.includes('sangria')) return '💵 Saque/Sangria';
+  if (desc.includes('folha') || desc.includes('salario') || desc.includes('salário')) return '👥 RH / Mão de Obra';
+
+  // Usa categoria do Pluggy se disponível
+  if (catPluggy.includes('tax') || subcatPluggy.includes('tax')) return '💳 Taxas/Impostos';
+  if (catPluggy.includes('loan') || catPluggy.includes('credit')) return '🏦 Empréstimo/Financiamento';
+  if (catPluggy.includes('food') || catPluggy.includes('supermarket')) return '🥩 Matéria Prima';
+  if (catPluggy.includes('service')) return '🏢 Custos Fixos';
+
+  return '🔄 Outros';
 }
 
 async function importarTransacoesPluggy() {
