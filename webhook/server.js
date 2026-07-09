@@ -2145,7 +2145,6 @@ async function enviarSaldosBancarios() {
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
     const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-    // Busca itemIds salvos
     const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
     const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
     const itemIds = d.pluggyItemIds || [];
@@ -2155,63 +2154,54 @@ async function enviarSaldosBancarios() {
     linhas.push(new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'}).slice(0,16));
     linhas.push('');
 
-    const contasVistas = new Set(); // deduplicar por ID
-    const bancoConta = [];   // contas correntes/poupança
-    const cartoes = [];      // cartões de crédito
+    const contasVistas = new Set();
+    const bancoConta = [];
+    const cartoes = [];
 
     for (const itemId of itemIds) {
-      // Busca info do item para pegar nome do banco
-      const itemInf = await pluggyAuthFetch('GET', '/items/'+itemId).catch(()=>({}));
-      // Nome real do banco vem da conta, não do item (que sempre retorna MeuPluggy)
-      const bancoItem = ''; // será substituído pelo nome da conta
       const contas = await pluggyGet('/accounts?itemId='+itemId);
       if (!contas || !contas.results) continue;
       for (const conta of contas.results) {
-        if (contasVistas.has(conta.id)) continue; // dedup
+        if (contasVistas.has(conta.id)) continue;
         contasVistas.add(conta.id);
         const tipo = (conta.type||'').toUpperCase();
-        const subTipo = (conta.subtype||'').toUpperCase();
-        // Usa o nome da conta para identificar o banco (ex: "C6 BANK", "CAIXA", "STONE PAGAMENTOS S.A.")
         const nomeContaRaw = (conta.name||'').trim();
-        // Simplifica o nome para exibição
         const nomeBancoMap = {
           'C6 BANK': 'C6 Bank', 'C6': 'C6 Bank',
-          'CAIXA': 'Caixa', 'CAIXA ECONÔMICA': 'Caixa',
-          'STONE': 'Stone', 'STONE PAGAMENTOS': 'Stone',
+          'CAIXA': 'Caixa',
+          'STONE': 'Stone',
           'SANTANDER': 'Santander',
           'BANDEIRADO': 'Bandeirado (Santander)',
           'NUBANK': 'Nubank', 'INTER': 'Inter', 'SICOOB': 'Sicoob'
         };
         const banco = Object.entries(nomeBancoMap).find(([k])=>nomeContaRaw.toUpperCase().includes(k))?.[1] || nomeContaRaw || 'Banco';
-        const nome = nomeContaRaw;
         const saldo = Number(conta.balance||0);
-        if (tipo === 'CREDIT' || subTipo === 'CREDIT_CARD' || nome.toUpperCase().includes('VISA') || nome.toUpperCase().includes('MASTERCARD') || nome.toUpperCase().includes('BANDEIRADO')) {
-          cartoes.push({banco, nome, saldo});
+        if (tipo === 'CREDIT') {
+          cartoes.push({banco, nome: nomeContaRaw, saldo});
         } else {
-          bancoConta.push({banco, nome, saldo});
+          bancoConta.push({banco, saldo});
         }
       }
     }
 
-    // Contas bancárias
     let totalBanco = 0;
     if (bancoConta.length) {
       linhas.push('*💰 Contas Bancárias:*');
       bancoConta.forEach(c => {
         totalBanco += c.saldo;
-        linhas.push('  • '+c.banco+': *'+brl(c.saldo)+'*');
+        const alerta = c.saldo < 0 ? ' ⚠️ NEGATIVO' : '';
+        linhas.push('  • '+c.banco+': *'+brl(c.saldo)+'*'+alerta);
       });
       linhas.push('  *Total contas: '+brl(totalBanco)+'*');
     }
 
-    // Cartões de crédito (fatura = dívida, não somar no total)
     if (cartoes.length) {
       linhas.push('');
       linhas.push('*💳 Faturas de Cartão:*');
       let totalCartao = 0;
       cartoes.forEach(c => {
         totalCartao += c.saldo;
-        linhas.push('  • '+c.nome.trim()+': *'+brl(c.saldo)+'*');
+        linhas.push('  • '+c.nome+': *'+brl(c.saldo)+'*');
       });
       linhas.push('  *Total faturas: '+brl(totalCartao)+'*');
     }
@@ -2223,7 +2213,7 @@ async function enviarSaldosBancarios() {
     const msg = linhas.join('\n');
     const destinos = ['5534996853258','5534997692282'];
     for (const num of destinos) await wpp(num, msg);
-    console.log('Saldos enviados:', totalGeral);
+    console.log('Saldos enviados. Total banco:', totalBanco);
   } catch(e) {
     console.error('Erro saldos:', e.message);
   }
