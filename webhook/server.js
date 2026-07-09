@@ -1057,6 +1057,21 @@ function abrirWidget(){
       const NF_GROUP_ID = '120363429855996118@g.us';
       const tipo = msg.messageType || Object.keys(msg.message||{})[0] || '';
       console.log('MSG:', tipo);
+
+      // ── DOCUMENTO (STi3 Excel) ──────────────────────────────
+      if (['documentMessage','documentWithCaptionMessage'].includes(tipo)) {
+        const docMsg = msg.message?.documentMessage || msg.message?.documentWithCaptionMessage?.message?.documentMessage;
+        const caption = (docMsg?.caption || msg.message?.documentWithCaptionMessage?.message?.documentMessage?.caption || '').toLowerCase();
+        const fileName = (docMsg?.fileName || '').toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        const isSti3 = caption.includes('sti3') || caption.includes('sti 3') || caption.includes('vendas');
+        if (isExcel && isSti3) {
+          console.log('STi3 arquivo detectado:', fileName, 'caption:', caption);
+          processarSTi3WhatsApp(msg, num).catch(e => console.error('STi3 erro:', e.message));
+          return;
+        }
+      }
+
       if (['textMessage','extendedTextMessage','conversation'].includes(tipo)) {
         // Comprovante enviado como TEXTO (ex: Stone, copia do recibo)
         const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.textMessage?.text || '';
@@ -2558,6 +2573,160 @@ async function importarTransacoesPluggy() {
 
 // Roda Pluggy junto com a consulta SEFAZ às 3h
 // (ja incluido no agendador de 30min)
+
+
+// ═══════════════════════════════════════════════════════════════
+// STi3 VIA WHATSAPP — processa Excel de vendas enviado no grupo
+// Uso: envie o arquivo .xlsx com legenda "STi3" no grupo
+// ═══════════════════════════════════════════════════════════════
+async function processarSTi3WhatsApp(msg, grupoId) {
+  try {
+    const XLSX = require('xlsx');
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    const EVO_URL = 'https://evolution-api-latest-lrlv.onrender.com';
+    const EVO_KEY = 'dicasalaranjinha2024';
+    const INSTANCE = 'dicasalaranjinha';
+
+    await wpp(grupoId, '📊 STi3 recebido! Processando vendas...');
+
+    // Baixa o arquivo via Evolution API
+    const msgId = msg.key?.id;
+    if (!msgId) throw new Error('ID da mensagem não encontrado');
+
+    const dlResp = await req2('POST', EVO_URL+'/chat/getBase64FromMediaMessage/'+INSTANCE,
+      { message: { key: msg.key, message: msg.message } },
+      { 'apikey': EVO_KEY, 'Content-Type': 'application/json' }
+    );
+
+    if (!dlResp || !dlResp.base64) throw new Error('Não foi possível baixar o arquivo');
+
+    // Processa o Excel
+    const buf = Buffer.from(dlResp.base64, 'base64');
+    const wb = XLSX.read(buf, { type: 'buffer', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '', header: 1, raw: false });
+
+    if (!rows || rows.length < 2) throw new Error('Arquivo vazio ou sem dados');
+
+    // Log primeiras linhas
+    console.log('STi3 WhatsApp: total linhas:', rows.length);
+    rows.slice(0,3).forEach((r,i) => {
+      const nv = r.map((v,j) => v ? '['+j+']='+String(v).slice(0,15) : null).filter(Boolean);
+      console.log('STi3 L'+i+':', nv.join(' | '));
+    });
+
+    // Detecta colunas
+    let colData=-1, colValor=-1, colVenda=0, headerRow=-1;
+    const palavrasData = ['data','emissao','emissão','dtvenda','datahora','data hora'];
+    const palavrasValor = ['valor','total','vltotal','vl.total','valortotal'];
+
+    for (let i=0; i<Math.min(10,rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let temData=false, temValor=false;
+      for (let j=0; j<r.length; j++) {
+        const cel = String(r[j]||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+        if (palavrasData.some(p => cel===p || cel.startsWith(p))) { colData=j; temData=true; }
+        if (palavrasValor.some(p => cel===p || cel.startsWith(p))) { colValor=j; temValor=true; }
+        if (['venda','pedido','nrvenda'].some(p => cel===p)) colVenda=j;
+      }
+      if (temData && temValor) { headerRow=i; break; }
+    }
+
+    // Fallback por conteúdo
+    if (colData<0 || colValor<0) {
+      for (let i=1; i<Math.min(20,rows.length); i++) {
+        const r = rows[i]; if (!r || r.length<3) continue;
+        for (let j=0; j<r.length; j++) {
+          const v = r[j];
+          if (colData<0 && typeof v==='string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v.trim())) colData=j;
+          if (colData<0 && v instanceof Date && !isNaN(v) && v.getFullYear()>2020) colData=j;
+        }
+        if (colData>=0) {
+          for (let j=r.length-1; j>=0; j--) {
+            const v = r[j];
+            const n = typeof v==='number' ? v : parseFloat(String(v||'').replace(',','.'));
+            if (!isNaN(n) && n>0.5 && n<100000 && j!==colData) { colValor=j; break; }
+          }
+          if (colValor>=0) { headerRow=i-1; break; }
+        }
+      }
+    }
+
+    if (colData<0 || colValor<0) {
+      throw new Error('Não achei as colunas Data e Valor. Verifique o arquivo.');
+    }
+
+    // Processa linhas
+    const porDia = {};
+    let erros=0, linhas=0;
+    const startRow = headerRow>=0 ? headerRow+1 : 1;
+
+    for (let i=startRow; i<rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length <= Math.max(colData,colValor)) continue;
+
+      // Pula linhas sem numero de venda (totais)
+      if (colVenda>=0) {
+        const vid = String(r[colVenda]||'').trim();
+        if (!vid || isNaN(Number(vid)) || !Number.isInteger(Number(vid))) continue;
+      }
+
+      // Data
+      let dataFmt = null;
+      const dv = r[colData];
+      if (dv instanceof Date && !isNaN(dv)) {
+        dataFmt = String(dv.getDate()).padStart(2,'0')+'/'+String(dv.getMonth()+1).padStart(2,'0')+'/'+dv.getFullYear();
+      } else if (typeof dv==='string' && dv.trim()) {
+        const m = dv.trim().match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+        if (m) { const y=m[3].length===2?'20'+m[3]:m[3]; dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+y; }
+      }
+      if (!dataFmt) { erros++; continue; }
+
+      // Valor
+      let valor = r[colValor];
+      if (typeof valor!=='number') valor = parseFloat(String(valor||'0').replace(/\./g,'').replace(',','.'));
+      if (!valor || valor<=0) continue;
+
+      if (!porDia[dataFmt]) porDia[dataFmt]=0;
+      porDia[dataFmt] += valor;
+      linhas++;
+    }
+
+    if (!linhas) throw new Error('Nenhuma venda encontrada. Erros de data: '+erros);
+
+    // Grava no Supabase
+    const diasImportados = Object.keys(porDia).sort();
+    let gravados=0;
+    for (const dia of diasImportados) {
+      const idLanc = 'sti3_'+dia.replace(/\//g,'');
+      await req2('POST', SB_URL+'/rest/v1/lancamentos',
+        { id: idLanc, tipo:'receita', dia_comercial:dia, descricao:'STi3 Vendas',
+          categoria:'💰 Receita/Vendas', segmento:'restaurante', valor:porDia[dia], device_id:'sti3_auto' },
+        { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+      ).catch(()=>{});
+      gravados++;
+    }
+
+    const total = Object.values(porDia).reduce((a,b)=>a+b,0);
+    const meses = [...new Set(diasImportados.map(d=>d.slice(3)))];
+    const msg_ok = '✅ *STi3 importado com sucesso!*\n'+
+      '• '+linhas+' vendas processadas\n'+
+      '• '+gravados+' dias gravados\n'+
+      '• Período: '+diasImportados[0]+' a '+diasImportados[diasImportados.length-1]+'\n'+
+      '• Meses: '+meses.join(', ')+'\n'+
+      '• *Total: R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})+'*\n'+
+      (erros>0 ? '• ⚠️ '+erros+' linhas ignoradas (sem data)' : '');
+
+    await wpp(grupoId, msg_ok);
+    console.log('STi3 WhatsApp: '+linhas+' vendas, '+gravados+' dias, total R$'+total.toFixed(2));
+    return { ok:true, linhas, dias:gravados, total };
+  } catch(e) {
+    console.error('STi3 WhatsApp erro:', e.message);
+    await wpp(grupoId, '❌ Erro ao processar STi3: '+e.message);
+    return { ok:false, erro:e.message };
+  }
+}
 
 // Verificacao a cada 30min — sobrevive a restarts do servidor
 // Roda SEFAZ às 3h, alertas de contas às 7h, alertas de estoque às 8h e 14h
