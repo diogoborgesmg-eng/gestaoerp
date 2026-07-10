@@ -2020,6 +2020,61 @@ async function consultarNFsRecebidas() {
             device_id: 'sefaz_auto' },
           { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
         ).catch(()=>{});
+
+        // Lança no estoque (se tem itens reais do procNFe)
+        if (nfe.itens && nfe.itens.length > 0) {
+          const n = await lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY).catch(()=>0);
+          if (n>0) console.log('Estoque: '+n+' itens lancados da NF '+nfe.nNF+' '+nfe.emitente);
+        }
+
+        // Cria conta a pagar (com vencimento estimado se necessário)
+        if (!nfe.vencimento && nfe.data) {
+          const pts = nfe.data.split('/');
+          if (pts.length===3) {
+            const base = new Date(pts[2], pts[1]-1, parseInt(pts[0])+30);
+            nfe.vencimento = base.toLocaleDateString('pt-BR');
+          }
+        }
+        const cpOk = await lancarContaPagarNFeSefaz(nfe, nfe, SB_URL, SB_KEY).catch(()=>false);
+        if (cpOk) console.log('Conta a pagar: '+nfe.emitente+' venc.'+nfe.vencimento+' R$'+nfe.valor);
+
+        // Manifesta ciência e consulta procNFe completo pela chave
+        if (nfe.chNFe && cert && cert.pfxBase64) {
+          manifestarCiencia(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod')
+            .then(async mr => {
+              const cStat = (mr.xml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
+              console.log('Manifestacao', nfe.chNFe.slice(0,10), 'cStat:', cStat);
+              await new Promise(r=>setTimeout(r,3000));
+              try {
+                const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, '44686412000100', nfe.chNFe, 'prod');
+                const nfesCompletas = parsearDocZips(proc.xml);
+                for (const nfeC of nfesCompletas) {
+                  if (!nfeC.chNFe) continue;
+                  console.log('procNFe completo:', nfeC.emitente, 'itens:', (nfeC.itens&&nfeC.itens.length)||0, 'venc:', nfeC.vencimento||'sem venc');
+                  if (nfeC.itens && nfeC.itens.length > 0) {
+                    const n2 = await lancarEstoqueNFeSefaz(nfeC, nfeC, SB_URL, SB_KEY).catch(()=>0);
+                    if (n2>0) console.log('Estoque procNFe: '+n2+' itens reais da NF '+nfeC.nNF);
+                  }
+                  if (nfeC.vencimento) {
+                    const rowsUpd = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY}).catch(()=>[]);
+                    if (Array.isArray(rowsUpd)&&rowsUpd.length) {
+                      const dUpd = JSON.parse(rowsUpd[0].data);
+                      const cpUpd = (dUpd.contasPagar||[]).find(cp=>cp.id==='sefaz_cp_'+nfeC.chNFe);
+                      if (cpUpd && cpUpd._estimado) {
+                        cpUpd.venc = nfeC.vencimento;
+                        cpUpd._estimado = false;
+                        await req2('POST', SB_URL+'/rest/v1/erp_sync',
+                          {device_id:rowsUpd[0].device_id, data:JSON.stringify(dUpd)},
+                          {'apikey':SB_KEY,'Prefer':'resolution=merge-duplicates','Content-Type':'application/json'}).catch(()=>{});
+                        console.log('Vencimento real atualizado:', nfeC.vencimento, nfeC.emitente);
+                      }
+                    }
+                  }
+                }
+              } catch(ep) { console.log('Erro consulta procNFe:', ep.message); }
+            })
+            .catch(e => console.log('Erro manifestacao:', e.message));
+        }
       }
       // Notifica via WhatsApp com resumo
       const destinos = ['5534996853258','5534997692282'];
