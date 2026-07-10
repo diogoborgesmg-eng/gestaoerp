@@ -486,7 +486,12 @@ function abrirWidget(){
           const d=Array.isArray(rows)&&rows.length?JSON.parse(rows[0].data):{};
           const ids=d.pluggyItemIds||[];
           const resultados=[];
-          for(const id of ids){
+          // Sincroniza apenas Caixa e Santander (bancos com cheque)
+          const idsCheque = ids.filter(id =>
+            id.startsWith('4303859e') || id.startsWith('ab725403')
+          );
+          const idsParaSync = idsCheque.length ? idsCheque : ids.slice(0,2);
+          for(const id of idsParaSync){
             const r=await pluggyAuthFetch('POST','/items/'+id+'/update',{}).catch(e=>({erro:e.message}));
             console.log('Pluggy force sync item:',id.slice(0,8),r.status||r.erro||'ok');
             resultados.push({id:id.slice(0,8), resultado:r.status||r.erro||'enviado'});
