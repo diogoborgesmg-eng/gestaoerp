@@ -3140,27 +3140,12 @@ setInterval(() => {
     // Segunda-feira: envia relatório semanal também
     if (agora.getUTCDay() === 1) gerarEnviarRelatorioPDF().catch(()=>{});
   }
-  // Todos os dias às 10h Brasilia = 13h UTC — saldos bancários Pluggy
-  if (hUTC === 13 && _ultimoSaldoDia !== diaKey) {
+  // Fallback: se webhook nao disparou ate 11h Brasilia (14h UTC), envia saldos mesmo assim
+  if (hUTC === 14 && _ultimoSaldoDia !== diaKey) {
     _ultimoSaldoDia = diaKey;
-    console.log('Agendador: rodando saldos bancarios', diaKey, new Date().toISOString());
+    console.log('Agendador: fallback saldos (webhook nao disparou)', diaKey);
     if (PLUGGY_CLIENT_ID && PLUGGY_CLIENT_SECRET) {
-      // Força refresh dos itens Pluggy antes de buscar saldos
-      (async () => {
-        try {
-          const SB_URL2 = 'https://bxppiwshjyddiieazoqx.supabase.co';
-          const SB_KEY2 = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
-          const rb = await req2('GET', SB_URL2+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY2});
-          const bd = Array.isArray(rb)&&rb.length ? JSON.parse(rb[0].data) : {};
-          const ids = bd.pluggyItemIds || [];
-          for (const id of ids) {
-            await pluggyAuthFetch('POST', '/items/'+id+'/update', {}).catch(()=>{});
-            console.log('Pluggy: refresh solicitado para item', id);
-          }
-          await new Promise(r=>setTimeout(r,5000)); // aguarda 5s para processar
-        } catch(e) { console.log('Pluggy refresh erro:', e.message); }
-        enviarSaldosBancarios().catch(e=>console.error('Saldos erro:', e.message));
-      })();
+      enviarSaldosBancarios().catch(e=>console.error('Saldos fallback erro:', e.message));
     }
   }
   // Estoque às 8h Brasilia = 11h UTC
