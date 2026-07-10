@@ -477,6 +477,29 @@ function abrirWidget(){
       });
       return;
     }
+    if (req.url === '/pluggy-force-sync') {
+      (async () => {
+        try {
+          const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
+          const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const rows=await req2('GET',SB2+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1',null,{'apikey':SK2});
+          const d=Array.isArray(rows)&&rows.length?JSON.parse(rows[0].data):{};
+          const ids=d.pluggyItemIds||[];
+          const resultados=[];
+          for(const id of ids){
+            const r=await pluggyAuthFetch('POST','/items/'+id+'/update',{}).catch(e=>({erro:e.message}));
+            console.log('Pluggy force sync item:',id.slice(0,8),r.status||r.erro||'ok');
+            resultados.push({id:id.slice(0,8), resultado:r.status||r.erro||'enviado'});
+          }
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, itens:ids.length, resultados, aviso:'Aguarde 5-10min para sincronizacao completar'}));
+        } catch(e){
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false,erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url === '/test-transacoes') {
       (async () => {
         try {
