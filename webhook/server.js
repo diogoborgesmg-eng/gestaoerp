@@ -1048,6 +1048,12 @@ function abrirWidget(){
           }
           if (evtName === 'item/updated' || evtName === 'item.updated') {
             importarTransacoesPluggy().catch(function(e){ console.log('Pluggy import erro:', e.message); });
+            // Debounce 5min: aguarda todos os bancos sincronizarem antes de enviar saldos
+            if (global._saldoDebounce) clearTimeout(global._saldoDebounce);
+            global._saldoDebounce = setTimeout(function() {
+              console.log('Pluggy: bancos atualizados, enviando saldos...');
+              enviarSaldosBancarios().catch(function(e){ console.log('Saldo erro:', e.message); });
+            }, 5 * 60 * 1000);
           }
         }
 
