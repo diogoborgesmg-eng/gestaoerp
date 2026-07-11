@@ -2273,119 +2273,135 @@ async function enviarSaldosBancarios() {
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
     const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
     const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const pct = (v,t) => t ? Math.round(Math.abs(v/t)*100)+'%' : '0%';
 
     const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
     const d = Array.isArray(rows)&&rows.length ? JSON.parse(rows[0].data) : {};
     const itemIds = d.pluggyItemIds || [];
-    if (!itemIds.length) { console.log('Saldos: nenhum itemId configurado'); return; }
+    if (!itemIds.length) { console.log('Saldos: nenhum itemId'); return; }
 
-    const linhas = ['*🏦 Saldos Bancários — Di Casa Laranjinha*'];
-    linhas.push(new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'}).slice(0,16));
-    linhas.push('');
+    const agora = new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 
     const contasVistas = new Set();
     const bancoConta = [];
     const cartoes = [];
+    const investimentos = [];
+    const cheques = [];
+
+    const dataInicio7d = new Date(); dataInicio7d.setDate(dataInicio7d.getDate()-7);
+    const fmtDate = d2 => d2.toISOString().slice(0,10);
+    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+
+    const nomeBancoMap = {
+      'C6 BANK':'C6 Bank','C6':'C6 Bank','CAIXA':'Caixa Econômica Federal',
+      'STONE':'Stone Pagamentos','SANTANDER':'Santander Empresas',
+      'BANDEIRADO':'Bandeirado (Santander)','NUBANK':'Nubank','INTER':'Inter','SICOOB':'Sicoob'
+    };
+    const nomeBanco = (raw) => Object.entries(nomeBancoMap).find(([k])=>raw.toUpperCase().includes(k))?.[1] || raw || 'Banco';
 
     for (const itemId of itemIds) {
       const contas = await pluggyGet('/accounts?itemId='+itemId);
-      if (!contas || !contas.results) continue;
+      if (!contas||!contas.results) continue;
+
       for (const conta of contas.results) {
         if (contasVistas.has(conta.id)) continue;
         contasVistas.add(conta.id);
-        const tipo = (conta.type||'').toUpperCase();
-        const nomeContaRaw = (conta.name||'').trim();
-        const nomeBancoMap = {
-          'C6 BANK': 'C6 Bank', 'C6': 'C6 Bank',
-          'CAIXA': 'Caixa',
-          'STONE': 'Stone',
-          'SANTANDER': 'Santander',
-          'BANDEIRADO': 'Bandeirado (Santander)',
-          'NUBANK': 'Nubank', 'INTER': 'Inter', 'SICOOB': 'Sicoob'
-        };
-        const banco = Object.entries(nomeBancoMap).find(([k])=>nomeContaRaw.toUpperCase().includes(k))?.[1] || nomeContaRaw || 'Banco';
+        const nomeRaw = (conta.name||'').trim();
+        const banco = nomeBanco(nomeRaw);
         const saldo = Number(conta.balance||0);
-        if (tipo === 'CREDIT') {
-          cartoes.push({banco, nome: nomeContaRaw, saldo});
+        const tipo = (conta.type||'').toUpperCase();
+
+        if (tipo==='CREDIT') {
+          // Busca limite do cartão
+          const fat = await pluggyAuthFetch('GET','/credit-cards/'+conta.id).catch(()=>({}));
+          const limite = Number(fat.creditLimit||fat.availableCreditLimit||0) + Math.abs(saldo);
+          const utilizado = saldo > 0 ? saldo : Math.abs(saldo);
+          const pctUsado = limite>0 ? Math.round(utilizado/limite*100) : 0;
+          cartoes.push({banco, nomeRaw, saldo: utilizado, limite, pctUsado});
         } else {
           bancoConta.push({banco, saldo});
+          // Busca cheques dos últimos 7 dias
+          const txs = await pluggyGet('/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio7d)+'&to='+fmtDate(new Date())+'&pageSize=50');
+          if (txs&&txs.results) {
+            for (const tx of txs.results) {
+              const desc = (tx.description||'').toLowerCase();
+              const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toLowerCase();
+              if (metodo.includes('check')||desc.includes('cheque')||desc.includes('saque din ag')) {
+                cheques.push({banco, valor:Math.abs(Number(tx.amount||0)), dia:fmtDia(tx.date), tipo:Number(tx.amount||0)>0?'📥':'📤'});
+              }
+            }
+          }
+        }
+      }
+
+      // Investimentos
+      const invs = await pluggyAuthFetch('GET','/investments?itemId='+itemId).catch(()=>({}));
+      if (invs&&invs.results) {
+        for (const inv of invs.results) {
+          investimentos.push({nome:inv.name||'Renda Fixa', valor:Number(inv.value||inv.amount||0)});
         }
       }
     }
 
-    let totalBanco = 0;
-    if (bancoConta.length) {
-      linhas.push('*💰 Contas Bancárias:*');
-      bancoConta.forEach(c => {
-        totalBanco += c.saldo;
-        const alerta = c.saldo < 0 ? ' ⚠️ NEGATIVO' : '';
-        linhas.push('  • '+c.banco+': *'+brl(c.saldo)+'*'+alerta);
-      });
-      linhas.push('  *Total contas: '+brl(totalBanco)+'*');
-    }
+    // Monta mensagem
+    const linhas = [];
+    linhas.push('*📊 Di Casa Laranjinha*');
+    linhas.push('_'+agora+'_');
+    linhas.push('');
 
+    // Contas bancárias
+    const totalBanco = bancoConta.reduce((a,b)=>a+b.saldo,0);
+    linhas.push('*🏦 Contas Bancárias: '+brl(totalBanco)+'*');
+    bancoConta.forEach(c => {
+      const alerta = c.saldo<0?' ⚠️':'';
+      linhas.push('  • '+c.banco+': *'+brl(c.saldo)+'*'+alerta);
+    });
+
+    // Cartões de crédito
     if (cartoes.length) {
       linhas.push('');
-      linhas.push('*💳 Faturas de Cartão:*');
-      let totalCartao = 0;
+      const totalCartao = cartoes.reduce((a,b)=>a+b.saldo,0);
+      const totalLimite = cartoes.reduce((a,b)=>a+b.limite,0);
+      const pctTotal = totalLimite>0?Math.round(totalCartao/totalLimite*100):0;
+      linhas.push('*💳 Cartões: '+brl(totalCartao)+' ('+pctTotal+'% de '+brl(totalLimite)+')*');
       cartoes.forEach(c => {
-        totalCartao += c.saldo;
-        linhas.push('  • '+c.nome+': *'+brl(c.saldo)+'*');
+        linhas.push('  • '+c.nomeRaw+': *'+brl(c.saldo)+'* ('+c.pctUsado+'% de '+brl(c.limite)+')');
       });
-      linhas.push('  *Total faturas: '+brl(totalCartao)+'*');
     }
 
-    // Busca cheques pendentes dos ultimos 7 dias
-    const cheques = [];
-    const dataInicio7d = new Date(); dataInicio7d.setDate(dataInicio7d.getDate()-7);
-    const fmtDate = d => d.toISOString().slice(0,10);
-    const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
-    for (const itemId of itemIds) {
-      const contas2 = await pluggyGet('/accounts?itemId='+itemId);
-      if (!contas2||!contas2.results) continue;
-      for (const conta2 of contas2.results) {
-        if ((conta2.type||'').toUpperCase()==='CREDIT') continue;
-        const txs = await pluggyGet('/transactions?accountId='+conta2.id+'&from='+fmtDate(dataInicio7d)+'&to='+fmtDate(new Date())+'&pageSize=100');
-        if (!txs||!txs.results) continue;
-        for (const tx of txs.results) {
-          const desc = (tx.description||'').toLowerCase();
-          const metodo = (tx.paymentData&&tx.paymentData.paymentMethod||'').toUpperCase();
-          const isCheque = metodo==='CHECK'
-            || metodo.includes('check') || metodo.includes('Check')
-            || desc.includes('cheque') || desc.includes('chq')
-            || desc.includes('saque din ag cheque')
-            || desc.includes('cheque compensado');
-          if (!isCheque) continue;
-          const nomeContaRaw2 = (conta2.name||'').trim();
-          const nomeBancoMap2 = {'C6 BANK':'C6 Bank','CAIXA':'Caixa','STONE':'Stone','SANTANDER':'Santander'};
-          const bancoNome2 = Object.entries(nomeBancoMap2).find(([k])=>nomeContaRaw2.toUpperCase().includes(k))?.[1]||nomeContaRaw2;
-          const numCheque = tx.paymentData?.checkNumber || (desc.match(/n[o°]?\s*(\d+)/i)||[])[1] || '';
-          cheques.push({
-            banco: bancoNome2,
-            numero: numCheque,
-            valor: Math.abs(Number(tx.amount||0)),
-            data: fmtDia(tx.date),
-            tipo: Number(tx.amount||0)>0 ? '📥' : '📤'
-          });
-        }
-      }
+    // Investimentos
+    if (investimentos.length) {
+      linhas.push('');
+      const totalInv = investimentos.reduce((a,b)=>a+b.valor,0);
+      linhas.push('*📈 Investimentos: '+brl(totalInv)+'*');
+      linhas.push('  • Renda Fixa ('+investimentos.length+' ativos): *'+brl(totalInv)+'*');
     }
+
+    // Cheques
     if (cheques.length) {
       linhas.push('');
-      linhas.push('*🔖 Cheques (últimos 7 dias):*');
-      cheques.forEach(ch => {
-        linhas.push('  '+ch.tipo+' '+ch.banco+(ch.numero?' nº '+ch.numero:'')+': *'+brl(ch.valor)+'* ('+ch.data+')');
-      });
+      const totalCheques = cheques.reduce((a,c)=>a+c.valor,0);
+      linhas.push('*🔖 Cheques (7 dias): '+brl(totalCheques)+'*');
+      cheques.forEach(c => linhas.push('  '+c.tipo+' '+c.banco+': *'+brl(c.valor)+'* ('+c.dia+')'));
+    }
+
+    // DDA (quando disponível)
+    const ddaPendentes = (d.contasPagar||[]).filter(cp=>cp._dda&&!cp.pago);
+    if (ddaPendentes.length) {
+      linhas.push('');
+      const totalDDA = ddaPendentes.reduce((a,b)=>a+Number(b.val||0),0);
+      linhas.push('*📬 Boletos DDA pendentes: '+brl(totalDDA)+'*');
+      ddaPendentes.slice(0,5).forEach(cp => linhas.push('  • '+cp.forn+': *'+brl(cp.val)+'* venc '+cp.venc));
+      if (ddaPendentes.length>5) linhas.push('  _...e mais '+(ddaPendentes.length-5)+' boletos_');
     }
 
     linhas.push('');
     linhas.push('*Saldo líquido: '+brl(totalBanco)+'*');
-    linhas.push('_Atualizado às 10h_');
 
     const msg = linhas.join('\n');
     const destinos = ['5534996853258','5534997692282'];
     for (const num of destinos) await wpp(num, msg);
-    console.log('Saldos enviados. Total banco:', totalBanco, 'Cheques:', cheques.length);
+    console.log('Saldos enviados. Banco:'+totalBanco+' Cartoes:'+cartoes.length+' Inv:'+investimentos.length+' Cheques:'+cheques.length);
   } catch(e) {
     console.error('Erro saldos:', e.message);
   }
