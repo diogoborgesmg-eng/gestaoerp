@@ -3588,8 +3588,7 @@ setInterval(() => {
           if(vencHoje.length){linhasAlerta.push('*Hoje:*');vencHoje.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
           if(vencAmanha.length){linhasAlerta.push('*Amanha:*');vencAmanha.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
           if(venc3dias.length){linhasAlerta.push('*Em 3 dias:*');venc3dias.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
-          let msg=linhasAlerta.join('
-');
+          var msg=linhasAlerta.join('\n');
           for(const num of ['5534996853258','5534997692282']) await wpp(num,msg).catch(()=>{});
         }
       } catch(e2){console.log('Contas vencendo err:',e2.message);}
