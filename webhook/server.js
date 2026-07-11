@@ -1535,8 +1535,9 @@ async function executarDispatch(diaForcado){
   // Funde com a tabela lancamentos (novos lancamentos que ainda nao foram pro blob via Forcar Envio)
   try {
     // Busca lancamentos do mes atual E do mes anterior (cobre virada de mes)
-    const mesAtualISO = new Date(hojeP.ano, hojeP.mes-1, 1).toISOString().slice(0,7);
-    const mesAnteriorISO = new Date(hojeP.ano, hojeP.mes-2, 1).toISOString().slice(0,7);
+    const _agora = new Date();
+    const mesAtualISO = new Date(_agora.getFullYear(), _agora.getMonth(), 1).toISOString().slice(0,7);
+    const mesAnteriorISO = new Date(_agora.getFullYear(), _agora.getMonth()-1, 1).toISOString().slice(0,7);
     const lancRows = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=*&limit=5000', null, {'apikey':SB_KEY});
     console.log('lancamentos na tabela:', Array.isArray(lancRows) ? lancRows.length : 0);
     if (Array.isArray(lancRows) && lancRows.length) {
@@ -3583,18 +3584,11 @@ setInterval(() => {
         }
         const brl2=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
         if(vencHoje.length||vencAmanha.length||venc3dias.length){
-          let msg='⚠️ *Contas vencendo:*
-';
-          if(vencHoje.length) msg+='*Hoje:*
-'+vencHoje.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
-')+'
-';
-          if(vencAmanha.length) msg+='*Amanhã:*
-'+vencAmanha.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
-')+'
-';
-          if(venc3dias.length) msg+='*Próximos 3 dias:*
-'+venc3dias.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
+          let linhasAlerta=['*Contas vencendo:*'];
+          if(vencHoje.length){linhasAlerta.push('*Hoje:*');vencHoje.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
+          if(vencAmanha.length){linhasAlerta.push('*Amanha:*');vencAmanha.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
+          if(venc3dias.length){linhasAlerta.push('*Em 3 dias:*');venc3dias.forEach(c=>linhasAlerta.push('  - '+c.forn+': '+brl2(c.val||c.valor)));}
+          let msg=linhasAlerta.join('
 ');
           for(const num of ['5534996853258','5534997692282']) await wpp(num,msg).catch(()=>{});
         }
