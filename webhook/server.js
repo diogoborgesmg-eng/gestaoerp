@@ -3561,7 +3561,45 @@ setInterval(() => {
   // Todos os dias às 7h Brasilia = 10h UTC — alertas de contas
   if (hUTC === 10 && _ultimoContasDia !== diaKey) {
     _ultimoContasDia = diaKey;
-    checarContasVencendo().catch(()=>{});
+    // Alerta de contas vencendo (inline - funcao foi removida)
+    (async () => {
+      try {
+        const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
+        const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+        const r2=await req2('GET',SB2+'/rest/v1/erp_sync?select=data&order=updated_at.desc&limit=1',null,{'apikey':SK2});
+        const d2=Array.isArray(r2)&&r2.length?JSON.parse(r2[0].data):{};
+        const cp=(d2.contasPagar||[]).filter(c=>!c.pago);
+        const hoje2=new Date();
+        const vencHoje=[], vencAmanha=[], venc3dias=[];
+        for(const c of cp){
+          if(!c.venc)continue;
+          const pts=c.venc.split('/');
+          if(pts.length!==3)continue;
+          const dv=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0]));
+          const diff=Math.round((dv-hoje2)/(1000*86400));
+          if(diff===0)vencHoje.push(c);
+          else if(diff===1)vencAmanha.push(c);
+          else if(diff<=3&&diff>1)venc3dias.push(c);
+        }
+        const brl2=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+        if(vencHoje.length||vencAmanha.length||venc3dias.length){
+          let msg='⚠️ *Contas vencendo:*
+';
+          if(vencHoje.length) msg+='*Hoje:*
+'+vencHoje.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
+')+'
+';
+          if(vencAmanha.length) msg+='*Amanhã:*
+'+vencAmanha.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
+')+'
+';
+          if(venc3dias.length) msg+='*Próximos 3 dias:*
+'+venc3dias.map(c=>'  • '+c.forn+': '+brl2(c.val||c.valor)).join('
+');
+          for(const num of ['5534996853258','5534997692282']) await wpp(num,msg).catch(()=>{});
+        }
+      } catch(e2){console.log('Contas vencendo err:',e2.message);}
+    })();
     // Segunda-feira: envia relatório semanal também
     if (agora.getUTCDay() === 1) gerarEnviarRelatorioPDF().catch(()=>{});
   }
