@@ -495,6 +495,103 @@ function abrirWidget(){
       });
       return;
     }
+    if (req.url === '/reprocessar-nfs-sefaz') {
+      (async () => {
+        try {
+          const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+          const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+
+          // Busca todas as NFs do SEFAZ na tabela lancamentos
+          const nfsTable = await req2('GET',
+            SB_URL+'/rest/v1/lancamentos?device_id=eq.sefaz_auto&select=id,descricao,valor,dia_comercial&limit=500',
+            null, {'apikey':SB_KEY});
+          if (!Array.isArray(nfsTable)||!nfsTable.length) {
+            res.writeHead(200,{'Content-Type':'application/json'});
+            res.end(JSON.stringify({ok:false,erro:'Nenhuma NF encontrada na tabela'}));
+            return;
+          }
+
+          // Carrega blob atual
+          const blobRows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+          const d = Array.isArray(blobRows)&&blobRows.length ? JSON.parse(blobRows[0].data) : {};
+          const deviceId = Array.isArray(blobRows)&&blobRows.length ? blobRows[0].device_id : 'sefaz_auto';
+          if (!d.contasPagar) d.contasPagar = [];
+
+          // Carrega certificado para consChNFe
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado ? d.dadosFiscais.certificado : null;
+
+          let criadas=0, jaExistia=0, comXML=0;
+          const resultados = [];
+
+          for (const lanc of nfsTable) {
+            // Extrai chNFe do ID (formato: nf_CHAVE44DIGITOS)
+            const chNFe = lanc.id.startsWith('nf_') ? lanc.id.slice(3) : null;
+            const idCP = 'sefaz_cp_' + (chNFe || lanc.id);
+
+            // Verifica se já existe conta a pagar
+            if (d.contasPagar.find(cp=>cp.id===idCP)) {
+              jaExistia++;
+              continue;
+            }
+
+            // Extrai emitente da descrição (formato: "NF 001234 - RIBERFOODS")
+            const emitente = lanc.descricao ? lanc.descricao.replace(/^NF \d+ - /, '').trim() : 'Fornecedor';
+            const valor = Number(lanc.valor||0);
+            const dia = lanc.dia_comercial || new Date().toLocaleDateString('pt-BR');
+
+            // Estima vencimento 30 dias após emissão
+            const pts = dia.split('/');
+            let venc = dia;
+            if (pts.length===3) {
+              const base = new Date(Number(pts[2]), Number(pts[1])-1, parseInt(pts[0])+30);
+              venc = base.toLocaleDateString('pt-BR');
+            }
+
+            // Tenta buscar XML completo se tiver certificado
+            let itensXML = [];
+            if (chNFe && cert && cert.pfxBase64 && chNFe.length===44) {
+              try {
+                console.log('Buscando XML:', emitente, chNFe.slice(0,10));
+                const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, '44686412000100', chNFe, 'prod');
+                const nfesCompletas = parsearDocZips(proc.xml);
+                for (const nfeC of nfesCompletas) {
+                  if (nfeC.vencimento) venc = nfeC.vencimento;
+                  if (nfeC.itens && nfeC.itens.length) {
+                    itensXML = nfeC.itens;
+                    await lancarEstoqueNFeSefaz(nfeC, nfeC, SB_URL, SB_KEY).catch(()=>{});
+                    comXML++;
+                  }
+                }
+              } catch(eXML) { console.log('XML err:', emitente, eXML.message); }
+              await new Promise(r=>setTimeout(r,1000)); // 1s entre consultas
+            }
+
+            // Cria conta a pagar
+            d.contasPagar.push({
+              id: idCP, forn: emitente, val: valor, venc, pago: false,
+              cat: '🥩 Matéria Prima', _sefaz: true, _estimado: !comXML,
+              chNFe: chNFe, criadoEm: new Date().toISOString()
+            });
+            criadas++;
+            resultados.push({emitente, valor, venc, temXML: itensXML.length>0});
+          }
+
+          // Salva blob
+          if (criadas > 0) {
+            await req2('POST', SB_URL+'/rest/v1/erp_sync',
+              {device_id:deviceId, data:JSON.stringify(d)},
+              {'apikey':SB_KEY,'Prefer':'resolution=merge-duplicates','Content-Type':'application/json'});
+          }
+
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:true, totalNFs:nfsTable.length, criadas, jaExistia, comXML, resultados},null,2));
+        } catch(e) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false,erro:e.message}));
+        }
+      })();
+      return;
+    }
     if (req.url === '/pluggy-force-sync') {
       (async () => {
         try {
