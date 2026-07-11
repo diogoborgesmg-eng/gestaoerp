@@ -2556,9 +2556,8 @@ async function enviarSaldosBancarios() {
     const INSTANCE = 'dicasalaranjinha';
 
     // Envia como texto (canvas indisponivel no Render Starter)
-    const msg = linhas.join('\n');
-    const destinos = ['5534996853258','5534997692282'];
-    for (const num of destinos) await wpp(num, msg);
+    const msgSaldo = linhas.join('\n');
+    for (const numS of ['5534996853258','5534997692282']) await wpp(numS, msgSaldo);
     console.log('Saldos enviados. Banco:'+totalBanco);
   } catch(e) {
     console.error('Erro saldos:', e.message);
