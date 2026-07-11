@@ -259,6 +259,24 @@ async function salvarGitHubBatch(lancamentos, reciboUrl) {
       { message: 'bot:lote:'+novosUnicos.length, content: Buffer.from(JSON.stringify(fd)).toString('base64'), sha: fi.sha, branch: 'dados' },
       { 'Authorization': 'token '+GHTOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'GestaoERP-Bot/1.0' });
     console.log('GitHub OK -', novosUnicos.length, 'salvos,', ignorados, 'ignorados (duplicado)');
+    // Também grava no Supabase lancamentos para o PDF das 6h e relatórios automáticos
+    const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
+    const SB_KEY = 'sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+    for (const lanc of novosUnicos) {
+      const idLanc = lanc.id || ('bot_'+lanc.destinatario+'_'+lanc.valor+'_'+(lanc.dia||'').replace(/\//g,'')).replace(/\s/g,'_').slice(0,60);
+      const tipo = Number(lanc.valor||0) > 0 ? 'custo' : 'receita';
+      const dia = lanc.dia || new Date().toLocaleDateString('pt-BR');
+      await req2('POST', SB_URL+'/rest/v1/lancamentos',
+        { id: idLanc, tipo, dia_comercial: dia,
+          descricao: lanc.destinatario || lanc.desc || 'Lançamento bot',
+          categoria: lanc.categoria || '🔄 Outros',
+          segmento: lanc.segmento || null,
+          valor: Math.abs(Number(lanc.valor||0)),
+          device_id: 'bot_whatsapp' },
+        { 'apikey': SB_KEY, 'Prefer': 'return=minimal,resolution=ignore-duplicates', 'Content-Type': 'application/json' }
+      ).catch(e => console.log('Bot Supabase err:', e.message));
+    }
+    if (novosUnicos.length) console.log('Bot: '+novosUnicos.length+' lancamentos gravados no Supabase');
     return { salvos: novosUnicos.length, ignorados };
   } catch(eg) {
     console.error('GitHub batch err:', eg.message);
