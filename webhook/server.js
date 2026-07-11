@@ -2268,6 +2268,164 @@ async function pluggyGet(path) {
 }
 
 
+
+// Gera imagem PNG do card de saldos bancários
+async function gerarImagemSaldos(dados) {
+  try {
+    const { createCanvas } = require('canvas');
+    const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    const W = 800, PADDING = 32, LINEH = 44;
+    let totalLinhas = 4; // header + titulo + data + espaco
+    if (dados.bancoConta) totalLinhas += 1 + dados.bancoConta.length + 1;
+    if (dados.cartoes && dados.cartoes.length) totalLinhas += 1 + dados.cartoes.length + 1;
+    if (dados.investimentos && dados.investimentos.length) totalLinhas += 1 + 1 + 1;
+    if (dados.cheques && dados.cheques.length) totalLinhas += 1 + dados.cheques.length + 1;
+    if (dados.ddaPendentes && dados.ddaPendentes.length) totalLinhas += 1 + Math.min(dados.ddaPendentes.length,5) + 1;
+    totalLinhas += 2; // saldo final
+    const H = Math.max(600, PADDING*2 + totalLinhas * LINEH);
+
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext('2d');
+
+    // Fundo escuro
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    // Gradiente sutil no topo
+    const grad = ctx.createLinearGradient(0,0,W,0);
+    grad.addColorStop(0,'#1a1a2e'); grad.addColorStop(1,'#0a0a0f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 100);
+
+    let y = PADDING;
+    const col1 = PADDING + 8;
+    const col2 = W - PADDING;
+
+    // Logo / Header
+    ctx.fillStyle = '#ff6b35';
+    ctx.fillRect(PADDING, y, 6, 52);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.fillText('Di Casa Laranjinha', col1 + 16, y + 20);
+    ctx.fillStyle = '#888888';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Visão Financeira  •  '+dados.agora, col1 + 16, y + 42);
+    y += 72;
+
+    const secao = (emoji, titulo, total, corTotal) => {
+      ctx.fillStyle = '#1e1e2e';
+      ctx.beginPath();
+      ctx.roundRect(PADDING, y-8, W-PADDING*2, LINEH*0.9, 8);
+      ctx.fill();
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(emoji+' '+titulo, col1, y+16);
+      ctx.fillStyle = corTotal||'#ffffff';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(total, col2, y+16);
+      ctx.textAlign = 'left';
+      y += LINEH;
+    };
+
+    const item = (nome, valor, cor, sub) => {
+      ctx.fillStyle = '#666666';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('  '+nome, col1, y+12);
+      if (sub) {
+        ctx.fillStyle = '#444444';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(sub, col1+8, y+26);
+      }
+      ctx.fillStyle = cor||'#ffffff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(valor, col2, y+16);
+      ctx.textAlign = 'left';
+      y += sub ? LINEH+6 : LINEH-4;
+    };
+
+    const separador = () => {
+      ctx.strokeStyle = '#1e1e2e';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PADDING, y); ctx.lineTo(W-PADDING, y);
+      ctx.stroke();
+      y += 12;
+    };
+
+    // Contas bancárias
+    const totalBanco = (dados.bancoConta||[]).reduce((a,b)=>a+b.saldo,0);
+    secao('🏦','Contas Bancárias', brl(totalBanco), totalBanco<0?'#ff4444':'#4ade80');
+    (dados.bancoConta||[]).forEach(c => {
+      item(c.banco, brl(c.saldo), c.saldo<0?'#ff6666':'#cccccc');
+    });
+    separador();
+
+    // Cartões
+    if (dados.cartoes && dados.cartoes.length) {
+      const totalCartao = dados.cartoes.reduce((a,b)=>a+b.saldo,0);
+      const totalLimite = dados.cartoes.reduce((a,b)=>a+b.limite,0);
+      const pct = totalLimite>0?Math.round(totalCartao/totalLimite*100):0;
+      secao('💳','Cartões de Crédito', brl(totalCartao)+' ('+pct+'%)', '#f59e0b');
+      dados.cartoes.forEach(c => {
+        item(c.nomeRaw||c.banco, brl(c.saldo), '#e0a070', c.pctUsado+'% de '+brl(c.limite));
+      });
+      separador();
+    }
+
+    // Investimentos
+    if (dados.investimentos && dados.investimentos.length) {
+      const totalInv = dados.investimentos.reduce((a,b)=>a+b.valor,0);
+      secao('📈','Investimentos', brl(totalInv), '#60a5fa');
+      item('Renda Fixa ('+dados.investimentos.length+' ativos)', brl(totalInv), '#90c4ff');
+      separador();
+    }
+
+    // Cheques
+    if (dados.cheques && dados.cheques.length) {
+      const totalCheques = dados.cheques.reduce((a,b)=>a+b.valor,0);
+      secao('🔖','Cheques (7 dias)', brl(totalCheques), '#a78bfa');
+      dados.cheques.forEach(c => {
+        item(c.tipo+' '+c.banco+' ('+c.dia+')', brl(c.valor), '#c4b5fd');
+      });
+      separador();
+    }
+
+    // DDA
+    if (dados.ddaPendentes && dados.ddaPendentes.length) {
+      const totalDDA = dados.ddaPendentes.reduce((a,b)=>a+Number(b.val||0),0);
+      secao('📬','Boletos DDA pendentes', brl(totalDDA), '#fb923c');
+      dados.ddaPendentes.slice(0,5).forEach(cp => {
+        item(cp.forn, brl(cp.val)+' venc '+cp.venc, '#fdba74');
+      });
+      separador();
+    }
+
+    // Saldo líquido final
+    y += 8;
+    ctx.fillStyle = '#1e1e2e';
+    ctx.beginPath();
+    ctx.roundRect(PADDING, y-8, W-PADDING*2, 56, 10);
+    ctx.fill();
+    ctx.fillStyle = '#888888';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Saldo Líquido', col1, y+16);
+    const corSaldo = totalBanco<0?'#ff4444':'#4ade80';
+    ctx.fillStyle = corSaldo;
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(brl(totalBanco), col2, y+20);
+    ctx.textAlign = 'left';
+
+    return canvas.toBuffer('image/png');
+  } catch(e) {
+    console.error('Erro imagem saldos:', e.message);
+    return null;
+  }
+}
+
 async function enviarSaldosBancarios() {
   try {
     const SB_URL = 'https://bxppiwshjyddiieazoqx.supabase.co';
@@ -2398,10 +2556,33 @@ async function enviarSaldosBancarios() {
     linhas.push('');
     linhas.push('*Saldo líquido: '+brl(totalBanco)+'*');
 
-    const msg = linhas.join('\n');
+    // Gera imagem do card financeiro
+    const imgBuffer = await gerarImagemSaldos({
+      agora, bancoConta, cartoes, investimentos, cheques,
+      ddaPendentes: (d.contasPagar||[]).filter(cp=>cp._dda&&!cp.pago)
+    });
+
     const destinos = ['5534996853258','5534997692282'];
-    for (const num of destinos) await wpp(num, msg);
-    console.log('Saldos enviados. Banco:'+totalBanco+' Cartoes:'+cartoes.length+' Inv:'+investimentos.length+' Cheques:'+cheques.length);
+    const EVO_URL = 'https://evolution-api-latest-lrlv.onrender.com';
+    const EVO_KEY = 'dicasalaranjinha2024';
+    const INSTANCE = 'dicasalaranjinha';
+
+    if (imgBuffer) {
+      const imgB64 = imgBuffer.toString('base64');
+      for (const num of destinos) {
+        await req2('POST', EVO_URL+'/message/sendMedia/'+INSTANCE,
+          { number: num, mediatype: 'image', mimetype: 'image/png',
+            caption: '📊 Di Casa Laranjinha — '+agora,
+            media: imgB64, fileName: 'saldos.png' },
+          { 'apikey': EVO_KEY, 'Content-Type': 'application/json' }
+        ).catch(e => console.log('Erro envio imagem:', e.message));
+      }
+      console.log('Imagem saldos enviada. Banco:'+totalBanco);
+    } else {
+      // Fallback: envia texto se imagem falhar
+      const msg = linhas.join('\n');
+      for (const num of destinos) await wpp(num, msg);
+    }
   } catch(e) {
     console.error('Erro saldos:', e.message);
   }
