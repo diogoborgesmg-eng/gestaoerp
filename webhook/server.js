@@ -1792,8 +1792,19 @@ function detectarGrupoServidor(descricao){
 
 
 async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
-  // So lanca conta a pagar se tiver vencimento (boleto)
-  if (!dados.vencimento) return false;
+  // Se nao tiver vencimento, estima 30 dias
+  if (!dados.vencimento) {
+    const dataEmissao = dados.data || new Date().toLocaleDateString('pt-BR');
+    const pts = dataEmissao.split('/');
+    if (pts.length===3) {
+      const base = new Date(Number(pts[2]), Number(pts[1])-1, parseInt(pts[0])+30);
+      dados.vencimento = base.toLocaleDateString('pt-BR');
+    } else {
+      const base = new Date(); base.setDate(base.getDate()+30);
+      dados.vencimento = base.toLocaleDateString('pt-BR');
+    }
+    console.log('SEFAZ: vencimento estimado 30 dias para '+dados.emitente+':', dados.vencimento);
+  }
 
   const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
   if (!Array.isArray(rows) || !rows.length) return false;
@@ -2104,11 +2115,24 @@ async function consultarNFsRecebidas() {
             .catch(e => console.log('Erro manifestacao:', e.message));
         }
       }
-      // Notifica via WhatsApp com resumo
-      const destinos = ['5534996853258','5534997692282'];
-      const resumo = nfesDados.map(n=>`• ${n.emitente||'?'} — R$${n.valor.toFixed(2)}`).join('\n');
-      for (const num of destinos) {
-        await wpp(num, `📄 SEFAZ: ${nfesDados.length} NF(s) nova(s) recebida(s):\n${resumo}\n\nDados lançados automaticamente no sistema!`);
+      // Notifica via WhatsApp apenas sobre NFs REALMENTE novas (não duplicatas)
+      const idsExistentes = new Set();
+      try {
+        const lancExist = await req2('GET', SB_URL+'/rest/v1/lancamentos?select=id&device_id=eq.sefaz_auto&limit=500', null, {'apikey':SB_KEY});
+        if (Array.isArray(lancExist)) lancExist.forEach(l => idsExistentes.add(l.id));
+      } catch(e) {}
+      const nfesNovas = nfesDados.filter(nfe => {
+        const _id = 'nf_'+nfe.chNFe;
+        return !idsExistentes.has(_id);
+      });
+      if (nfesNovas.length > 0) {
+        const destinos = ['5534996853258','5534997692282'];
+        const resumo = nfesNovas.map(n=>`• ${n.emitente||'?'} — R$${Number(n.valor||0).toFixed(2)}`).join('\n');
+        for (const num of destinos) {
+          await wpp(num, `📄 SEFAZ: ${nfesNovas.length} NF(s) nova(s):\n${resumo}\n\nLançado no sistema!`);
+        }
+      } else {
+        console.log('SEFAZ: todas NFs ja existiam, sem notificacao');
       }
     }
 
