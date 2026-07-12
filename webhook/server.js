@@ -1016,6 +1016,33 @@ http.createServer(async (req, res) => {
     if (req.url==='/test-pdf') { enviarPDF().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-sefaz') { consultarNFsSEFAZ().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-pluggy') { importarTransacoesPluggy().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
+    if (req.url==='/test-pluggy-tx') {
+      (async()=>{
+        try {
+          const {data} = await lerBlob();
+          const ids = data.pluggyItemIds||[];
+          const resultado = {};
+          for (const id of ids.slice(0,2)) {
+            const contas = await pluggyGet('/accounts?itemId='+id).catch(e=>({erro:e.message}));
+            if (!contas.results) { resultado[id.slice(0,8)]={erro:'sem contas',raw:contas}; continue; }
+            for (const conta of contas.results.slice(0,1)) {
+              if ((conta.type||'').toUpperCase()==='CREDIT') continue;
+              // Tenta sem filtro de data
+              const tx1 = await pluggyGet('/transactions?accountId='+conta.id+'&pageSize=5').catch(e=>({erro:e.message}));
+              // Tenta com filtro mensal
+              const tx2 = await pluggyGet('/transactions?accountId='+conta.id+'&from=2026-07-01&to=2026-07-12&pageSize=5').catch(e=>({erro:e.message}));
+              resultado[conta.name.slice(0,10)] = {
+                semFiltro: {total:tx1.results?.length||0, raw:JSON.stringify(tx1).slice(0,300)},
+                comFiltro: {total:tx2.results?.length||0, raw:JSON.stringify(tx2).slice(0,300)}
+              };
+            }
+          }
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify(resultado,null,2));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/pluggy-force-sync') {
       (async()=>{
         const {data} = await lerBlob();
