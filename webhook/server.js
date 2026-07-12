@@ -270,7 +270,6 @@ async function processarMensagemBot(msg, grupoId) {
   if (['imageMessage','documentMessage'].includes(tipo) && tipo!=='documentWithCaptionMessage') {
     const b64 = await getMidia(msg);
     if (!b64) { await wpp(grupoId,'Não consegui baixar a imagem.'); return; }
-    await wpp(grupoId,'⏳ Analisando...');
     try {
       // Passo 1: extrai texto
       const r1 = await claude([{role:'user',content:[
@@ -321,7 +320,6 @@ async function processarMensagemBot(msg, grupoId) {
     const texto = msg.message?.conversation||msg.message?.extendedTextMessage?.text||'';
     const palavras = ['comprovante','transferência','pix','valor','stone','c6','pagamento','recibo'];
     if (!palavras.some(p=>texto.toLowerCase().includes(p))) return;
-    await wpp(grupoId,'⏳ Analisando...');
     try {
       const r = await claude([{role:'user',content:
         'Interprete este comprovante brasileiro e retorne APENAS JSON:\n'+
