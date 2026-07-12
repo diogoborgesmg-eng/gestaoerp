@@ -1049,6 +1049,9 @@ function abrirPluggy(){
   req.on('data',c=>body+=c);
   req.on('end', async()=>{
     try {
+      // Ignora body vazio (health checks do Render)
+      if (!body || !body.trim()) { res.writeHead(200); res.end('ok'); return; }
+
       if (req.url==='/pluggy-save-item') {
         const {itemId} = JSON.parse(body);
         if (!itemId) { res.writeHead(400); res.end(JSON.stringify({ok:false})); return; }
