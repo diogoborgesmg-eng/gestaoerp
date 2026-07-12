@@ -962,6 +962,30 @@ async function importarTransacoesPluggy() {
       }
     }
     console.log('Pluggy: '+total+' transações importadas');
+    // Dedup automático: remove duplicatas bot+pluggy no mesmo dia+valor
+    if (total > 0) {
+      try {
+        const todos = await sb('GET', '/rest/v1/lancamentos?tipo=eq.custo&select=id,dia_comercial,valor,device_id&limit=5000');
+        if (Array.isArray(todos)) {
+          const grupos = {};
+          for (const l of todos) {
+            const k = l.dia_comercial+'|'+Number(l.valor||0).toFixed(2);
+            if (!grupos[k]) grupos[k]=[];
+            grupos[k].push(l);
+          }
+          let dedup=0;
+          for (const itens of Object.values(grupos)) {
+            if (itens.length<2) continue;
+            const temBot=itens.find(i=>i.device_id==='bot_whatsapp');
+            const pluggyDups=itens.filter(i=>i.device_id==='pluggy_auto');
+            if (temBot && pluggyDups.length) {
+              for (const d of pluggyDups) { await sb('DELETE','/rest/v1/lancamentos?id=eq.'+d.id).catch(()=>{}); dedup++; }
+            }
+          }
+          if (dedup>0) console.log('Pluggy: '+dedup+' duplicatas removidas (bot+pluggy mesmo dia+valor)');
+        }
+      } catch(ed) { console.log('Dedup err:', ed.message); }
+    }
   } catch(e) { console.error('Pluggy err:', e.message); }
 }
 
@@ -1038,6 +1062,51 @@ http.createServer(async (req, res) => {
     if (req.url==='/test-pdf') { enviarPDF().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-sefaz') { consultarNFsSEFAZ().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-pluggy') { importarTransacoesPluggy().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
+    if (req.url==='/dedup-lancamentos') {
+      (async()=>{
+        try {
+          // Busca todos os lançamentos de custo
+          const todos = await sb('GET', '/rest/v1/lancamentos?tipo=eq.custo&select=id,dia_comercial,valor,descricao,device_id&limit=5000');
+          if (!Array.isArray(todos)) { res.writeHead(200); res.end(JSON.stringify({erro:'sem dados'})); return; }
+
+          // Agrupa por chave: dia+valor (arredondado 2 decimais)
+          const grupos = {};
+          for (const l of todos) {
+            const chave = l.dia_comercial+'|'+Number(l.valor||0).toFixed(2);
+            if (!grupos[chave]) grupos[chave] = [];
+            grupos[chave].push(l);
+          }
+
+          // Encontra duplicatas (mesmo dia+valor, diferentes device_ids)
+          const duplicatas = [];
+          for (const [chave, itens] of Object.entries(grupos)) {
+            if (itens.length < 2) continue;
+            const temBot = itens.find(i=>i.device_id==='bot_whatsapp');
+            const temPluggy = itens.find(i=>i.device_id==='pluggy_auto');
+            // Duplicata: tem bot E pluggy com mesmo dia+valor
+            if (temBot && temPluggy) {
+              // Mantém o do bot (mais confiável, tem descrição real)
+              // Remove os do pluggy
+              const paraRemover = itens.filter(i=>i.device_id==='pluggy_auto');
+              duplicatas.push({chave, bot:temBot.id, pluggy:paraRemover.map(i=>i.id)});
+            }
+          }
+
+          // Remove as duplicatas do Pluggy
+          let removidos = 0;
+          for (const dup of duplicatas) {
+            for (const id of dup.pluggy) {
+              await sb('DELETE', '/rest/v1/lancamentos?id=eq.'+id).catch(()=>{});
+              removidos++;
+            }
+          }
+
+          console.log('Dedup: '+duplicatas.length+' duplicatas encontradas, '+removidos+' removidos');
+          res.writeHead(200); res.end(JSON.stringify({ok:true, duplicatas:duplicatas.length, removidos, detalhes:duplicatas.slice(0,10)}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/test-pluggy-tx') {
       (async()=>{
         try {
