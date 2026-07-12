@@ -926,7 +926,7 @@ async function importarTransacoesPluggy() {
         // Usa v2/transactions com paginação por cursor
         let cursor = null, totalTxConta = 0;
         do {
-          const url = '/v2/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=100'+(cursor?'&cursor='+cursor:'');
+          const url = '/v2/transactions?accountId='+conta.id+(cursor?'&cursor='+cursor:'');
           const page = await pluggyGet(url).catch(e=>{console.log('Tx v2 err:',e.message);return{};});
           if (!page.results) break;
           console.log('Pluggy v2 '+conta.name.slice(0,10)+': '+page.results.length+' txs, cursor:'+(page.nextCursor||'fim'));
@@ -1035,9 +1035,8 @@ http.createServer(async (req, res) => {
             for (const conta of contas.results.slice(0,1)) {
               if ((conta.type||'').toUpperCase()==='CREDIT') continue;
               // Tenta sem filtro de data
-              const tx1 = await pluggyGet('/v2/transactions?accountId='+conta.id+'&pageSize=5').catch(e=>({erro:e.message}));
-              // Tenta com filtro mensal
-              const tx2 = await pluggyGet('/v2/transactions?accountId='+conta.id+'&from=2026-07-01&to=2026-07-12&pageSize=5').catch(e=>({erro:e.message}));
+              const tx1 = await pluggyGet('/v2/transactions?accountId='+conta.id).catch(e=>({erro:e.message}));
+              const tx2 = await pluggyGet('/v2/transactions?accountId='+conta.id+'&cursor=').catch(e=>({erro:e.message}));
               resultado[conta.name.slice(0,10)] = {
                 semFiltro: {total:tx1.results?.length||0, raw:JSON.stringify(tx1).slice(0,300)},
                 comFiltro: {total:tx2.results?.length||0, raw:JSON.stringify(tx2).slice(0,300)}
