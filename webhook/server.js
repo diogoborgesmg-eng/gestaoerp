@@ -177,7 +177,7 @@ async function enviarSaldos() {
       if (!contas7d.results) continue;
       for (const c of contas7d.results) {
         if ((c.type||'').toUpperCase()==='CREDIT') continue;
-        const txs = await pluggyGet('/transactions?accountId='+c.id+'&from='+fmtDate7d(dataInicio7d)+'&to='+fmtDate7d(new Date())+'&pageSize=50').catch(()=>({}));
+        const txs = await pluggyGet('/v2/transactions?accountId='+c.id+'&from='+fmtDate7d(dataInicio7d)+'&to='+fmtDate7d(new Date())+'&pageSize=50').catch(()=>({}));
         if (!txs.results) continue;
         const nomeBanco = c.name.includes('C6')?'C6 Bank':c.name.includes('CAIXA')?'Caixa':
           c.name.includes('STONE')?'Stone':c.name.includes('SANTANDER')?'Santander':c.name.trim();
@@ -923,10 +923,15 @@ async function importarTransacoesPluggy() {
         if (vistas.has(conta.id)) continue;
         vistas.add(conta.id);
         if ((conta.type||'').toUpperCase()==='CREDIT') continue;
-        const txs = await pluggyGet('/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=200').catch(e=>{console.log('Tx err:',e.message);return{};});
-        console.log('Pluggy conta '+conta.name.slice(0,15)+': '+(txs.results?txs.results.length:0)+' transações');
-        if (!txs.results) continue;
-        for (const tx of txs.results) {
+        // Usa v2/transactions com paginação por cursor
+        let cursor = null, totalTxConta = 0;
+        do {
+          const url = '/v2/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=100'+(cursor?'&cursor='+cursor:'');
+          const page = await pluggyGet(url).catch(e=>{console.log('Tx v2 err:',e.message);return{};});
+          if (!page.results) break;
+          console.log('Pluggy v2 '+conta.name.slice(0,10)+': '+page.results.length+' txs, cursor:'+(page.nextCursor||'fim'));
+          totalTxConta += page.results.length;
+          for (const tx of page.results) {
           if (tx.type==='CREDIT') continue;
           const valor = Math.abs(Number(tx.amount||0));
           if (valor<0.01) continue;
@@ -936,7 +941,9 @@ async function importarTransacoesPluggy() {
           if (cat==='__IGNORAR__') continue;
           await gravarLancamento('pluggy_'+tx.id,'custo',dia,desc,cat,valor,'pluggy_auto');
           total++;
-        }
+          }
+          cursor = page.nextCursor||null;
+        } while (cursor);
       }
     }
     console.log('Pluggy: '+total+' transações importadas');
@@ -1028,9 +1035,9 @@ http.createServer(async (req, res) => {
             for (const conta of contas.results.slice(0,1)) {
               if ((conta.type||'').toUpperCase()==='CREDIT') continue;
               // Tenta sem filtro de data
-              const tx1 = await pluggyGet('/transactions?accountId='+conta.id+'&pageSize=5').catch(e=>({erro:e.message}));
+              const tx1 = await pluggyGet('/v2/transactions?accountId='+conta.id+'&pageSize=5').catch(e=>({erro:e.message}));
               // Tenta com filtro mensal
-              const tx2 = await pluggyGet('/transactions?accountId='+conta.id+'&from=2026-07-01&to=2026-07-12&pageSize=5').catch(e=>({erro:e.message}));
+              const tx2 = await pluggyGet('/v2/transactions?accountId='+conta.id+'&from=2026-07-01&to=2026-07-12&pageSize=5').catch(e=>({erro:e.message}));
               resultado[conta.name.slice(0,10)] = {
                 semFiltro: {total:tx1.results?.length||0, raw:JSON.stringify(tx1).slice(0,300)},
                 comFiltro: {total:tx2.results?.length||0, raw:JSON.stringify(tx2).slice(0,300)}
