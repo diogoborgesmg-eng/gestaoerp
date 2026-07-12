@@ -914,14 +914,17 @@ async function importarTransacoesPluggy() {
     const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
     let total = 0;
     const vistas = new Set();
+    console.log('Pluggy: processando '+ids.length+' itemIds');
     for (const id of ids) {
-      const contas = await pluggyGet('/accounts?itemId='+id).catch(()=>({}));
-      if (!contas.results) continue;
+      const contas = await pluggyGet('/accounts?itemId='+id).catch(e=>{console.log('Contas err '+id.slice(0,8)+':',e.message);return{};});
+      if (!contas.results) { console.log('Pluggy: sem contas para item '+id.slice(0,8)); continue; }
+      console.log('Pluggy item '+id.slice(0,8)+': '+contas.results.length+' contas');
       for (const conta of contas.results) {
         if (vistas.has(conta.id)) continue;
         vistas.add(conta.id);
         if ((conta.type||'').toUpperCase()==='CREDIT') continue;
-        const txs = await pluggyGet('/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=200').catch(()=>({}));
+        const txs = await pluggyGet('/transactions?accountId='+conta.id+'&from='+fmtDate(dataInicio)+'&to='+fmtDate(hoje)+'&pageSize=200').catch(e=>{console.log('Tx err:',e.message);return{};});
+        console.log('Pluggy conta '+conta.name.slice(0,15)+': '+(txs.results?txs.results.length:0)+' transações');
         if (!txs.results) continue;
         for (const tx of txs.results) {
           if (tx.type==='CREDIT') continue;
