@@ -928,21 +928,36 @@ async function importarTransacoesPluggy() {
         do {
           const url = '/v2/transactions?accountId='+conta.id+(cursor?'&cursor='+cursor:'');
           const page = await pluggyGet(url).catch(e=>{console.log('Tx v2 err:',e.message);return{};});
-          if (!page.results) break;
-          console.log('Pluggy v2 '+conta.name.slice(0,10)+': '+page.results.length+' txs, cursor:'+(page.nextCursor||'fim'));
-          totalTxConta += page.results.length;
-          for (const tx of page.results) {
-          if (tx.type==='CREDIT') continue;
-          const valor = Math.abs(Number(tx.amount||0));
+          // v2 usa "resultados" em PT ou "results" em EN
+          const txList = page.resultados || page.results;
+          if (!txList) break;
+          console.log('Pluggy v2 '+conta.name.slice(0,10)+': '+txList.length+' txs');
+          totalTxConta += txList.length;
+          for (const tx of txList) {
+          // v2: amount/valor positivo = crédito, negativo = débito
+          const valorRaw = Number(tx.amount||tx.valor||0);
+          if (valorRaw >= 0) continue; // ignora créditos
+          const valor = Math.abs(valorRaw);
           if (valor<0.01) continue;
-          const dia = fmtDia(tx.date); if (!dia) continue;
-          const desc = (tx.paymentData?.receiver?.name||tx.description||'Transação').slice(0,80);
-          const cat = classificarPluggy(tx);
+          // v2: data em PT ou date em EN
+          const dataStr = tx.date||tx.data||'';
+          const dia = fmtDia(dataStr); if (!dia) continue;
+          // v2: descrição em PT ou description em EN
+          const descRaw = tx.description||tx.descrição||tx.descriptionRaw||tx.descriçãoRaw||'Transação';
+          const desc = descRaw.slice(0,80);
+          // Monta objeto compatível com classificarPluggy
+          const txCompat = {
+            description: desc,
+            category: tx.category||tx.categoria||'',
+            paymentData: tx.paymentData,
+            amount: valorRaw
+          };
+          const cat = classificarPluggy(txCompat);
           if (cat==='__IGNORAR__') continue;
           await gravarLancamento('pluggy_'+tx.id,'custo',dia,desc,cat,valor,'pluggy_auto');
           total++;
           }
-          cursor = page.nextCursor||null;
+          cursor = page.nextCursor||page.proximoCursor||null;
         } while (cursor);
       }
     }
