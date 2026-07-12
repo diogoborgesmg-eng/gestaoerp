@@ -909,7 +909,7 @@ async function importarTransacoesPluggy() {
     const ids = data.pluggyItemIds || [];
     if (!ids.length) return;
     const hoje = new Date();
-    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-30);
+    const dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate()-90); // 3 meses
     const fmtDate = d => d.toISOString().slice(0,10);
     const fmtDia = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
     let total = 0;
@@ -1013,6 +1013,20 @@ http.createServer(async (req, res) => {
     if (req.url==='/test-pdf') { enviarPDF().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-sefaz') { consultarNFsSEFAZ().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-pluggy') { importarTransacoesPluggy().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
+    if (req.url==='/pluggy-force-sync') {
+      (async()=>{
+        const {data} = await lerBlob();
+        const ids = data.pluggyItemIds||[];
+        const res2=[];
+        for(const id of ids){
+          const r=await (async()=>{const k=await pluggyAuth();return httpReq('POST','https://api.pluggy.ai/items/'+id+'/update',{},{'X-API-KEY':k,'Content-Type':'application/json'});})().catch(e=>({erro:e.message}));
+          res2.push({id:id.slice(0,8),resultado:r.status||r.erro||'enviado'});
+          console.log('Force sync:',id.slice(0,8),r.status||r.erro||'ok');
+        }
+        res.writeHead(200); res.end(JSON.stringify({ok:true,itens:ids.length,resultados:res2,aviso:'Aguarde 5-10min'}));
+      })().catch(e=>{res.writeHead(200);res.end(JSON.stringify({erro:e.message}));});
+      return;
+    }
     if (req.url==='/limpar-pluggy-duplicados') {
       (async()=>{
         const {data,deviceId} = await lerBlob();
