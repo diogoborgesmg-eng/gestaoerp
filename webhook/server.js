@@ -167,6 +167,35 @@ async function enviarSaldos() {
       linhas.push('','*💳 Faturas: '+brl(totalCartao)+'*');
       cartoes.forEach(c=>linhas.push('  • '+c.nome+': *'+brl(c.saldo)+'*'));
     }
+    // Busca cheques dos últimos 7 dias
+    const cheques = [];
+    const dataInicio7d = new Date(); dataInicio7d.setDate(dataInicio7d.getDate()-7);
+    const fmtDate7d = d => d.toISOString().slice(0,10);
+    const fmtDia7d = s => s ? s.slice(0,10).split('-').reverse().join('/') : '';
+    for (const id of ids) {
+      const contas7d = await pluggyGet('/accounts?itemId='+id).catch(()=>({}));
+      if (!contas7d.results) continue;
+      for (const c of contas7d.results) {
+        if ((c.type||'').toUpperCase()==='CREDIT') continue;
+        const txs = await pluggyGet('/transactions?accountId='+c.id+'&from='+fmtDate7d(dataInicio7d)+'&to='+fmtDate7d(new Date())+'&pageSize=50').catch(()=>({}));
+        if (!txs.results) continue;
+        const nomeBanco = c.name.includes('C6')?'C6 Bank':c.name.includes('CAIXA')?'Caixa':
+          c.name.includes('STONE')?'Stone':c.name.includes('SANTANDER')?'Santander':c.name.trim();
+        for (const tx of txs.results) {
+          const desc = (tx.description||'').toLowerCase();
+          const metodo = (tx.paymentData?.paymentMethod||'').toLowerCase();
+          if (metodo.includes('check')||desc.includes('cheque')||desc.includes('saque din ag')) {
+            cheques.push({banco:nomeBanco, valor:Math.abs(Number(tx.amount||0)), dia:fmtDia7d(tx.date), tipo:Number(tx.amount||0)>0?'📥':'📤'});
+          }
+        }
+      }
+    }
+    if (cheques.length) {
+      const totalCheques = cheques.reduce((a,c)=>a+c.valor,0);
+      linhas.push('','*🔖 Cheques (7 dias): '+brl(totalCheques)+'*');
+      cheques.forEach(c=>linhas.push('  '+c.tipo+' '+c.banco+': *'+brl(c.valor)+'* ('+c.dia+')'));
+    }
+
     linhas.push('','*Saldo líquido: '+brl(totalBanco)+'*');
 
     await wppParaTodos(linhas.join('\n'));
