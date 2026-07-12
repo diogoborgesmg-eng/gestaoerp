@@ -986,6 +986,32 @@ async function importarTransacoesPluggy() {
         }
       } catch(ed) { console.log('Dedup err:', ed.message); }
     }
+    // Atualiza blob erp_sync com totais por dia — frontend lê isso
+    if (total > 0) {
+      try {
+        const {data: blobData, deviceId} = await lerBlob();
+        const todosLanc = await sb('GET', '/rest/v1/lancamentos?tipo=eq.custo&device_id=eq.pluggy_auto&select=dia_comercial,valor,descricao,categoria&limit=2000');
+        if (Array.isArray(todosLanc)) {
+          const porDia = {};
+          for (const l of todosLanc) {
+            const dia = l.dia_comercial;
+            if (!porDia[dia]) porDia[dia] = [];
+            porDia[dia].push({id:'pluggy_'+dia+'_'+l.valor, d:l.descricao, v:Number(l.valor||0), cat:l.categoria, fonte:'pluggy'});
+          }
+          for (const [dia, itens] of Object.entries(porDia)) {
+            if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
+            if (!blobData[dia].c) blobData[dia].c = [];
+            // Remove pluggy antigos e adiciona novos
+            blobData[dia].c = blobData[dia].c.filter(x=>x.fonte!=='pluggy');
+            // Agrupa em um único item por dia para não inflar o blob
+            const totalDia = itens.reduce((a,b)=>a+b.v, 0);
+            blobData[dia].c.push({id:'pluggy_dia_'+dia.replace(/\//g,''), d:'Pluggy ('+itens.length+' transações)', v:totalDia, fonte:'pluggy'});
+          }
+          await salvarBlob(blobData, 'pluggy_server');
+          console.log('Pluggy: blob atualizado com '+Object.keys(porDia).length+' dias');
+        }
+      } catch(eb) { console.log('Blob update err:', eb.message); }
+    }
   } catch(e) { console.error('Pluggy err:', e.message); }
 }
 
