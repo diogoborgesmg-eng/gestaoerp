@@ -1009,7 +1009,13 @@ async function importarTransacoesPluggy() {
           for (const [dia, items] of Object.entries(porDia)) {
             if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
             // Substitui apenas os lançamentos automáticos (pluggy/sefaz/sti3)
-            blobData[dia].c = blobData[dia].c.filter(x=>!['pluggy_auto','sefaz_auto'].includes(x.fonte));
+            blobData[dia].c = blobData[dia].c.filter(x=>{
+            // Remove itens antigos do pluggy (com fonte ou ID pluggy_ ou descrição Pluggy)
+            if (x.fonte && ['pluggy_auto','sefaz_auto'].includes(x.fonte)) return false;
+            if ((x.id||'').startsWith('pluggy_')) return false;
+            if ((x.d||'').startsWith('Pluggy ')) return false;
+            return true;
+          });
             blobData[dia].c.push(...items.c);
             blobData[dia].r = blobData[dia].r.filter(x=>x.fonte!=='sti3_auto');
             blobData[dia].r.push(...items.r);
@@ -1120,6 +1126,12 @@ http.createServer(async (req, res) => {
     if (req.url==='/test-saldos') { enviarSaldos().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-pdf') { enviarPDF().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-sefaz') { consultarNFsSEFAZ().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
+    if (req.url==='/resync-blob') {
+      importarTransacoesPluggy().then(()=>{
+        res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Blob atualizado com transacoes individuais'}));
+      }).catch(e=>{res.writeHead(200);res.end(JSON.stringify({erro:e.message}));});
+      return;
+    }
     if (req.url==='/test-pluggy') { importarTransacoesPluggy().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/dedup-lancamentos') {
       (async()=>{
