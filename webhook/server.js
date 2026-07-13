@@ -314,7 +314,13 @@ async function processarMensagemBot(msg, grupoId) {
       const r2 = await claude([{role:'user',content:
         'Interprete este comprovante/NF brasileiro e retorne APENAS JSON:\n'+
         '{"tipo":"comprovante|nf","destinatario":"","valor":0,"data":"DD/MM/AAAA","categoria":"","descricao":"","fornecedor":"","vencimento":"","itens":[]}\n'+
-        'Categorias: Matéria Prima, RH, Custos Fixos, Embalagem, Taxas, Outros\n'+
+        'Categorias possíveis (escolha a mais adequada):\n'+
+        '- 🥩 Matéria Prima: compras de alimentos, bebidas, ingredientes\n'+
+        '- 👥 RH / Mão de Obra: salário, diária, entregador, diarista, funcionário, freelancer, show, evento, artista\n'+
+        '- 🏢 Custos Fixos: aluguel, energia, água, internet, manutenção, seguro\n'+
+        '- 📦 Embalagem: embalagem, caixa, sacola, descartável\n'+
+        '- 💳 Taxas/Impostos: imposto, taxa, IOF, tarifa bancária\n'+
+        '- 🔄 Outros: qualquer outra coisa\n'+
         'TEXTO:\n'+texto
       }], 1000);
       const txt2 = (r2.content||[]).map(b=>b.text||'').join('').trim();
