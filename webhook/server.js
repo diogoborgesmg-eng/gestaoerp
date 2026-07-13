@@ -985,6 +985,33 @@ async function importarTransacoesPluggy() {
           if (dedup>0) console.log('Pluggy: '+dedup+' duplicatas removidas (bot+pluggy mesmo dia+valor)');
         }
       } catch(ed) { console.log('Dedup err:', ed.message); }
+      // Sincroniza blob para o frontend ver os dados
+      try {
+        const todosLanc = await sb('GET', '/rest/v1/lancamentos?select=tipo,dia_comercial,valor,descricao,categoria,device_id&limit=5000');
+        if (Array.isArray(todosLanc)) {
+          const {data:blobData, deviceId:blobDev} = await lerBlob();
+          // Agrupa por dia
+          const porDia = {};
+          for (const l of todosLanc) {
+            const dia = l.dia_comercial; if (!dia) continue;
+            if (!porDia[dia]) porDia[dia] = {r:[], c:[]};
+            const item = {id:l.device_id+'_'+dia+'_'+l.valor, d:l.descricao, v:Number(l.valor||0), cat:l.categoria, fonte:l.device_id};
+            if (l.tipo==='receita') porDia[dia].r.push(item);
+            else porDia[dia].c.push(item);
+          }
+          // Merge no blob preservando outros dados
+          for (const [dia, items] of Object.entries(porDia)) {
+            if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
+            // Substitui apenas os lançamentos automáticos (pluggy/sefaz/sti3)
+            blobData[dia].c = blobData[dia].c.filter(x=>!['pluggy_auto','sefaz_auto'].includes(x.fonte));
+            blobData[dia].c.push(...items.c);
+            blobData[dia].r = blobData[dia].r.filter(x=>x.fonte!=='sti3_auto');
+            blobData[dia].r.push(...items.r);
+          }
+          await salvarBlob(blobData, blobDev);
+          console.log('Pluggy: blob sincronizado com '+Object.keys(porDia).length+' dias');
+        }
+      } catch(es) { console.log('Sync blob err:', es.message); }
     }
     // Atualiza blob erp_sync com totais por dia — frontend lê isso
     if (total > 0) {
