@@ -1347,7 +1347,12 @@ function abrirPluggy(){
         if (evtName==='item/updated'||evtName==='item.updated') {
           importarTransacoesPluggy().catch(()=>{});
           if (_saldoDebounce) clearTimeout(_saldoDebounce);
-          _saldoDebounce = setTimeout(()=>enviarSaldos().catch(()=>{}), 5*60*1000);
+          _saldoDebounce = setTimeout(()=>{
+            const diaHoje = new Date().toISOString().slice(0,10);
+            if (_ultimoSaldo === diaHoje) { console.log('Saldos: ja enviado hoje'); return; }
+            _ultimoSaldo = diaHoje;
+            enviarSaldos().catch(()=>{});
+          }, 15*60*1000); // 15min para Pluggy atualizar + só 1x por dia
         }
         if (evtName==='item/created'||evtName==='item.created') {
           if (itemId) {
