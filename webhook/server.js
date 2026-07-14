@@ -105,14 +105,39 @@ async function salvarBotLancamentosGitHub(lancamentos) {
 
 // ── Blob erp_sync ────────────────────────────────────────
 async function lerBlob() {
-  const r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1');
+  const r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=20');
   if (!Array.isArray(r)||!r.length) return { data:{}, deviceId:'v9' };
-  return { data:JSON.parse(r[0].data||'{}'), deviceId:r[0].device_id };
+  // Mescla todas as linhas preservando certificado e dados importantes
+  const merged = {};
+  // Processa do mais antigo para o mais recente (mais recente sobrescreve)
+  for (const row of [...r].reverse()) {
+    try {
+      const d = JSON.parse(row.data||'{}');
+      Object.assign(merged, d);
+      // Certificado: sempre preserva se existir em qualquer linha
+      if (d.dadosFiscais && d.dadosFiscais.certificado) {
+        if (!merged.dadosFiscais) merged.dadosFiscais = {};
+        merged.dadosFiscais.certificado = d.dadosFiscais.certificado;
+        if (d.dadosFiscais.ultimoNSU) merged.dadosFiscais.ultimoNSU = d.dadosFiscais.ultimoNSU;
+      }
+      // pluggyItemIds: usa o da linha mais recente que tiver
+      if (d.pluggyItemIds && d.pluggyItemIds.length) merged.pluggyItemIds = d.pluggyItemIds;
+      // contasPagar: merge sem duplicar
+      if (d.contasPagar) {
+        if (!merged.contasPagar) merged.contasPagar = [];
+        d.contasPagar.forEach(cp => { if (!merged.contasPagar.find(x=>x.id===cp.id)) merged.contasPagar.push(cp); });
+      }
+    } catch(e) {}
+  }
+  const deviceId = r[0].device_id || 'v9';
+  return { data:merged, deviceId };
 }
 
+const BLOB_DEVICE_ID = 'gestaoerp_v9';
 async function salvarBlob(data, deviceId) {
+  // Sempre usa device_id fixo para não fragmentar dados em múltiplas linhas
   return sb('POST', '/rest/v1/erp_sync',
-    { device_id:deviceId, data:JSON.stringify(data) },
+    { device_id: BLOB_DEVICE_ID, data:JSON.stringify(data) },
     { Prefer:'resolution=merge-duplicates' });
 }
 
