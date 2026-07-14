@@ -209,7 +209,8 @@ async function enviarSaldos() {
         for (const tx of txs.results) {
           const desc = (tx.description||'').toLowerCase();
           const metodo = (tx.paymentData?.paymentMethod||'').toLowerCase();
-          if (metodo.includes('check')||desc.includes('cheque')||desc.includes('saque din ag')) {
+          const catTx = (tx.category||tx.categoria||'').toLowerCase();
+        if (metodo.includes('check')||catTx.includes('check')||catTx.includes('verifica')||desc.includes('cheque')||desc.includes('saque din ag')) {
             cheques.push({banco:nomeBanco, valor:Math.abs(Number(tx.amount||0)), dia:fmtDia7d(tx.date), tipo:Number(tx.amount||0)>0?'📥':'📤'});
           }
         }
@@ -1127,10 +1128,25 @@ setInterval(async () => {
     alertaContasVencendo().catch(e=>console.error('Alerta err:',e.message));
   }
 
-  // Fallback saldos 11h Brasília = 14h UTC (se webhook não disparou)
-  if (hUTC===14 && _ultimoSaldo!==dia) {
+  // 9h Brasília = 12h UTC: força sync Pluggy e envia saldos 15min depois
+  if (hUTC===12 && _ultimoSaldo!==dia) {
     _ultimoSaldo = dia;
-    if (PLUGGY_CID && PLUGGY_CSEC) enviarSaldos().catch(e=>console.error('Saldos err:',e.message));
+    if (PLUGGY_CID && PLUGGY_CSEC) {
+      console.log('Agendador: forcando sync Pluggy para saldos das 10h...');
+      // Força sync de todos os bancos
+      (async()=>{
+        try {
+          const {data} = await lerBlob();
+          const ids = data.pluggyItemIds||[];
+          for (const id of ids) {
+            await (async()=>{ const k=await pluggyAuth(); return httpReq('POST','https://api.pluggy.ai/items/'+id+'/update',{},{'X-API-KEY':k,'Content-Type':'application/json'}); })().catch(()=>{});
+          }
+          console.log('Sync forcado para '+ids.length+' bancos. Aguardando 15min...');
+          // Aguarda 15min para Pluggy processar e envia saldos
+          setTimeout(()=>enviarSaldos().catch(e=>console.error('Saldos err:',e.message)), 15*60*1000);
+        } catch(e) { console.error('Sync saldos err:', e.message); }
+      })();
+    }
   }
 }, 30*60*1000);
 
