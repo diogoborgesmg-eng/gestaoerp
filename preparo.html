@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pré-Preparo Diário — Di Casa Laranjinha</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 16px; max-width: 600px; margin: 0 auto; }
+  h1 { color: #c0392b; font-size: 1.2rem; text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #555; font-size: 0.8rem; margin-bottom: 8px; }
+  .data-hoje { text-align: center; font-size: 0.78rem; color: #999; margin-bottom: 12px; }
+
+  .nome-box {
+    background: white; border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nome-box label { font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
+  .nome-box input {
+    flex: 1; border: 1.5px solid #c0392b; border-radius: 8px;
+    padding: 8px 10px; font-size: 0.9rem; font-weight: 600; color: #333;
+  }
+  .nome-box button {
+    background: #c0392b; color: white; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  }
+
+  .pizzas-input {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 12px; background: white; border-radius: 12px;
+    padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .pizzas-input label { font-size: 0.9rem; font-weight: 600; color: #333; }
+  .pizzas-input input {
+    width: 70px; text-align: center; border: 1.5px solid #c0392b;
+    border-radius: 8px; padding: 6px; font-size: 1.1rem; font-weight: 700; color: #c0392b;
+  }
+
+  .quem-preencheu {
+    background: #e8f5e9; border-radius: 12px; padding: 12px;
+    margin-bottom: 12px; font-size: 0.82rem;
+  }
+  .quem-preencheu h3 { color: #2e7d32; font-size: 0.85rem; margin-bottom: 8px; }
+  .colaborador-tag {
+    display: inline-block; background: #c8e6c9; color: #1b5e20;
+    border-radius: 20px; padding: 3px 10px; margin: 3px; font-weight: 700; font-size: 0.8rem;
+  }
+
+  .card {
+    background: white; border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .card h2 {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+    color: #888; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px;
+  }
+
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0; gap: 8px; flex-wrap: wrap;
+  }
+  .item:last-child { border-bottom: none; }
+  .item-info { flex: 1; min-width: 120px; }
+  .item-name { font-size: 0.88rem; font-weight: 600; color: #222; }
+  .item-meta { font-size: 0.72rem; color: #999; }
+  .item-outros { font-size: 0.7rem; color: #4caf50; font-style: italic; }
+
+  .controls { display: flex; align-items: center; gap: 6px; }
+  .qty-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none;
+    background: #f0f0f0; font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333;
+  }
+  .qty-btn:active { background: #ddd; }
+  .qty-input {
+    width: 60px; text-align: center; border: 1.5px solid #ddd;
+    border-radius: 8px; padding: 4px; font-size: 0.95rem; font-weight: 700; color: #222;
+  }
+  .unit { font-size: 0.78rem; color: #888; min-width: 24px; }
+
+  .btn-salvar {
+    width: 100%; background: #2e7d32; color: white; border: none;
+    border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; margin-bottom: 8px;
+  }
+  .btn-salvar:active { background: #1b5e20; }
+  .btn-gerar {
+    width: 100%; background: #c0392b; color: white; border: none;
+    border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; margin-bottom: 8px;
+  }
+  .btn-gerar:active { background: #a93226; }
+  .btn-limpar {
+    width: 100%; background: #ecf0f1; color: #555; border: none;
+    border-radius: 12px; padding: 12px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-bottom: 12px;
+  }
+
+  .lista-preparo {
+    background: white; border-radius: 12px; padding: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: none; margin-bottom: 12px;
+  }
+  .lista-preparo h2 { color: #c0392b; font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; }
+  .lista-linha {
+    display: flex; justify-content: space-between; padding: 7px 0;
+    border-bottom: 1px solid #f0f0f0; font-size: 0.85rem;
+  }
+  .lista-linha:last-child { border-bottom: none; }
+  .lista-linha .qtd { font-weight: 700; color: #c0392b; }
+
+  .status-msg {
+    text-align: center; font-size: 0.82rem; padding: 8px;
+    border-radius: 8px; margin-bottom: 8px;
+  }
+  .status-ok { background: #e8f5e9; color: #2e7d32; }
+  .status-err { background: #ffebee; color: #c0392b; }
+  .status-load { background: #e3f2fd; color: #1565c0; }
+
+  #statusMsg { display: none; }
+
+  .sync-info {
+    text-align: center; font-size: 0.72rem; color: #aaa; margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🍕 Pré-Preparo Diário</h1>
+<p class="sub">Di Casa Laranjinha — Pizza Grande 35cm</p>
+<div class="data-hoje" id="dataHoje"></div>
+
+<!-- Identificação -->
+<div class="nome-box">
+  <label>👤 Seu nome:</label>
+  <input type="text" id="nomeColaborador" placeholder="Ex: Maria, João..." maxlength="20">
+  <button onclick="confirmarNome()">OK</button>
+</div>
+
+<!-- Quem já preencheu -->
+<div class="quem-preencheu" id="quemPreencheu" style="display:none">
+  <h3>✅ Colaboradores que preencheram hoje:</h3>
+  <div id="listaNomes"></div>
+</div>
+
+<!-- Pizzas previstas -->
+<div class="pizzas-input">
+  <label>🍕 Pizzas previstas hoje:</label>
+  <input type="number" id="totalPizzas" value="50" min="1" onchange="calcular()">
+</div>
+
+<div id="statusMsg" class="status-msg"></div>
+<div class="sync-info" id="syncInfo"></div>
+
+<!-- Estoque -->
+<div class="card" id="cardEstoque" style="display:none">
+  <h2>📦 Estoque atual — informe o que você tem</h2>
+  <div id="estoqueList"></div>
+</div>
+
+<div id="botoesAcao" style="display:none">
+  <button class="btn-salvar" onclick="salvarEstoque()">💾 Salvar meu estoque</button>
+  <button class="btn-gerar" onclick="gerarLista()">📋 Gerar Lista de Preparo</button>
+  <button class="btn-limpar" onclick="limpar()">🔄 Limpar</button>
+</div>
+
+<div class="lista-preparo" id="listaFinal">
+  <h2>✅ O que preparar hoje</h2>
+  <div id="listaConteudo"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'preparo_dicasa_' + new Date().toISOString().slice(0,10);
+let nomeAtual = localStorage.getItem('colaborador_nome') || '';
+let dadosShared = {};
+
+const ingredientes = [
+  { id: 'mussarela', nome: 'Muçarela ralada', gPorPizza: 250, unit: 'kg', fator: 1000 },
+  { id: 'molho', nome: 'Molho de tomate', gPorPizza: 100, unit: 'kg', fator: 1000 },
+  { id: 'calabresa', nome: 'Calabresa fatiada', gPorPizza: 120, unit: 'kg', fator: 1000 },
+  { id: 'presunto', nome: 'Presunto fatiado', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'bacon', nome: 'Bacon picado', gPorPizza: 60, unit: 'kg', fator: 1000 },
+  { id: 'frango', nome: 'Frango desfiado', gPorPizza: 120, unit: 'kg', fator: 1000 },
+  { id: 'lombinho', nome: 'Lombinho fatiado', gPorPizza: 100, unit: 'kg', fator: 1000 },
+  { id: 'cupim', nome: 'Cupim cozido/fatiado', gPorPizza: 120, unit: 'kg', fator: 1000 },
+  { id: 'alcatra', nome: 'Alcatra grelhada', gPorPizza: 120, unit: 'kg', fator: 1000 },
+  { id: 'costela', nome: 'Costela desfiada', gPorPizza: 120, unit: 'kg', fator: 1000 },
+  { id: 'pernil', nome: 'Pernil desfiado', gPorPizza: 100, unit: 'kg', fator: 1000 },
+  { id: 'catupiry', nome: 'Catupiry', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'creamcheese', nome: 'Cream cheese', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'parmesao', nome: 'Parmesão ralado', gPorPizza: 40, unit: 'kg', fator: 1000 },
+  { id: 'provolone', nome: 'Provolone ralado', gPorPizza: 40, unit: 'kg', fator: 1000 },
+  { id: 'gorgonzola', nome: 'Gorgonzola', gPorPizza: 50, unit: 'kg', fator: 1000 },
+  { id: 'chedar', nome: 'Cheddar fatiado', gPorPizza: 50, unit: 'kg', fator: 1000 },
+  { id: 'cebola', nome: 'Cebola fatiada', gPorPizza: 60, unit: 'kg', fator: 1000 },
+  { id: 'tomate', nome: 'Tomate fatiado', gPorPizza: 60, unit: 'kg', fator: 1000 },
+  { id: 'milho', nome: 'Milho', gPorPizza: 50, unit: 'kg', fator: 1000 },
+  { id: 'palmito', nome: 'Palmito fatiado', gPorPizza: 60, unit: 'kg', fator: 1000 },
+  { id: 'azeitona', nome: 'Azeitona', gPorPizza: 30, unit: 'kg', fator: 1000 },
+  { id: 'batatapalha', nome: 'Batata palha', gPorPizza: 30, unit: 'kg', fator: 1000 },
+  { id: 'tomateSeco', nome: 'Tomate seco', gPorPizza: 40, unit: 'kg', fator: 1000 },
+  { id: 'morango', nome: 'Morango', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'banana', nome: 'Banana fatiada', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'chocolateLeite', nome: 'Chocolate ao leite', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'chocolateBranco', nome: 'Chocolate branco', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'coco', nome: 'Coco ralado', gPorPizza: 30, unit: 'kg', fator: 1000 },
+  { id: 'leiteCondensado', nome: 'Leite condensado', gPorPizza: 60, unit: 'g', fator: 1 },
+  { id: 'barbecue', nome: 'Molho barbecue', gPorPizza: 50, unit: 'g', fator: 1 },
+  { id: 'cremeMandioca', nome: 'Creme de mandioca', gPorPizza: 80, unit: 'kg', fator: 1000 },
+  { id: 'cremeAlho', nome: 'Creme de alho', gPorPizza: 50, unit: 'g', fator: 1 },
+  { id: 'cremeLeite', nome: 'Creme de leite', gPorPizza: 60, unit: 'g', fator: 1 },
+  { id: 'molhoMadeira', nome: 'Molho madeira', gPorPizza: 60, unit: 'g', fator: 1 },
+];
+
+function fmt(g, fator, unit) {
+  return fator === 1000 ? (g/1000).toFixed(2)+' kg' : g+' '+unit;
+}
+
+function mostrarStatus(msg, tipo) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg status-'+tipo;
+  el.style.display = 'block';
+  if (tipo !== 'load') setTimeout(()=>{ el.style.display='none'; }, 3000);
+}
+
+async function carregarDados() {
+  try {
+    const r = await window.storage.get(STORAGE_KEY, true);
+    if (r && r.value) {
+      dadosShared = JSON.parse(r.value);
+      atualizarColaboradores();
+      atualizarOutrosNoCampo();
+    }
+  } catch(e) {
+    dadosShared = {};
+  }
+  document.getElementById('syncInfo').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+}
+
+async function salvarEstoque() {
+  if (!nomeAtual) { mostrarStatus('Informe seu nome primeiro!', 'err'); return; }
+  mostrarStatus('Salvando...', 'load');
+  const meuEstoque = {};
+  ingredientes.forEach(ing => {
+    const val = parseFloat(document.getElementById('est_'+ing.id).value) || 0;
+    meuEstoque[ing.id] = val;
+  });
+  if (!dadosShared.colaboradores) dadosShared.colaboradores = {};
+  dadosShared.colaboradores[nomeAtual] = { estoque: meuEstoque, hora: new Date().toLocaleTimeString('pt-BR') };
+  try {
+    const atual = await window.storage.get(STORAGE_KEY, true).catch(()=>null);
+    const versao = atual ? undefined : 'new';
+    await window.storage.set(STORAGE_KEY, JSON.stringify(dadosShared), true);
+    mostrarStatus('✅ Estoque salvo! Outros colaboradores já podem ver.', 'ok');
+    atualizarColaboradores();
+    atualizarOutrosNoCampo();
+  } catch(e) {
+    mostrarStatus('Erro ao salvar: '+e.message, 'err');
+  }
+}
+
+function atualizarColaboradores() {
+  const cols = dadosShared.colaboradores || {};
+  const nomes = Object.keys(cols);
+  if (nomes.length === 0) { document.getElementById('quemPreencheu').style.display='none'; return; }
+  document.getElementById('quemPreencheu').style.display = 'block';
+  document.getElementById('listaNomes').innerHTML = nomes.map(n =>
+    `<span class="colaborador-tag">👤 ${n} <span style="font-weight:400">(${cols[n].hora||''})</span></span>`
+  ).join('');
+}
+
+function atualizarOutrosNoCampo() {
+  const cols = dadosShared.colaboradores || {};
+  ingredientes.forEach(ing => {
+    const outros = Object.entries(cols)
+      .filter(([n]) => n !== nomeAtual)
+      .map(([n, d]) => d.estoque && d.estoque[ing.id] ? `${n}: ${d.estoque[ing.id]} ${ing.unit}` : null)
+      .filter(Boolean);
+    const el = document.getElementById('outros_'+ing.id);
+    if (el) el.textContent = outros.length ? '👥 ' + outros.join(' · ') : '';
+  });
+}
+
+function somaEstoqueTotal(ingId, fator) {
+  const cols = dadosShared.colaboradores || {};
+  let total = 0;
+  Object.values(cols).forEach(d => {
+    const val = (d.estoque && d.estoque[ingId]) || 0;
+    total += fator === 1000 ? val * 1000 : val;
+  });
+  return total;
+}
+
+function confirmarNome() {
+  const input = document.getElementById('nomeColaborador');
+  const nome = input.value.trim();
+  if (!nome) { mostrarStatus('Digite seu nome!', 'err'); return; }
+  nomeAtual = nome;
+  localStorage.setItem('colaborador_nome', nome);
+  input.disabled = true;
+  document.getElementById('cardEstoque').style.display = 'block';
+  document.getElementById('botoesAcao').style.display = 'block';
+  carregarDados();
+  // Atualiza a cada 30s
+  setInterval(carregarDados, 30000);
+}
+
+function renderEstoque() {
+  const list = document.getElementById('estoqueList');
+  list.innerHTML = '';
+  ingredientes.forEach(ing => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-info">
+        <div class="item-name">${ing.nome}</div>
+        <div class="item-meta">${fmt(ing.gPorPizza, ing.fator, ing.unit)}/pizza</div>
+        <div class="item-outros" id="outros_${ing.id}"></div>
+      </div>
+      <div class="controls">
+        <button class="qty-btn" onclick="ajustar('${ing.id}', ${ing.fator===1000?0.5:100})">−</button>
+        <input class="qty-input" type="number" id="est_${ing.id}" value="0" min="0" step="${ing.fator===1000?'0.5':'100'}">
+        <span class="unit">${ing.unit}</span>
+        <button class="qty-btn" onclick="ajustar('${ing.id}', ${ing.fator===1000?0.5:100}, true)">+</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function ajustar(id, delta, add=false) {
+  const input = document.getElementById('est_'+id);
+  let val = parseFloat(input.value) || 0;
+  val = Math.max(0, add ? val+delta : val-delta);
+  input.value = val.toFixed(val >= 10 ? 1 : 2);
+}
+
+function gerarLista() {
+  const total = parseInt(document.getElementById('totalPizzas').value) || 50;
+  const linhas = [];
+  ingredientes.forEach(ing => {
+    const estoqueTotal = somaEstoqueTotal(ing.id, ing.fator);
+    const meuVal = parseFloat(document.getElementById('est_'+ing.id).value) || 0;
+    const meuGramas = ing.fator === 1000 ? meuVal*1000 : meuVal;
+    const totalGramas = estoqueTotal + meuGramas;
+    const necessario = ing.gPorPizza * total;
+    const falta = Math.max(0, necessario - totalGramas);
+    if (falta > 0) linhas.push({ nome: ing.nome, falta, fator: ing.fator, unit: ing.unit });
+  });
+
+  const container = document.getElementById('listaConteudo');
+  container.innerHTML = '';
+  if (linhas.length === 0) {
+    container.innerHTML = '<p style="color:#27ae60;font-weight:700;text-align:center;padding:12px">✅ Estoque suficiente para '+total+' pizzas!</p>';
+  } else {
+    linhas.forEach(l => {
+      const div = document.createElement('div');
+      div.className = 'lista-linha';
+      div.innerHTML = `<span class="nome">${l.nome}</span><span class="qtd">Preparar: ${fmt(l.falta, l.fator, l.unit)}</span>`;
+      container.appendChild(div);
+    });
+  }
+  document.getElementById('listaFinal').style.display = 'block';
+  document.getElementById('listaFinal').scrollIntoView({ behavior: 'smooth' });
+}
+
+function limpar() {
+  ingredientes.forEach(ing => {
+    const el = document.getElementById('est_'+ing.id);
+    if (el) el.value = '0';
+  });
+  document.getElementById('listaFinal').style.display = 'none';
+}
+
+// Init
+const hoje = new Date();
+document.getElementById('dataHoje').textContent =
+  hoje.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+
+if (nomeAtual) {
+  document.getElementById('nomeColaborador').value = nomeAtual;
+  document.getElementById('nomeColaborador').disabled = true;
+  document.getElementById('cardEstoque').style.display = 'block';
+  document.getElementById('botoesAcao').style.display = 'block';
+  carregarDados();
+  setInterval(carregarDados, 30000);
+}
+
+renderEstoque();
+</script>
+</body>
+</html>
