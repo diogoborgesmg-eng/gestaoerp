@@ -176,8 +176,14 @@ async function enviarSaldos() {
         vistas.add(c.id);
         const nomeBanco = c.name.includes('C6')?'C6 Bank':c.name.includes('CAIXA')?'Caixa':
           c.name.includes('STONE')?'Stone':c.name.includes('SANTANDER')?'Santander':c.name.trim();
-        if ((c.type||'').toUpperCase()==='CREDIT') cartoes.push({nome:c.name.trim(), saldo:Number(c.balance||0)});
-        else bancos.push({nome:nomeBanco, saldo:Number(c.balance||0)});
+        // Usa saldo em tempo real se disponível
+        let saldoReal = Number(c.balance||0);
+        try {
+          const bal = await pluggyGet('/accounts/'+c.id+'/balance').catch(()=>null);
+          if (bal && bal.balance !== undefined) saldoReal = Number(bal.balance);
+        } catch(e) {}
+        if ((c.type||'').toUpperCase()==='CREDIT') cartoes.push({nome:c.name.trim(), saldo:saldoReal});
+        else bancos.push({nome:nomeBanco, saldo:saldoReal});
       }
     }
 
