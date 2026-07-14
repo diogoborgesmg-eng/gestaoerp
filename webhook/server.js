@@ -618,6 +618,7 @@ async function consultarNFsSEFAZ() {
 
 // ── Módulo SEFAZ ──────────────────────────────────────────
 
+let _forge = null;
 function getForge(){ if(!_forge)_forge=require('node-forge'); return _forge; }
 
 function carregarCertPFX(pfxBase64, senha){
@@ -935,6 +936,8 @@ async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
 
 // ── Pluggy importar transações ────────────────────────────
 async function importarTransacoesPluggy() {
+  if (global._pluggyImportando) { console.log('Pluggy: import ja em andamento, ignorando'); return; }
+  global._pluggyImportando = true;
   try {
     const { data, deviceId } = await lerBlob();
     const ids = data.pluggyItemIds || [];
@@ -1076,7 +1079,7 @@ async function importarTransacoesPluggy() {
         }
       } catch(eb) { console.log('Blob update err:', eb.message); }
     }
-  } catch(e) { console.error('Pluggy err:', e.message); }
+  } catch(e) { console.error('Pluggy err:', e.message); } finally { global._pluggyImportando = false; }
 }
 
 function classificarPluggy(tx) {
