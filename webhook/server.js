@@ -795,6 +795,56 @@ async function consultarNFeByChave(pfxBase64, senha, cnpj, chNFe, ambiente) {
   });
 }
 
+function parsearNFeXML(xml) {
+  // Extrai dados principais da NF-e
+  const emitente = extrairTagXML(xml, 'xNome') || extrairTagXML(xml, 'xFant');
+  const cnpjEmit = extrairTagXML(xml, 'CNPJ');
+  const nNF = extrairTagXML(xml, 'nNF');
+  const dhEmi = extrairTagXML(xml, 'dhEmi');
+  const vNF = parseFloat(extrairTagXML(xml, 'vNF') || '0');
+  const vProd = parseFloat(extrairTagXML(xml, 'vProd') || '0');
+  const chNFe = extrairTagXML(xml, 'chNFe');
+
+  // Extrai itens
+  const itens = [];
+  const detMatches = xml.matchAll(/<det nItem="(\d+)">([\s\S]*?)<\/det>/g);
+  for (const m of detMatches) {
+    const det = m[2];
+    const xProd = extrairTagXML(det, 'xProd');
+    const qCom = parseFloat(extrairTagXML(det, 'qCom') || '1');
+    const vUnCom = parseFloat(extrairTagXML(det, 'vUnCom') || '0');
+    const vProdItem = parseFloat(extrairTagXML(det, 'vProd') || '0');
+    const uCom = extrairTagXML(det, 'uCom');
+    if (xProd) itens.push({ descricao: xProd, quantidade: qCom, unidade: uCom, valor_unitario: vUnCom, valor_total: vProdItem });
+  }
+
+  // Data formatada DD/MM/YYYY
+  let dataFormatada = '';
+  if (dhEmi) {
+    const d = new Date(dhEmi);
+    if (!isNaN(d)) dataFormatada = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  // Vencimento (boleto)
+  const dVenc = extrairTagXML(xml, 'dVenc');
+  let vencFormatado = '';
+  if (dVenc) {
+    const d = new Date(dVenc);
+    if (!isNaN(d)) vencFormatado = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  return { emitente, cnpjEmit, nNF, chNFe, data: dataFormatada, vencimento: vencFormatado, valor: vNF || vProd, itens };
+}
+
+function descompactarDocZip(docZipBase64) {
+  const buf = Buffer.from(docZipBase64, 'base64');
+  try {
+    return zlib.gunzipSync(buf).toString('utf-8');
+  } catch(e) {
+    return buf.toString('utf-8'); // ja descomprimido
+  }
+}
+
 function parsearDocZips(xmlResp) {
   const nfes = [];
   const xmlNorm = xmlResp.replace(/\r?\n/g," ");
