@@ -1392,6 +1392,30 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/limpar-reprocessar-sefaz') {
+      (async()=>{
+        try {
+          const SB2='https://bxppiwshjyddiieazoqx.supabase.co';
+          const SK2='sb_publishable_eEZOmtLmoOEbjJDtrUBGcQ_KmnmeBxM';
+          const {data:d2,deviceId:dev2}=await lerBlob();
+          if(!d2.dadosFiscais||!d2.dadosFiscais.certificado){res.writeHead(200);res.end(JSON.stringify({ok:false,erro:'Sem certificado'}));return;}
+          // Remove CP SEFAZ
+          const cpAntes=(d2.contasPagar||[]).length;
+          d2.contasPagar=(d2.contasPagar||[]).filter(cp=>!cp._sefaz);
+          // Remove lotes SEFAZ do estoque
+          if(d2.est) d2.est.forEach(p=>{
+            if(p.lotes){var antes=p.lotes.length;p.lotes=p.lotes.filter(l=>!l._sefaz);var rem=antes-p.lotes.length;if(rem>0){p.q=Math.max(0,(p.q||0)-rem);p.qi=Math.max(0,(p.qi||0)-rem);}}
+          });
+          // Remove lancamentos SEFAZ da tabela
+          await req2('DELETE',SB2+'/rest/v1/lancamentos?device_id=eq.sefaz_auto',null,{'apikey':SK2,'Prefer':'return=minimal'}).catch(()=>{});
+          // Reseta NSU para reprocessar tudo
+          d2.dadosFiscais.ultimoNSU='000000000000000';
+          await salvarBlob(d2,dev2);
+          res.writeHead(200);res.end(JSON.stringify({ok:true,cpRemovidas:cpAntes-(d2.contasPagar||[]).length,msg:'Limpo! Rode /test-sefaz agora.'}));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      })();
+      return;
+    }
     if (req.url && req.url.startsWith('/debug-dia/')) {
       const diaParam = req.url.split('/debug-dia/')[1]; // formato DD-MM-YYYY
       const [dd,mm,yy] = diaParam.split('-');
