@@ -1054,7 +1054,7 @@ async function importarTransacoesPluggy() {
       } catch(ed) { console.log('Dedup err:', ed.message); }
       // Sincroniza blob para o frontend ver os dados
       try {
-        const todosLanc = await sb('GET', '/rest/v1/lancamentos?select=tipo,dia_comercial,valor,descricao,categoria,device_id&limit=5000');
+        const todosLanc = await sb('GET', '/rest/v1/lancamentos?select=id,tipo,dia_comercial,valor,descricao,categoria,segmento,device_id&limit=5000');
         if (Array.isArray(todosLanc)) {
           const {data:blobData, deviceId:blobDev} = await lerBlob();
           // Agrupa por dia
@@ -1062,7 +1062,18 @@ async function importarTransacoesPluggy() {
           for (const l of todosLanc) {
             const dia = l.dia_comercial; if (!dia) continue;
             if (!porDia[dia]) porDia[dia] = {r:[], c:[]};
-            const item = {id:l.device_id+'_'+dia+'_'+l.valor, d:l.descricao, v:Number(l.valor||0), cat:l.categoria, fonte:l.device_id};
+            // ID único por transação (usa ID do Supabase se disponível)
+            const itemId = l.id || (l.device_id+'_'+dia+'_'+l.descricao+'_'+l.valor).slice(0,60);
+            const item = {
+              id: itemId,
+              d: l.descricao || 'Lançamento',
+              v: Number(l.valor||0),
+              cat: l.categoria || '🔄 Outros',
+              seg: l.segmento || null,
+              dt: dia,
+              fonte: l.device_id,
+              _deOutroDispositivo: true
+            };
             if (l.tipo==='receita') porDia[dia].r.push(item);
             else porDia[dia].c.push(item);
           }
