@@ -762,6 +762,21 @@ async function consultarNFsSEFAZ(nsuForcado) {
       const idLanc = 'nf_'+(nfe.chNFe||Date.now());
       console.log('SEFAZ NF nova:', nfe.emitente, nfe.valor, dia);
 
+      // Detecta NF de bonificação (valor zero ou CFOP 5910/6910/1910)
+      const isBonificacao = Number(nfe.valor||0) < 0.01 ||
+        (nfe.cfop && /^[156]91/.test(String(nfe.cfop))) ||
+        (nfe.natureza && /(bonifica|brindes?|doacao|gratuita)/i.test(nfe.natureza));
+
+      if (isBonificacao) {
+        console.log('SEFAZ: NF bonificacao (sem custo DRE):', nfe.emitente);
+        // Só lança no estoque, não no DRE nem contas a pagar
+        if (nfe.itens && nfe.itens.length) {
+          await lancarEstoqueNFeSefaz(nfe, nfe, SB_URL, SB_KEY).catch(e=>console.log('Estoque bonif err:',e.message));
+        }
+        nfesNovas.push(nfe); // mantém na notificação
+        continue;
+      }
+
       // 1. DRE
       await gravarLancamento(idLanc, 'custo', dia,
         `NF ${nfe.nNF||''} - ${nfe.emitente||'Fornecedor'}`,
