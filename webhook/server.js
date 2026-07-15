@@ -1081,16 +1081,16 @@ async function importarTransacoesPluggy() {
           for (const [dia, items] of Object.entries(porDia)) {
             if (!blobData[dia]) blobData[dia] = {r:[], c:[]};
             // Substitui apenas os lançamentos automáticos (pluggy/sefaz/sti3)
-            blobData[dia].c = blobData[dia].c.filter(x=>{
-            // Remove itens antigos do pluggy (com fonte ou ID pluggy_ ou descrição Pluggy)
-            if (x.fonte && ['pluggy_auto','sefaz_auto'].includes(x.fonte)) return false;
-            if ((x.id||'').startsWith('pluggy_')) return false;
-            if ((x.d||'').startsWith('Pluggy ')) return false;
+            // Preserva manuais do bot, substitui automáticos
+          const manuaisC = blobData[dia].c.filter(x=>{
+            const src = x.fonte||'';
+            if (['pluggy_auto','sefaz_auto'].includes(src)) return false;
+            if ((x.id||'').startsWith('pluggy_')||(x.id||'').startsWith('nf_')) return false;
             return true;
           });
-            blobData[dia].c.push(...items.c);
-            blobData[dia].r = blobData[dia].r.filter(x=>x.fonte!=='sti3_auto');
-            blobData[dia].r.push(...items.r);
+          blobData[dia].c = [...manuaisC, ...items.c];
+          const manuaisR = (blobData[dia].r||[]).filter(x=>(x.fonte||'')!=='sti3_auto');
+          blobData[dia].r = [...manuaisR, ...items.r];
           }
           await salvarBlob(blobData, blobDev);
           console.log('Pluggy: blob sincronizado com '+Object.keys(porDia).length+' dias');
