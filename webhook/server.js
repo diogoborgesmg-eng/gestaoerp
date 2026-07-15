@@ -806,6 +806,21 @@ function parsearDocZips(xmlResp) {
     try {
       const xmlNFe = descompactarDocZip(b64);
       const dados = parsearNFeXML(xmlNFe);
+      // Extrai duplicatas (parcelas) da seção <cobr><dup>
+      const dups = [];
+      const dupMatches = xmlNFe.matchAll(/<dup>(.*?)<\/dup>/gs);
+      for (const dm of dupMatches) {
+        const dupXml = dm[1];
+        const nDup = (dupXml.match(/<nDup>([^<]+)<\/nDup>/)||[])[1]||'';
+        const dVenc = (dupXml.match(/<dVenc>([^<]+)<\/dVenc>/)||[])[1]||'';
+        const vDup = parseFloat((dupXml.match(/<vDup>([^<]+)<\/vDup>/)||[])[1]||'0');
+        if (dVenc && vDup>0) {
+          // Converte data YYYY-MM-DD para DD/MM/YYYY
+          const [y,m,d2] = dVenc.split('-');
+          dups.push({nDup, venc:d2+'/'+m+'/'+y, valor:vDup});
+        }
+      }
+      if (dups.length) dados.duplicatas = dups;
       if (dados.valor > 0 || dados.emitente) nfes.push({ schema, ...dados });
     } catch(e) { console.log('Erro ao parsear docZip:', e.message); }
   }
@@ -935,23 +950,47 @@ async function lancarContaPagarNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
     dados.vencimento = dtBase.toLocaleDateString('pt-BR');
     console.log('SEFAZ: vencimento estimado 30 dias:', dados.vencimento);
   }
-  d.contasPagar.push({
-    id: idConta,
-    forn: dados.emitente || 'Fornecedor',
-    val: dados.valor,
-    valor: dados.valor,
-    venc: dados.vencimento,
-    vencimento: dados.vencimento,
-    pag: 'boleto',
-    pago: false,
-    nf: dados.nNF || '',
-    desc: 'NF ' + (dados.nNF||'') + ' - ' + (dados.emitente||'Fornecedor'),
-    dt: dados.data || new Date().toLocaleDateString('pt-BR'),
-    cat: 'Fornecedores',
-    semana: '',
-    _sefaz: true,
-    criadoEm: new Date().toISOString()
-  });
+  // Se tem duplicatas (parcelas reais da NF), cria uma conta por parcela
+  const duplicatas = dados.duplicatas || [];
+  if (duplicatas.length > 0) {
+    for (const dup of duplicatas) {
+      const idDup = idConta + '_dup' + dup.nDup;
+      if (d.contasPagar.some(cp=>cp.id===idDup)) continue;
+      d.contasPagar.push({
+        id: idDup,
+        forn: dados.emitente || 'Fornecedor',
+        val: dup.valor,
+        valor: dup.valor,
+        venc: dup.venc,
+        vencimento: dup.venc,
+        pag: 'boleto',
+        pago: false,
+        nf: dados.nNF || '',
+        nDup: dup.nDup,
+        desc: 'NF '+( dados.nNF||'')+' Parcela '+dup.nDup+' - '+(dados.emitente||'Fornecedor'),
+        dt: dados.data || new Date().toLocaleDateString('pt-BR'),
+        cat: 'Fornecedores',
+        _sefaz: true, cnpjEmit: dados.cnpjEmit||'',
+        criadoEm: new Date().toISOString()
+      });
+      console.log('SEFAZ CP parcela:', dados.emitente, dup.nDup, dup.valor, dup.venc);
+    }
+  } else {
+    // Sem duplicatas: cria uma única conta com valor total
+    d.contasPagar.push({
+      id: idConta,
+      forn: dados.emitente || 'Fornecedor',
+      val: dados.valor, valor: dados.valor,
+      venc: dados.vencimento, vencimento: dados.vencimento,
+      pag: 'boleto', pago: false,
+      nf: dados.nNF || '',
+      desc: 'NF '+(dados.nNF||'')+' - '+(dados.emitente||'Fornecedor'),
+      dt: dados.data || new Date().toLocaleDateString('pt-BR'),
+      cat: 'Fornecedores', _sefaz: true, _estimado: true,
+      cnpjEmit: dados.cnpjEmit||'',
+      criadoEm: new Date().toISOString()
+    });
+  }
 
   // Salva o blob atualizado
   await req2('POST', SB_URL+'/rest/v1/erp_sync',
@@ -1022,6 +1061,28 @@ async function importarTransacoesPluggy() {
           const cat = classificarPluggy(txCompat);
           if (cat==='__IGNORAR__') continue;
           await gravarLancamento('pluggy_'+tx.id,'custo',dia,desc,cat,valor,'pluggy_auto');
+          // Baixa automática: se for pagamento de fornecedor, marca conta a pagar como paga
+          if (desc.startsWith('Pagamento | ')||desc.startsWith('pagamento | ')) {
+            const fornPago = desc.replace(/^[Pp]agamento \| /,'').trim().toUpperCase().slice(0,20);
+            try {
+              const {data:blobCP, deviceId:devCP} = await lerBlob();
+              const cps = blobCP.contasPagar||[];
+              let baixou=false;
+              for (const cp of cps) {
+                if (cp.pago) continue;
+                const fornCP = (cp.forn||'').toUpperCase().slice(0,20);
+                const valorMatch = Math.abs(Number(cp.val||cp.valor||0)-valor)<0.10;
+                const fornMatch = fornCP.includes(fornPago.slice(0,10))||fornPago.includes(fornCP.slice(0,10));
+                if (valorMatch && fornMatch) {
+                  cp.pago=true; cp.dataPagamento=dia; cp._baixaPluggy=true;
+                  baixou=true;
+                  console.log('Baixa automática CP:', cp.forn, cp.val, dia);
+                  break;
+                }
+              }
+              if (baixou) await salvarBlob(blobCP, devCP);
+            } catch(eb) { console.log('Baixa CP err:', eb.message); }
+          }
           total++;
           }
           cursor = page.nextCursor||page.proximoCursor||null;
