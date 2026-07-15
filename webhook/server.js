@@ -426,85 +426,97 @@ async function processarSTi3WhatsApp(msg, grupoId) {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',header:1,raw:true});
     if (!rows||rows.length<2) throw new Error('Arquivo vazio');
 
-    // Detecta cabeçalho onde col[0] = "Venda"
-    let colData=-1,colValor=-1,headerRow=-1;
-    for (let i=0;i<Math.min(20,rows.length);i++) {
+    console.log('STi3: total linhas='+rows.length);
+
+    // Detecta cabeçalho buscando linha com "Venda" em col[0]
+    let colData=-1, colValor=-1, headerRow=-1;
+    for (let i=0;i<Math.min(30,rows.length);i++) {
       const r=rows[i]; if(!r) continue;
       const c0=String(r[0]||'').trim().toLowerCase();
-      if (c0==='venda') {
+      if (c0==='venda'||c0==='nr venda'||c0==='nrvenda') {
         headerRow=i;
+        console.log('STi3: cabecalho em L'+i+': '+r.map((v,j)=>v?'['+j+']='+String(v).slice(0,10):null).filter(Boolean).join(' '));
         for (let j=0;j<r.length;j++) {
           const cel=String(r[j]||'').trim().toLowerCase();
-          if (cel==='data') colData=j;
-          if (cel==='valor') colValor=j;
+          if (cel==='data'||cel==='data venda'||cel==='dtvenda') colData=j;
+          if (cel==='valor'||cel==='vl.total'||cel==='total'||cel==='valor total') colValor=j;
         }
         break;
       }
     }
-    // Fallback por conteúdo
-    if (colData<0||colValor<0) {
-      for (let i=1;i<Math.min(30,rows.length);i++) {
-        const r=rows[i]; if(!r||r.length<3) continue;
-        const c0Str2=String(r[0]||'').replace(/\./g,'').replace(',','').trim();
-        const c0=Number(c0Str2);
-        if (!c0||isNaN(c0)||c0<=0) continue;
-        for (let j=0;j<r.length;j++) {
-          const v=r[j];
-          if (colData<0 && v instanceof Date && !isNaN(v) && v.getFullYear()>2020) colData=j;
-          if (colData<0 && typeof v==='string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v.trim())) colData=j;
-        }
-        if (colData>=0) {
-          for (let j=r.length-1;j>=1;j--) {
-            const v=r[j]; const n=typeof v==='number'?v:parseFloat(String(v||'').replace(',','.'));
-            if (!isNaN(n)&&n>0.5&&n<100000&&j!==colData){colValor=j;break;}
-          }
-          if (colValor>=0){headerRow=i-1;break;}
+
+    // Valida colValor — deve conter numero, não data
+    if (colValor>=0 && headerRow>=0) {
+      const linhaRef = rows[headerRow+1]||[];
+      const valRef = linhaRef[colValor];
+      if (valRef instanceof Date || (typeof valRef==='string' && /\d{4}-\d{2}/.test(valRef))) {
+        console.log('STi3: colValor='+colValor+' tem data, buscando coluna numerica...');
+        colValor=-1;
+      }
+    }
+
+    // Se não achou Valor pelo cabeçalho, busca pela primeira coluna numérica real nas linhas de dados
+    if (colValor<0 && headerRow>=0) {
+      const linhaRef = rows[headerRow+1]||[];
+      for (let j=linhaRef.length-1;j>colData;j--) {
+        const v=linhaRef[j];
+        if (typeof v==='number' && v>0 && v<100000 && j!==colData) { colValor=j; break; }
+        if (typeof v==='string') {
+          const n=parseFloat(v.replace(',','.'));
+          if (!isNaN(n)&&n>0&&n<100000) { colValor=j; break; }
         }
       }
     }
-    if (colData<0||colValor<0) throw new Error('Colunas Data/Valor não encontradas');
+
+    console.log('STi3: colData='+colData+' colValor='+colValor+' headerRow='+headerRow);
+    if (colData<0||colValor<0) throw new Error('Colunas Data/Valor não encontradas. colData='+colData+' colValor='+colValor);
 
     const porDia={};let linhas=0,erros=0;
-    const startLoop=headerRow>=0?headerRow+1:1;
-    // Log primeiras 5 linhas para debug
-    for(let dbgi=startLoop;dbgi<Math.min(startLoop+5,rows.length);dbgi++){
-      const rdbg=rows[dbgi]||[];
-      console.log('STi3 L'+dbgi+' c0='+JSON.stringify(rdbg[0])+' cD='+JSON.stringify(rdbg[colData])+' cV='+JSON.stringify(rdbg[colValor]));
-    }
-    for (let i=startLoop;i<rows.length;i++) {
+    for (let i=(headerRow>=0?headerRow+1:1);i<rows.length;i++) {
       const r=rows[i]; if(!r) continue;
-      const c0Str=String(r[0]||'').replace(/\./g,'').replace(',','').trim();
-      const c0=Number(c0Str);
+      const c0=Number(String(r[0]||'').replace(/\./g,'').replace(',','').trim());
       if (!c0||isNaN(c0)||c0<=0) continue;
+
+      // Data
       let dataFmt=null;
       const dv=r[colData];
-      if (dv instanceof Date&&!isNaN(dv)) dataFmt=String(dv.getUTCDate()).padStart(2,'0')+'/'+String(dv.getUTCMonth()+1).padStart(2,'0')+'/'+dv.getUTCFullYear();
-      else if (typeof dv==='string'&&dv.trim()) { const m=dv.trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3]; }
+      if (dv instanceof Date&&!isNaN(dv)) {
+        dataFmt=String(dv.getUTCDate()).padStart(2,'0')+'/'+String(dv.getUTCMonth()+1).padStart(2,'0')+'/'+dv.getUTCFullYear();
+      } else if (typeof dv==='string'&&dv.trim()) {
+        const s=dv.trim();
+        let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if(m) dataFmt=m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3];
+        if(!m){m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)dataFmt=m[3]+'/'+m[2]+'/'+m[1];}
+      }
       if (!dataFmt){erros++;continue;}
+
+      // Valor
       let valor=r[colValor];
+      if (valor instanceof Date) {erros++;continue;} // era coluna de data errada
       if (typeof valor!=='number') valor=parseFloat(String(valor||'0').replace(',','.'));
       if (!valor||valor<=0) continue;
+
       if (!porDia[dataFmt]) porDia[dataFmt]=0;
       porDia[dataFmt]+=valor;
       linhas++;
     }
+
     if (!linhas) throw new Error('Nenhuma venda. Erros de data: '+erros);
 
-    // Grava no Supabase
     const dias=Object.keys(porDia).sort();
     for (const dia of dias) {
       await gravarLancamento('sti3_'+dia.replace(/\//g,''),'receita',dia,'STi3 Vendas','💰 Receita/Vendas',porDia[dia],'sti3_auto');
     }
 
     // Atualiza blob
-    const {data,deviceId} = await lerBlob();
+    const {data:blobData,deviceId:blobDev}=await lerBlob();
     for (const dia of dias) {
-      if (!data[dia]) data[dia]={r:[],c:[]};
-      if (!data[dia].r) data[dia].r=[];
-      data[dia].r=data[dia].r.filter(x=>x.fonte!=='sti3');
-      data[dia].r.push({id:'sti3_'+dia.replace(/\//g,''),d:'STi3 Vendas',v:porDia[dia],fonte:'sti3'});
+      if (!blobData[dia]) blobData[dia]={r:[],c:[]};
+      if (!blobData[dia].r) blobData[dia].r=[];
+      blobData[dia].r=blobData[dia].r.filter(x=>x.fonte!=='sti3');
+      blobData[dia].r.push({id:'sti3_'+dia.replace(/\//g,''),d:'STi3 Vendas',v:porDia[dia],fonte:'sti3'});
     }
-    await salvarBlob(data,deviceId);
+    await salvarBlob(blobData,blobDev);
 
     const total=Object.values(porDia).reduce((a,b)=>a+b,0);
     await wpp(grupoId,'✅ STi3 importado!\n• '+linhas+' vendas\n• '+dias.length+' dias\n• Período: '+dias[0]+' a '+dias[dias.length-1]+'\n• *Total: '+brl(total)+'*');
