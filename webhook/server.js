@@ -1125,7 +1125,23 @@ function classificarPluggy(tx) {
   if (desc.startsWith('tar ')||desc.includes('tarifa')||desc.includes('ccf')||desc.includes('mensalidade maquininha')) return '🏦 Tarifas Bancárias';
   if (desc.includes('iof')) return '💳 Taxas/Impostos';
   if (desc.includes('juro')||desc.includes('encargo')) return '⚠️ Juros/Multa';
-  if (desc.includes('pix')||desc.startsWith('deb pix')) return '🔄 PIX Enviado';
+  if (desc.includes('pix')||desc.startsWith('deb pix')||desc.startsWith('transferencia | pix')) return '🔄 PIX Enviado';
+
+  // Pagamentos de boleto de fornecedores (Pagamento | FORNECEDOR)
+  if (desc.startsWith('pagamento |')) {
+    const forn = desc.replace('pagamento | ','').toLowerCase();
+    if (forn.includes('food')||forn.includes('aliment')||forn.includes('carnes')||
+        forn.includes('pesc')||forn.includes('suino')||forn.includes('frango')||
+        forn.includes('minerva')||forn.includes('jbs')||forn.includes('brf')||
+        forn.includes('riberfoods')||forn.includes('tgad')||forn.includes('uberlandia')||
+        forn.includes('supreme')||forn.includes('suprema')||forn.includes('mart minas')||
+        forn.includes('cecoti')||forn.includes('distribu')||forn.includes('import')) {
+      return '🥩 Matéria Prima';
+    }
+    if (forn.includes('embalagem')||forn.includes('embala')||forn.includes('psg indust')) return '📦 Embalagem';
+    if (forn.includes('pjbank')||forn.includes('banco')||forn.includes('fintech')) return '💳 Taxas/Impostos';
+    return '📄 Boleto Pago';
+  }
   if (cat.includes('services')||cat.includes('servicos')||cat.includes('entrepreneurial')||cat.includes('atividades')) return '🏢 Custos Fixos';
   if (cat.includes('healthcare')||cat.includes('assistencia')) return '🏢 Custos Fixos';
   if (cat.includes('transfers')||cat.includes('transferencias')) return '🔄 Transferência';
