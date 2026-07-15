@@ -465,7 +465,13 @@ async function processarSTi3WhatsApp(msg, grupoId) {
     if (colData<0||colValor<0) throw new Error('Colunas Data/Valor não encontradas');
 
     const porDia={};let linhas=0,erros=0;
-    for (let i=(headerRow>=0?headerRow+1:1);i<rows.length;i++) {
+    const startLoop=headerRow>=0?headerRow+1:1;
+    // Log primeiras 5 linhas para debug
+    for(let dbgi=startLoop;dbgi<Math.min(startLoop+5,rows.length);dbgi++){
+      const rdbg=rows[dbgi]||[];
+      console.log('STi3 L'+dbgi+' c0='+JSON.stringify(rdbg[0])+' cD='+JSON.stringify(rdbg[colData])+' cV='+JSON.stringify(rdbg[colValor]));
+    }
+    for (let i=startLoop;i<rows.length;i++) {
       const r=rows[i]; if(!r) continue;
       const c0Str=String(r[0]||'').replace(/\./g,'').replace(',','').trim();
       const c0=Number(c0Str);
