@@ -1298,8 +1298,8 @@ setInterval(async () => {
     alertaContasVencendo().catch(e=>console.error('Alerta err:',e.message));
   }
 
-  // 9h Brasília = 12h UTC: força sync Pluggy e envia saldos 15min depois
-  if (hUTC===12 && _ultimoSaldo!==dia) {
+  // 14h30 Brasília = 17h UTC: força sync Pluggy (Pluggy sincroniza ~14h40) e envia saldos 15min depois
+  if (hUTC===17 && _ultimoSaldo!==dia) {
     _ultimoSaldo = dia;
     if (PLUGGY_CID && PLUGGY_CSEC) {
       console.log('Agendador: forcando sync Pluggy para saldos das 10h...');
