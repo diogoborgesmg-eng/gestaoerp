@@ -1392,6 +1392,25 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/delete-sefaz-e-reprocessar') {
+      (async()=>{
+        try {
+          // Deleta lancamentos SEFAZ da tabela
+          const del1 = await sb('DELETE','/rest/v1/lancamentos?device_id=eq.sefaz_auto',null,{'Prefer':'return=minimal'});
+          console.log('DELETE sefaz_auto:', JSON.stringify(del1).slice(0,100));
+          // Reseta NSU no blob
+          const {data:d3,deviceId:dev3}=await lerBlob();
+          if(d3.dadosFiscais) d3.dadosFiscais.ultimoNSU='000000000000000';
+          d3.contasPagar=(d3.contasPagar||[]).filter(cp=>!cp._sefaz);
+          await salvarBlob(d3,dev3);
+          // Aguarda 1s e roda SEFAZ
+          await new Promise(r=>setTimeout(r,1000));
+          res.writeHead(200);res.end(JSON.stringify({ok:true,msg:'Deletado! Rodando SEFAZ...'}));
+          consultarNFsSEFAZ().catch(e=>console.error('SEFAZ err:',e.message));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      })();
+      return;
+    }
     if (req.url==='/limpar-reprocessar-sefaz') {
       (async()=>{
         try {
