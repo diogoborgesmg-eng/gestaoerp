@@ -1604,6 +1604,27 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/deletar-bonificacoes') {
+      (async()=>{
+        try {
+          // Deleta as NFs de bonificação da Uberlândia (R$2,29 e R$42,61)
+          const r1 = await sb('DELETE','/rest/v1/lancamentos?device_id=eq.sefaz_auto&valor=eq.2.29',null,{'Prefer':'return=minimal'});
+          const r2 = await sb('DELETE','/rest/v1/lancamentos?device_id=eq.sefaz_auto&valor=eq.42.61',null,{'Prefer':'return=minimal'});
+          // Remove também das contas a pagar no blob
+          const {data:d,deviceId} = await lerBlob();
+          const cpAntes = (d.contasPagar||[]).length;
+          d.contasPagar = (d.contasPagar||[]).filter(cp=>{
+            const v = Number(cp.val||cp.valor||0);
+            const forn = (cp.forn||'').toUpperCase();
+            if(forn.includes('UBERLANDIA')&&(Math.abs(v-2.29)<0.01||Math.abs(v-42.61)<0.01)) return false;
+            return true;
+          });
+          await salvarBlob(d,deviceId);
+          res.writeHead(200);res.end(JSON.stringify({ok:true,cpRemovidas:cpAntes-(d.contasPagar||[]).length,msg:'Bonificacoes removidas'}));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      })();
+      return;
+    }
     if (req.url==='/limpar-reprocessar-sefaz') {
       (async()=>{
         try {
