@@ -1254,6 +1254,23 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/debug-dia/')) {
+      const diaParam = req.url.split('/debug-dia/')[1]; // formato DD-MM-YYYY
+      const [dd,mm,yy] = diaParam.split('-');
+      const diaFmt = dd+'/'+mm+'/'+yy;
+      (async()=>{
+        try {
+          const rows = await sb('GET', '/rest/v1/lancamentos?dia_comercial=eq.'+encodeURIComponent(diaFmt)+'&select=tipo,valor,descricao,categoria,device_id&limit=200');
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({
+            dia: diaFmt,
+            total: Array.isArray(rows)?rows.length:0,
+            lancamentos: rows
+          },null,2));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/test-pluggy-tx') {
       (async()=>{
         try {
