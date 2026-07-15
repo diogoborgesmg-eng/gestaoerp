@@ -244,7 +244,7 @@ async function enviarPDF() {
     const diaOntem = ontem.toLocaleDateString('pt-BR'); // DD/MM/YYYY
 
     // Lê lançamentos do dia anterior
-    const rows = await sb('GET', `/rest/v1/lancamentos?dia_comercial=eq.${diaOntem}&select=tipo,valor,descricao,categoria&limit=500`);
+    const rows = await sb('GET', `/rest/v1/lancamentos?dia_comercial=eq.${diaOntem}&select=tipo,valor,descricao,categoria,device_id&limit=500`);
     if (!Array.isArray(rows)) return;
 
     const receitas = rows.filter(r=>r.tipo==='receita');
@@ -261,23 +261,29 @@ async function enviarPDF() {
     });
 
     const linhas = [
-      `*📊 Resumo ${diaOntem}*`,
-      ``,
-      `*💰 Receita: ${brl(totalR)}*`,
-      `*📦 Custo: ${brl(totalC)}*`,
-      `*${resultado>=0?'✅':'❌'} Resultado: ${brl(resultado)}*`,
+      '*📊 Di Casa Laranjinha*',
+      `_Resumo do dia ${diaOntem}_`,
+      '',
+      `*💰 Receita total: ${brl(totalR)}*`,
+      `  • Vendas STi3: ${brl(receitas.filter(r=>r.device_id==='sti3_auto').reduce((a,r)=>a+Number(r.valor||0),0))}`,
+      `  • Bot/Outros: ${brl(receitas.filter(r=>r.device_id!=='sti3_auto').reduce((a,r)=>a+Number(r.valor||0),0))}`,
+      '',
+      `*📦 Custo total: ${brl(totalC)}*`,
     ];
 
     if (Object.keys(porCat).length) {
-      linhas.push('', '*Custos por categoria:*');
       Object.entries(porCat)
         .sort((a,b)=>b[1]-a[1])
         .slice(0,8)
         .forEach(([cat,val])=>linhas.push(`  • ${cat}: ${brl(val)}`));
     }
 
+    linhas.push('');
+    const emoji = resultado>=0 ? '✅' : '❌';
+    linhas.push(`*${emoji} Resultado: ${brl(resultado)}*`);
+
     if (totalR===0 && totalC===0) {
-      linhas.push('', '_Nenhum lançamento encontrado para ontem._');
+      linhas.push('', '_Sem lançamentos para ontem_');
       console.log('PDF: sem dados para', diaOntem);
     }
 
@@ -439,8 +445,9 @@ async function processarSTi3WhatsApp(msg, grupoId) {
     if (colData<0||colValor<0) {
       for (let i=1;i<Math.min(30,rows.length);i++) {
         const r=rows[i]; if(!r||r.length<3) continue;
-        const c0=Number(String(r[0]||'').replace(/\./g,'').trim());
-        if (!Number.isInteger(c0)||c0<=0) continue;
+        const c0Str2=String(r[0]||'').replace(/\./g,'').replace(',','').trim();
+        const c0=Number(c0Str2);
+        if (!c0||isNaN(c0)||c0<=0) continue;
         for (let j=0;j<r.length;j++) {
           const v=r[j];
           if (colData<0 && v instanceof Date && !isNaN(v) && v.getFullYear()>2020) colData=j;
@@ -460,8 +467,9 @@ async function processarSTi3WhatsApp(msg, grupoId) {
     const porDia={};let linhas=0,erros=0;
     for (let i=(headerRow>=0?headerRow+1:1);i<rows.length;i++) {
       const r=rows[i]; if(!r) continue;
-      const c0=Number(String(r[0]||'').replace(/\./g,'').trim());
-      if (!Number.isInteger(c0)||c0<=0) continue;
+      const c0Str=String(r[0]||'').replace(/\./g,'').replace(',','').trim();
+      const c0=Number(c0Str);
+      if (!c0||isNaN(c0)||c0<=0) continue;
       let dataFmt=null;
       const dv=r[colData];
       if (dv instanceof Date&&!isNaN(dv)) dataFmt=String(dv.getUTCDate()).padStart(2,'0')+'/'+String(dv.getUTCMonth()+1).padStart(2,'0')+'/'+dv.getUTCFullYear();
