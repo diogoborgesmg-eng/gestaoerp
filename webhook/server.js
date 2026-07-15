@@ -446,6 +446,25 @@ async function enviarPDF() {
     }
 
     await wppParaTodos(linhas.join('\n'));
+
+    // Envia calendário de vencimentos como PDF
+    try {
+      const {data:blobCal} = await lerBlob();
+      const pdfBuf = await gerarCalendarioPDF(blobCal.contasPagar||[]);
+      const pdfB64 = pdfBuf.toString('base64');
+      const mesNome = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][new Date().getMonth()];
+      for (const num of DESTINOS) {
+        await httpReq('POST', EVO_URL+'/message/sendMedia/'+INSTANCE,
+          { number:num, mediatype:'document', mimetype:'application/pdf',
+            fileName:'vencimentos_'+mesNome+'.pdf',
+            caption:'📅 Calendário de Vencimentos — '+mesNome,
+            media:pdfB64 },
+          { apikey:EVO_KEY, 'Content-Type':'application/json' }
+        ).catch(e=>console.log('PDF cal err:',e.message));
+      }
+      console.log('Calendário PDF enviado');
+    } catch(ep) { console.log('Calendário err:', ep.message); }
+
     console.log(`PDF enviado: ${diaOntem} receita=${totalR.toFixed(2)} custo=${totalC.toFixed(2)}`);
   } catch(e) { console.error('Erro PDF:', e.message); }
 }
