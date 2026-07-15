@@ -284,10 +284,12 @@ async function gerarCalendarioPDF(contasPagar) {
         .text('Calendário de Vencimentos — '+meses[mes]+' '+ano, 20, 32);
 
       // Legenda
-      doc.rect(380,14,12,12).fill('#ff4444');
-      doc.font('Helvetica').fontSize(9).fillColor('#cccccc').text('Boleto', 396, 16);
-      doc.rect(440,14,12,12).fill('#4488ff');
-      doc.text('Cheque', 456, 16);
+      doc.rect(310,14,12,12).fill('#ff8800');
+      doc.font('Helvetica').fontSize(9).fillColor('#cccccc').text('Boleto', 326, 16);
+      doc.rect(380,14,12,12).fill('#ff3333');
+      doc.text('Cheque Sant.', 396, 16);
+      doc.rect(465,14,12,12).fill('#3388ff');
+      doc.text('Cheque Caixa', 481, 16);
 
       // Monta mapa de vencimentos do mês
       const vencMes = {};
@@ -296,10 +298,15 @@ async function gerarCalendarioPDF(contasPagar) {
         const [dd,mm,yy] = vStr.split('/');
         if(Number(mm)-1 !== mes || Number(yy) !== ano) return;
         const dia = parseInt(dd);
-        if(!vencMes[dia]) vencMes[dia] = {boletos:[], cheques:[]};
+        if(!vencMes[dia]) vencMes[dia] = {boletos:[], cheqSant:[], cheqCaixa:[]};
         const tipo = (cp.pag||cp.tipo||'boleto').toLowerCase();
-        if(tipo.includes('cheque')) vencMes[dia].cheques.push(Number(cp.val||cp.valor||0));
-        else vencMes[dia].boletos.push(Number(cp.val||cp.valor||0));
+        const banco = (cp.banco||cp.forn||'').toLowerCase();
+        if(tipo.includes('cheque')) {
+          if(banco.includes('santander')||banco.includes('sant')) vencMes[dia].cheqSant.push(Number(cp.val||cp.valor||0));
+          else vencMes[dia].cheqCaixa.push(Number(cp.val||cp.valor||0));
+        } else {
+          vencMes[dia].boletos.push(Number(cp.val||cp.valor||0));
+        }
       });
 
       const brl = v => 'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -343,15 +350,21 @@ async function gerarCalendarioPDF(contasPagar) {
           if(temVenc) {
             let yOff = 20;
             const totalBol = temVenc.boletos.reduce((a,b)=>a+b,0);
-            const totalCheq = temVenc.cheques.reduce((a,b)=>a+b,0);
             if(totalBol>0) {
-              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#ff6666')
+              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#ff8800')
                 .text(brl(totalBol), x+2, y+yOff, {width:CW-4, align:'center'});
               yOff+=11;
             }
-            if(totalCheq>0) {
-              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#4499ff')
-                .text(brl(totalCheq), x+2, y+yOff, {width:CW-4, align:'center'});
+            const totalCS = temVenc.cheqSant.reduce((a,b)=>a+b,0);
+            if(totalCS>0) {
+              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#ff3333')
+                .text(brl(totalCS), x+2, y+yOff, {width:CW-4, align:'center'});
+              yOff+=11;
+            }
+            const totalCC = temVenc.cheqCaixa.reduce((a,b)=>a+b,0);
+            if(totalCC>0) {
+              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#3388ff')
+                .text(brl(totalCC), x+2, y+yOff, {width:CW-4, align:'center'});
             }
           }
           dia++;
