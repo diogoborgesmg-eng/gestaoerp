@@ -528,13 +528,14 @@ async function processarSTi3WhatsApp(msg, grupoId) {
 
 
 // ── SEFAZ Loop Principal ──────────────────────────────────
-async function consultarNFsSEFAZ() {
+async function consultarNFsSEFAZ(nsuForcado) {
   try {
     const { data, deviceId } = await lerBlob();
     const cert = data.dadosFiscais && data.dadosFiscais.certificado;
     if (!cert || !cert.pfxBase64) { console.log('SEFAZ: sem certificado'); return; }
 
-    let nsuAtual = data.dadosFiscais.ultimoNSU || '000000000000000';
+    let nsuAtual = nsuForcado || data.dadosFiscais.ultimoNSU || '000000000000000';
+    console.log('SEFAZ: iniciando com NSU='+nsuAtual+(nsuForcado?' (FORCADO)':''));
     const todasNFs = [];
     let continuar = true, lote = 0;
 
@@ -1339,7 +1340,7 @@ http.createServer(async (req, res) => {
     }
     if (req.url==='/test-saldos') { enviarSaldos().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/test-pdf') { enviarPDF().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
-    if (req.url==='/test-sefaz') { consultarNFsSEFAZ().then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
+    if (req.url && req.url.startsWith('/test-sefaz')) { const nsuP=req.url.includes('nsu=')?(req.url.split('nsu=')[1]||''):null; consultarNFsSEFAZ(nsuP||undefined).then(()=>res.end('ok')).catch(e=>res.end(e.message)); return; }
     if (req.url==='/resync-blob') {
       importarTransacoesPluggy().then(()=>{
         res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Blob atualizado com transacoes individuais'}));
@@ -1403,8 +1404,10 @@ http.createServer(async (req, res) => {
           if(d3.dadosFiscais) d3.dadosFiscais.ultimoNSU='000000000000000';
           d3.contasPagar=(d3.contasPagar||[]).filter(cp=>!cp._sefaz);
           await salvarBlob(d3,dev3);
-          console.log('NSU resetado para 000000000000000, aguardando 3s...');
-          res.writeHead(200);res.end(JSON.stringify({ok:true,msg:'Deletado e NSU resetado! Aguarde 30s e rode /test-sefaz separado.'}));
+          console.log('NSU resetado. Iniciando SEFAZ com NSU forcado=000000000000000');
+          res.writeHead(200);res.end(JSON.stringify({ok:true,msg:'Deletado! SEFAZ rodando com NSU zerado...'}));
+          // Chama com NSU zerado, ignorando o blob
+          consultarNFsSEFAZ('000000000000000').catch(e=>console.error('SEFAZ err:',e.message));
         }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
       })();
       return;
