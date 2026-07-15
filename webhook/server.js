@@ -230,12 +230,157 @@ async function enviarSaldos() {
 
     linhas.push('','*Saldo líquido: '+brl(totalBanco)+'*');
 
+    // Envia o resumo em texto
     await wppParaTodos(linhas.join('\n'));
+
+    // Envia calendário de vencimentos como PDF
+    try {
+      const {data:blobCal} = await lerBlob();
+      const pdfBuf = await gerarCalendarioPDF(blobCal.contasPagar||[]);
+      const pdfB64 = pdfBuf.toString('base64');
+      const mesNome = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][new Date().getMonth()];
+      for (const num of DESTINOS) {
+        await httpReq('POST', EVO_URL+'/message/sendMedia/'+INSTANCE,
+          { number:num, mediatype:'document', mimetype:'application/pdf',
+            fileName:'vencimentos_'+mesNome+'.pdf',
+            caption:'📅 Calendário de Vencimentos — '+mesNome,
+            media:pdfB64 },
+          { apikey:EVO_KEY, 'Content-Type':'application/json' }
+        ).catch(e=>console.log('PDF cal err:',e.message));
+      }
+      console.log('Calendário PDF enviado');
+    } catch(ep) { console.log('Calendário err:', ep.message); }
     console.log('Saldos enviados OK. Total banco:', totalBanco.toFixed(2));
   } catch(e) { console.error('Erro saldos:', e.message); }
 }
 
 // ── PDF das 6h ───────────────────────────────────────────
+
+// Gera PDF de calendário de vencimentos mensal
+async function gerarCalendarioPDF(contasPagar) {
+  return new Promise((resolve, reject) => {
+    try {
+      const PDFDocument = require('pdfkit');
+      const doc = new PDFDocument({ size: [595, 420], margin: 0 });
+      const chunks = [];
+      doc.on('data', c => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const hoje = new Date();
+      const mes = hoje.getMonth();
+      const ano = hoje.getFullYear();
+      const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const diasSem = ['D','S','T','Q','Q','S','S'];
+
+      // Fundo escuro
+      doc.rect(0,0,595,420).fill('#0f0f1a');
+
+      // Header
+      doc.rect(0,0,595,52).fill('#1a1a2e');
+      doc.font('Helvetica-Bold').fontSize(16).fillColor('#ffffff')
+        .text('Di Casa Laranjinha', 20, 12);
+      doc.font('Helvetica').fontSize(11).fillColor('#aaaaaa')
+        .text('Calendário de Vencimentos — '+meses[mes]+' '+ano, 20, 32);
+
+      // Legenda
+      doc.rect(380,14,12,12).fill('#ff4444');
+      doc.font('Helvetica').fontSize(9).fillColor('#cccccc').text('Boleto', 396, 16);
+      doc.rect(440,14,12,12).fill('#4488ff');
+      doc.text('Cheque', 456, 16);
+
+      // Monta mapa de vencimentos do mês
+      const vencMes = {};
+      (contasPagar||[]).filter(cp=>!cp.pago).forEach(cp => {
+        const vStr = cp.venc||cp.vencimento; if(!vStr) return;
+        const [dd,mm,yy] = vStr.split('/');
+        if(Number(mm)-1 !== mes || Number(yy) !== ano) return;
+        const dia = parseInt(dd);
+        if(!vencMes[dia]) vencMes[dia] = {boletos:[], cheques:[]};
+        const tipo = (cp.pag||cp.tipo||'boleto').toLowerCase();
+        if(tipo.includes('cheque')) vencMes[dia].cheques.push(Number(cp.val||cp.valor||0));
+        else vencMes[dia].boletos.push(Number(cp.val||cp.valor||0));
+      });
+
+      const brl = v => 'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+      // Grade do calendário
+      const TOP = 60, LEFT = 10, COLS = 7;
+      const CW = (595-LEFT*2)/COLS, CH = 52;
+
+      // Cabeçalho dias da semana
+      diasSem.forEach((d,i) => {
+        doc.rect(LEFT+i*CW, TOP, CW, 22).fill(i===0||i===6?'#2a1a1a':'#1e1e2e').stroke();
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(i===0||i===6?'#ff6666':'#888888')
+          .text(d, LEFT+i*CW+CW/2-5, TOP+6);
+      });
+
+      // Dias do mês
+      const primeiroDia = new Date(ano, mes, 1).getDay();
+      const ultimoDia = new Date(ano, mes+1, 0).getDate();
+      let dia = 1;
+      for(let semana=0; semana<6 && dia<=ultimoDia; semana++) {
+        for(let col=0; col<7; col++) {
+          if(semana===0 && col<primeiroDia) continue;
+          if(dia>ultimoDia) break;
+          const x = LEFT+col*CW, y = TOP+22+semana*CH;
+          const isHoje = dia===hoje.getDate();
+          const temVenc = vencMes[dia];
+
+          // Fundo da célula
+          let bgColor = '#13131f';
+          if(isHoje) bgColor = '#1a2a1a';
+          if(temVenc) bgColor = '#1f1515';
+          doc.rect(x,y,CW,CH).fill(bgColor).stroke();
+          if(isHoje) doc.rect(x,y,CW,2).fill('#00cc66');
+
+          // Número do dia
+          doc.font('Helvetica-Bold').fontSize(11)
+            .fillColor(isHoje?'#00cc66':col===0||col===6?'#ff6666':'#888888')
+            .text(String(dia), x+4, y+4);
+
+          // Valores de vencimento
+          if(temVenc) {
+            let yOff = 20;
+            const totalBol = temVenc.boletos.reduce((a,b)=>a+b,0);
+            const totalCheq = temVenc.cheques.reduce((a,b)=>a+b,0);
+            if(totalBol>0) {
+              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#ff6666')
+                .text(brl(totalBol), x+2, y+yOff, {width:CW-4, align:'center'});
+              yOff+=11;
+            }
+            if(totalCheq>0) {
+              doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#4499ff')
+                .text(brl(totalCheq), x+2, y+yOff, {width:CW-4, align:'center'});
+            }
+          }
+          dia++;
+        }
+      }
+
+      // Rodapé com totais
+      const totalAberto = (contasPagar||[]).filter(cp=>!cp.pago).reduce((a,cp)=>a+Number(cp.val||cp.valor||0),0);
+      const vencidas = (contasPagar||[]).filter(cp=>!cp.pago&&(()=>{
+        const v=cp.venc||cp.vencimento;if(!v)return false;
+        const [d,m,y]=v.split('/');return new Date(Number(y),Number(m)-1,parseInt(d))<hoje;
+      })());
+      doc.rect(0,380,595,40).fill('#1a1a2e');
+      doc.font('Helvetica').fontSize(9).fillColor('#aaaaaa')
+        .text('Total em aberto: ', 20, 392);
+      doc.font('Helvetica-Bold').fillColor('#ffffff')
+        .text(brl(totalAberto), 110, 392, {continued:true})
+        .fillColor('#aaaaaa').font('Helvetica')
+        .text('   Vencidas: ', {continued:true})
+        .fillColor(vencidas.length>0?'#ff4444':'#00cc66').font('Helvetica-Bold')
+        .text(String(vencidas.length));
+      doc.font('Helvetica').fontSize(8).fillColor('#555555')
+        .text('Gerado em '+new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}), 395, 392);
+
+      doc.end();
+    } catch(e) { reject(e); }
+  });
+}
+
 async function enviarPDF() {
   try {
     const hoje = new Date();
