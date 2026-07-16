@@ -725,9 +725,16 @@ async function consultarNFsSEFAZ(nsuForcado) {
       console.log(`SEFAZ lote ${lote} - cStat:${cStat} ultNSU:${ultNSU} maxNSU:${maxNSU}`);
 
       if (cStat !== '138' && cStat !== '137') break;
-      const nfes = parsearNFesDoXML(resp.xml);
-      const dados = parsearDocZips(resp.xml);
-      todasNFs.push(...dados);
+      // Usa parsearNFesDoXML para extrair resumo (resNFe) e parsearDocZips para XML completo (docZip)
+      const resumos = parsearNFesDoXML(resp.xml);
+      const completos = parsearDocZips(resp.xml);
+      // Mescla: prefere dados completos (docZip), usa resumo (resNFe) quando não tem docZip
+      const porChave = {};
+      completos.forEach(n => { if(n.chNFe) porChave[n.chNFe]=n; });
+      resumos.forEach(n => { if(n.chNFe && !porChave[n.chNFe]) porChave[n.chNFe]=n; });
+      const loteNFs = Object.values(porChave);
+      console.log(`SEFAZ lote ${lote}: ${resumos.length} resNFe, ${completos.length} docZip, ${loteNFs.length} total`);
+      todasNFs.push(...loteNFs);
       nsuAtual = ultNSU;
       if (ultNSU >= maxNSU) continuar = false;
       if (cStat === '137') continuar = false; // sem mais docs
