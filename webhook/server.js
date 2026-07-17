@@ -1680,6 +1680,90 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/sefaz-capturar-tudo')) {
+      (async()=>{
+        try {
+          const params = new URL('http://x'+req.url).searchParams;
+          const nsuInicio = params.get('nsu') || '000000000004394';
+          const {data:d, deviceId} = await lerBlob();
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+          if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({ok:false,erro:'Sem certificado'})); return; }
+          if (!d.sefazXMLBruto) d.sefazXMLBruto = [];
+          // Responde imediatamente e processa em background
+          res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Capturando todos os lotes em background. Acompanhe nos logs do Render. Aguarde ~5min e acesse /sefaz-processar-xml-salvo'}));
+          // Processa em background
+          (async()=>{
+            let nsuAtual = nsuInicio;
+            let lote = 0; let totalSalvos = 0;
+            while (lote < 15) {
+              lote++;
+              try {
+                // Delay de 8 segundos entre lotes para evitar bloqueio
+                if (lote > 1) await new Promise(r=>setTimeout(r,8000));
+                console.log('SEFAZ captura lote '+lote+' NSU='+nsuAtual);
+                const resp = await sefazDistribuicaoDFe(cert.pfxBase64,cert.senha,CNPJ_EMP,nsuAtual,'prod');
+                const cStat = extrairTagXML(resp.xml,'cStat');
+                const ultNSU = extrairTagXML(resp.xml,'ultNSU');
+                const maxNSU = extrairTagXML(resp.xml,'maxNSU');
+                console.log('SEFAZ lote '+lote+': cStat='+cStat+' ultNSU='+ultNSU+' maxNSU='+maxNSU+' len='+resp.xml.length);
+                if (cStat==='656') { console.log('SEFAZ: bloqueado, parando'); break; }
+                if (cStat!=='138'&&cStat!=='137') { console.log('SEFAZ: cStat inesperado '+cStat+', parando'); break; }
+                // Salva XML
+                d.sefazXMLBruto.push({nsu:nsuAtual,ultNSU,cStat,xml:resp.xml,ts:new Date().toISOString()});
+                totalSalvos++;
+                nsuAtual = ultNSU;
+                if (ultNSU >= maxNSU || cStat==='137') break;
+              } catch(el) { console.log('SEFAZ lote '+lote+' err:',el.message); break; }
+            }
+            // Salva todos os XMLs no blob
+            d.dadosFiscais.ultimoNSU = nsuAtual;
+            await salvarBlob(d, deviceId);
+            console.log('SEFAZ: '+totalSalvos+' lotes salvos. Processando NFs...');
+            // Processa todas as NFs salvas
+            const todasNFs = [];
+            for (const item of d.sefazXMLBruto) {
+              if (!item.xml) continue;
+              const nfs = parsearDocZips(item.xml);
+              todasNFs.push(...nfs);
+            }
+            const vistas = new Set();
+            const nfesUnicas = todasNFs.filter(nfe=>{
+              if(!nfe.chNFe)return false;
+              if(vistas.has(nfe.chNFe))return false;
+              vistas.add(nfe.chNFe);return true;
+            });
+            const ex = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&select=id&limit=500');
+            const idsExist = new Set(Array.isArray(ex)?ex.map(l=>l.id):[]);
+            const nfesNovas = nfesUnicas.filter(nfe=>!idsExist.has('nf_'+nfe.chNFe));
+            console.log('SEFAZ total: '+nfesUnicas.length+' unicas, '+nfesNovas.length+' novas para lançar');
+            if (!d.contasPagar) d.contasPagar=[];
+            for (const nfe of nfesNovas) {
+              const dia = nfe.data || new Date().toLocaleDateString('pt-BR');
+              const idLanc = 'nf_'+(nfe.chNFe||Date.now());
+              const isBonif = Number(nfe.valor||0)<0.01;
+              console.log('Lancando:',(isBonif?'[BONIF]':''),nfe.emitente,nfe.valor,dia);
+              if (!isBonif) {
+                await gravarLancamento(idLanc,'custo',dia,'NF - '+(nfe.emitente||'?'),
+                  detectarGrupoServidor(nfe.emitente||'').catDRE||'🥩 Matéria Prima',nfe.valor,'sefaz_auto');
+                const idCP='sefaz_cp_'+nfe.chNFe;
+                if (!d.contasPagar.find(cp=>cp.id===idCP)) {
+                  const venc=nfe.vencimento||(()=>{const p=(dia||'').split('/');if(p.length===3){const b=new Date(Number(p[2]),Number(p[1])-1,parseInt(p[0])+30);return b.toLocaleDateString('pt-BR');}return '';})();
+                  d.contasPagar.push({id:idCP,forn:nfe.emitente||'?',val:Number(nfe.valor||0),venc,pago:false,_sefaz:true,cnpjEmit:nfe.cnpjEmit,chNFe:nfe.chNFe});
+                }
+              }
+            }
+            await salvarBlob(d,deviceId);
+            if (nfesNovas.length) {
+              const resumo=nfesNovas.filter(n=>Number(n.valor||0)>0).slice(0,10).map(n=>'• '+(n.emitente||'?').slice(0,25)+' R$'+Number(n.valor||0).toFixed(2)).join('\n');
+              await wppParaTodos('📄 SEFAZ concluído!\n'+nfesNovas.length+' NF(s) lançadas:\n'+resumo);
+            } else {
+              await wppParaTodos('📄 SEFAZ: nenhuma NF nova encontrada nos '+totalSalvos+' lotes capturados.');
+            }
+          })().catch(e=>console.error('SEFAZ bg err:',e.message));
+        } catch(e) { if(!res.headersSent){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));} }
+      })();
+      return;
+    }
     if (req.url==='/sefaz-processar-xml-salvo') {
       (async()=>{
         try {
