@@ -926,8 +926,21 @@ async function sefazDistribuicaoDFe(pfxBase64, senha, cnpj, ultNSU='000000000000
       headers:{'Content-Type':'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"','Content-Length':body.length},
       cert:certPem,key:keyPem,rejectUnauthorized:false};
     const r=https.request(opts,res=>{
-      let d='';res.on('data',c=>d+=c);
-      res.on('end',()=>resolve({status:res.statusCode,xml:d}));
+      let d='';const chunks=[];res.on('data',c=>{d+=c;chunks.push(Buffer.isBuffer(c)?c:Buffer.from(c));});
+      res.on('end',()=>{
+          const enc=res.headers['content-encoding']||'';
+          if(enc.includes('gzip')){
+            try{
+              const buf=Buffer.concat(chunks);
+              const xml=require('zlib').gunzipSync(buf).toString('utf-8');
+              console.log('SEFAZ resp gzip descomp, len:',xml.length,'inicio:',xml.slice(0,200).replace(/\n/g,' '));
+              resolve({status:res.statusCode,xml});
+            }catch(eg){resolve({status:res.statusCode,xml:d});}
+          } else {
+            console.log('SEFAZ resp len:',d.length,'inicio:',d.slice(0,200).replace(/\n/g,' '));
+            resolve({status:res.statusCode,xml:d});
+          }
+        });
     });
     r.on('error',reject);r.write(body);r.end();
   });
