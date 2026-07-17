@@ -1680,6 +1680,67 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/sefaz-processar-xml-salvo') {
+      (async()=>{
+        try {
+          const {data:d, deviceId} = await lerBlob();
+          const xmlBrutos = d.sefazXMLBruto || [];
+          if (!xmlBrutos.length) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem XML salvo'})); return; }
+          // Processa TODOS os XMLs salvos
+          const todasNFs = [];
+          for (const item of xmlBrutos) {
+            if (!item.xml) continue;
+            const nfs = parsearDocZips(item.xml);
+            console.log('XML salvo NSU='+item.nsu+': '+nfs.length+' NFs');
+            todasNFs.push(...nfs);
+          }
+          // Deduplica por chNFe
+          const vistas = new Set();
+          const nfesUnicas = todasNFs.filter(nfe => {
+            if (!nfe.chNFe) return false;
+            if (vistas.has(nfe.chNFe)) return false;
+            vistas.add(nfe.chNFe); return true;
+          });
+          // Verifica quais já existem na tabela
+          const idsExistentes = new Set();
+          const ex = await sb('GET', '/rest/v1/lancamentos?device_id=eq.sefaz_auto&select=id&limit=500');
+          if (Array.isArray(ex)) ex.forEach(l => idsExistentes.add(l.id));
+          const nfesNovas = nfesUnicas.filter(nfe => !idsExistentes.has('nf_'+nfe.chNFe));
+          if (!d.contasPagar) d.contasPagar = [];
+          console.log('SEFAZ XML salvo: '+nfesUnicas.length+' unicas, '+nfesNovas.length+' novas');
+          const resultados = [];
+          for (const nfe of nfesNovas) {
+            const dia = nfe.data || new Date().toLocaleDateString('pt-BR');
+            const idLanc = 'nf_'+(nfe.chNFe||Date.now());
+            console.log('Lancando NF:', nfe.emitente, nfe.valor, dia);
+            const isBonif = Number(nfe.valor||0) < 0.01;
+            if (!isBonif) {
+              await gravarLancamento(idLanc,'custo',dia,'NF - '+(nfe.emitente||'Fornecedor'),
+                detectarGrupoServidor(nfe.emitente||'').catDRE||'🥩 Matéria Prima',nfe.valor,'sefaz_auto');
+              // Conta a pagar
+              const idCP = 'sefaz_cp_'+nfe.chNFe;
+              if (!d.contasPagar.find(cp=>cp.id===idCP)) {
+                const venc = nfe.vencimento || (()=>{
+                  const pts=(dia||'').split('/');
+                  if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);return b.toLocaleDateString('pt-BR');}
+                  return '';
+                })();
+                d.contasPagar.push({id:idCP,forn:nfe.emitente||'Fornecedor',val:Number(nfe.valor||0),
+                  venc,pago:false,_sefaz:true,_estimado:!nfe.vencimento,cnpjEmit:nfe.cnpjEmit,chNFe:nfe.chNFe});
+              }
+            }
+            resultados.push({emitente:nfe.emitente,valor:nfe.valor,dia,bonif:isBonif});
+          }
+          await salvarBlob(d, deviceId);
+          if (nfesNovas.length) {
+            const resumo = nfesNovas.filter(n=>Number(n.valor||0)>0).map(n=>'• '+(n.emitente||'?').slice(0,30)+' — R$'+Number(n.valor||0).toFixed(2)).join('\n');
+            if (resumo) await wppParaTodos('📄 SEFAZ (XML salvo): '+nfesNovas.length+' NF(s):\n'+resumo);
+          }
+          res.writeHead(200); res.end(JSON.stringify({ok:true,total:nfesUnicas.length,novas:nfesNovas.length,resultados},null,2));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message,stack:e.stack?.slice(0,300)})); }
+      })();
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
