@@ -1640,6 +1640,43 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/sefaz-capturar')) {
+      // Uma unica consulta SEFAZ - salva XML bruto e processa tudo
+      (async()=>{
+        try {
+          const params = new URL('http://x'+req.url).searchParams;
+          const nsuParam = params.get('nsu') || null;
+          const {data:d, deviceId} = await lerBlob();
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+          if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({ok:false,erro:'Sem certificado'})); return; }
+          const nsuUsar = nsuParam || d.dadosFiscais.ultimoNSU || '000000000004394';
+          console.log('SEFAZ captura unica NSU:', nsuUsar);
+          // UMA UNICA consulta
+          const resp = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, CNPJ_EMP, nsuUsar, 'prod');
+          const cStat = extrairTagXML(resp.xml, 'cStat');
+          const ultNSU = extrairTagXML(resp.xml, 'ultNSU');
+          const maxNSU = extrairTagXML(resp.xml, 'maxNSU');
+          console.log('SEFAZ captura: cStat='+cStat+' ultNSU='+ultNSU+' maxNSU='+maxNSU+' xmlLen='+resp.xml.length);
+          // Salva XML bruto no blob para processamento
+          if (!d.sefazXMLBruto) d.sefazXMLBruto = [];
+          d.sefazXMLBruto.push({ nsu: nsuUsar, ultNSU, cStat, xml: resp.xml, ts: new Date().toISOString() });
+          if (d.dadosFiscais) d.dadosFiscais.ultimoNSU = ultNSU;
+          // Processa NFs do XML capturado
+          const completos = parsearDocZips(resp.xml);
+          console.log('SEFAZ captura: '+completos.length+' NFs encontradas');
+          await salvarBlob(d, deviceId);
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({
+            ok: true, cStat, nsuUsado: nsuUsar, ultNSU, maxNSU,
+            xmlLen: resp.xml.length,
+            nfsEncontradas: completos.length,
+            nfs: completos.map(n=>({emitente:n.emitente,valor:n.valor,data:n.data,chNFe:(n.chNFe||'').slice(0,10)+'...'})),
+            xmlInicio: resp.xml.slice(0,500)
+          }, null, 2));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/delete-sefaz-e-reprocessar') {
       (async()=>{
         try {
