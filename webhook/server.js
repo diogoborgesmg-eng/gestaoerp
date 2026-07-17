@@ -1688,6 +1688,13 @@ http.createServer(async (req, res) => {
           const xmlNorm = xml.replace(/\r?\n/g," ");
           // Testa regex exato do parsearDocZips
           const matchesFull = [...xmlNorm.matchAll(/<docZip[^>]*schema="([^"]*)"[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+          // Descomprime o primeiro resNFe para ver o XML interno
+          const primeiroNFe = matchesFull.find(m=>m[1].includes('resNFe'));
+          let xmlDescomp = '', erroDecomp = '';
+          if (primeiroNFe) {
+            try { xmlDescomp = descompactarDocZip(primeiroNFe[2].trim()).slice(0,600); }
+            catch(ed) { erroDecomp = ed.message; }
+          }
           // Testa regex mais permissivo (sem validar conteudo)
           const matchesSimples = [...xmlNorm.matchAll(/<docZip[^>]*>/g)];
           // Testa regex com conteudo diferente
@@ -1705,7 +1712,9 @@ http.createServer(async (req, res) => {
             matchesPermissivo: matchesPermissivo.length,
             schemasEncontrados: matchesPermissivo.slice(0,5).map(m=>({schema:m[0].match(/schema="([^"]*)"/)?.[1]||'?', conteudoLen:m[1].length, conteudoInicio:m[1].slice(0,50)})),
             conteudoPrimeiro,
-            charEspecialNoPrimeiro: charEspecial.slice(0,10)
+            charEspecialNoPrimeiro: charEspecial.slice(0,10),
+            xmlDescomprimido: xmlDescomp,
+            erroDescompressao: erroDecomp
           }, null, 2));
         } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
       })();
