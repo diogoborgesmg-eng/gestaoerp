@@ -175,6 +175,9 @@ function atualizarUI(){
   if(cols.length){
     document.getElementById('quemDiv').style.display='block';
     document.getElementById('tagsList').innerHTML=cols.map(n=>'<span class="tag">✅ '+n+'</span>').join('');
+  } else {
+    document.getElementById('quemDiv').style.display='block';
+    document.getElementById('tagsList').innerHTML='<span style="color:#ff6b35;font-size:0.8rem">⚠️ Ninguém preencheu ainda hoje. Seja o primeiro!</span>';
   }
   let total=0,prench=0;
   grupos.forEach(g=>g.itens.forEach(it=>{
