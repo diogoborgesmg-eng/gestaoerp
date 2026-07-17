@@ -1073,11 +1073,24 @@ function parsearDocZips(xmlResp) {
   for (const m of matches) {
     const schema = m[1];
     const b64 = m[2].trim();
-    if (!schema.includes('NFe') && !schema.includes('nfe')) continue;
+    if (!schema.includes('NFe') && !schema.includes('nfe') && !schema.includes('resNFe')) continue;
     try {
       const xmlNFe = descompactarDocZip(b64);
-      const dados = parsearNFeXML(xmlNFe);
-      // Extrai duplicatas (parcelas) da seção <cobr><dup>
+      let dados;
+      if (schema.includes('resNFe') && !schema.includes('procNFe')) {
+        // Resumo da NF (resNFe) — extrai dados básicos do docZip descomprimido
+        const tagR = (t) => { const r=xmlNFe.match(new RegExp('<'+t+'[^>]*>([^<]*)<\/'+t+'>')); return r?r[1].trim():''; };
+        const chNFe=tagR('chNFe');
+        if(!chNFe||chNFe.length!==44){continue;}
+        const dEmiStr=(tagR('dEmi')||tagR('dhEmi')||'').split('T')[0];
+        let dataFmt='';
+        if(dEmiStr){const[y,mm,dd]=dEmiStr.split('-');dataFmt=dd+'/'+mm+'/'+y;}
+        dados={chNFe,cnpjEmit:tagR('CNPJ'),emitente:tagR('xNome'),valor:parseFloat(tagR('vNF')||'0'),data:dataFmt,nNF:tagR('nNF'),_resNFe:true};
+        console.log('SEFAZ resNFe:', dados.emitente, dados.valor, dados.data);
+      } else {
+        dados = parsearNFeXML(xmlNFe);
+      }
+      // Extrai duplicatas (parcelas) da seção <cobr><dup> (só para XML completo)
       const dups = [];
       const dupMatches = xmlNFe.matchAll(/<dup>(.*?)<\/dup>/gs);
       for (const dm of dupMatches) {
