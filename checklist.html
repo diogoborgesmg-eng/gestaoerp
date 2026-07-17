@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist Pré-Preparo — Di Casa Laranjinha</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; padding: 14px; max-width: 520px; margin: 0 auto; }
+  h1 { color: #ff6b35; font-size: 1.15rem; text-align: center; margin-bottom: 2px; }
+  .sub { text-align: center; color: #666; font-size: 0.78rem; margin-bottom: 10px; }
+  .data-hoje { text-align: center; font-size: 0.75rem; color: #444; margin-bottom: 12px; }
+
+  .nome-box {
+    background: #1a1a2e; border-radius: 12px; padding: 12px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .nome-box label { font-size: 0.85rem; font-weight: 700; white-space: nowrap; color: #aaa; }
+  .nome-box input {
+    flex: 1; background: #0f0f1a; border: 1.5px solid #ff6b35;
+    border-radius: 8px; padding: 7px 10px; font-size: 0.9rem; color: #fff;
+  }
+  .nome-box button {
+    background: #ff6b35; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  }
+
+  .progress-bar {
+    background: #1a1a2e; border-radius: 12px; padding: 12px;
+    margin-bottom: 10px;
+  }
+  .progress-text { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 6px; }
+  .progress-text span:last-child { color: #00cc66; font-weight: 700; }
+  .bar-bg { background: #2a2a3e; border-radius: 20px; height: 8px; }
+  .bar-fill { background: linear-gradient(90deg, #ff6b35, #00cc66); height: 8px; border-radius: 20px; transition: width 0.3s; }
+
+  .quem-marcou {
+    background: #1a2a1a; border-radius: 12px; padding: 10px;
+    margin-bottom: 10px; display: none;
+  }
+  .quem-marcou h3 { font-size: 0.8rem; color: #00cc66; margin-bottom: 6px; }
+  .tag {
+    display: inline-block; background: #0f2a0f; color: #00cc66;
+    border-radius: 20px; padding: 3px 10px; margin: 2px; font-size: 0.75rem;
+  }
+
+  .secao { margin-bottom: 8px; }
+  .secao-titulo {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+    color: #555; padding: 6px 4px 4px; border-bottom: 1px solid #1a1a2e;
+    margin-bottom: 4px;
+  }
+
+  .item {
+    display: flex; align-items: center; gap: 10px;
+    background: #1a1a2e; border-radius: 10px; padding: 10px 12px;
+    margin-bottom: 4px; transition: all 0.2s; cursor: pointer;
+  }
+  .item:active { transform: scale(0.98); }
+  .item.feito { background: #0f2a0f; }
+  .item.feito .item-nome { text-decoration: line-through; color: #555; }
+
+  .checkbox {
+    width: 26px; height: 26px; border-radius: 8px; border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 14px; transition: all 0.2s;
+  }
+  .item.feito .checkbox { background: #00cc66; border-color: #00cc66; }
+
+  .item-info { flex: 1; }
+  .item-nome { font-size: 0.88rem; font-weight: 600; }
+  .item-por { font-size: 0.7rem; color: #00cc66; margin-top: 2px; }
+
+  .btn-reset {
+    width: 100%; background: #2a1a1a; color: #ff6b35; border: 1px solid #ff6b35;
+    border-radius: 12px; padding: 12px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; margin-top: 12px;
+  }
+  .btn-reset:active { background: #3a2a2a; }
+
+  .sync-info { text-align: center; font-size: 0.7rem; color: #333; margin: 8px 0; }
+
+  .status-msg {
+    text-align: center; font-size: 0.8rem; padding: 6px; border-radius: 8px; margin-bottom: 6px; display: none;
+  }
+  .status-ok { background: #0f2a0f; color: #00cc66; }
+</style>
+</head>
+<body>
+
+<h1>✅ Checklist Pré-Preparo</h1>
+<p class="sub">Di Casa Laranjinha — Pizza Grande 35cm</p>
+<div class="data-hoje" id="dataHoje"></div>
+
+<div class="nome-box">
+  <label>👤 Nome:</label>
+  <input type="text" id="nomeColaborador" placeholder="Seu nome..." maxlength="20">
+  <button onclick="confirmarNome()">OK</button>
+</div>
+
+<div id="statusMsg" class="status-msg"></div>
+
+<div id="appContent" style="display:none">
+
+  <div class="progress-bar">
+    <div class="progress-text">
+      <span>Progresso do dia</span>
+      <span id="progressoTexto">0 / 0</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="quem-marcou" id="quemMarcou">
+    <h3>✅ Quem marcou hoje:</h3>
+    <div id="listaMarcou"></div>
+  </div>
+
+  <div class="sync-info" id="syncInfo">Sincronizando...</div>
+
+  <div id="checklistContainer"></div>
+
+  <button class="btn-reset" onclick="resetarDia()">🔄 Resetar checklist do dia</button>
+</div>
+
+<script>
+const STORAGE_KEY = 'checklist_dicasa_' + new Date().toISOString().slice(0,10);
+let nomeAtual = localStorage.getItem('colaborador_nome') || '';
+let dadosShared = {};
+
+const grupos = [
+  { nome: '🧀 Queijos', itens: ['Muçarela ralada','Parmesão ralado','Provolone ralado','Gorgonzola','Cheddar fatiado','Catupiry','Cream cheese'] },
+  { nome: '🥩 Carnes', itens: ['Calabresa fatiada','Presunto fatiado','Bacon picado','Frango desfiado','Lombinho fatiado','Cupim cozido/fatiado','Alcatra grelhada','Costela desfiada','Pernil desfiado'] },
+  { nome: '🥗 Vegetais', itens: ['Cebola fatiada','Tomate fatiado','Milho','Palmito fatiado','Azeitona','Tomate seco'] },
+  { nome: '🍯 Molhos', itens: ['Molho de tomate','Molho barbecue','Creme de alho','Creme de mandioca','Creme de leite','Molho madeira'] },
+  { nome: '🍌 Doces', itens: ['Morango','Banana fatiada','Chocolate ao leite','Chocolate branco','Coco ralado','Leite condensado'] },
+  { nome: '📦 Outros', itens: ['Batata palha','Mussarela ralada extra','Azeite'] }
+];
+
+function mostrarStatus(msg, tipo) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg status-'+tipo;
+  el.style.display = 'block';
+  setTimeout(()=>{el.style.display='none';}, 2000);
+}
+
+async function carregarDados() {
+  try {
+    const r = await window.storage.get(STORAGE_KEY, true);
+    if (r && r.value) dadosShared = JSON.parse(r.value);
+    else dadosShared = { itens: {}, colaboradores: {} };
+    renderChecklist();
+    atualizarQuemMarcou();
+  } catch(e) {
+    dadosShared = { itens: {}, colaboradores: {} };
+    renderChecklist();
+  }
+  document.getElementById('syncInfo').textContent = 'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
+}
+
+async function toggleItem(id, nome) {
+  if (!nomeAtual) return;
+  if (!dadosShared.itens) dadosShared.itens = {};
+  if (!dadosShared.colaboradores) dadosShared.colaboradores = {};
+
+  if (dadosShared.itens[id]) {
+    delete dadosShared.itens[id];
+  } else {
+    dadosShared.itens[id] = { por: nomeAtual, hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) };
+    dadosShared.colaboradores[nomeAtual] = true;
+  }
+
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(dadosShared), true);
+    renderChecklist();
+    atualizarQuemMarcou();
+  } catch(e) {
+    mostrarStatus('Erro ao salvar', 'err');
+  }
+}
+
+function renderChecklist() {
+  const container = document.getElementById('checklistContainer');
+  container.innerHTML = '';
+  const itens = dadosShared.itens || {};
+  let total = 0, feitos = 0;
+
+  grupos.forEach(grupo => {
+    const secao = document.createElement('div');
+    secao.className = 'secao';
+    secao.innerHTML = '<div class="secao-titulo">'+grupo.nome+'</div>';
+
+    grupo.itens.forEach(nome => {
+      const id = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z_]/g,'');
+      const done = !!itens[id];
+      total++;
+      if(done) feitos++;
+
+      const div = document.createElement('div');
+      div.className = 'item' + (done?' feito':'');
+      div.onclick = () => toggleItem(id, nome);
+
+      const info = itens[id];
+      div.innerHTML = `
+        <div class="checkbox">${done?'✓':''}</div>
+        <div class="item-info">
+          <div class="item-nome">${nome}</div>
+          ${done&&info?'<div class="item-por">✓ '+info.por+' às '+info.hora+'</div>':''}
+        </div>
+      `;
+      secao.appendChild(div);
+    });
+    container.appendChild(secao);
+  });
+
+  // Atualiza progresso
+  const pct = total>0?Math.round(feitos/total*100):0;
+  document.getElementById('progressoTexto').textContent = feitos+' / '+total;
+  document.getElementById('barFill').style.width = pct+'%';
+}
+
+function atualizarQuemMarcou() {
+  const cols = Object.keys(dadosShared.colaboradores||{});
+  if(!cols.length) { document.getElementById('quemMarcou').style.display='none'; return; }
+  document.getElementById('quemMarcou').style.display='block';
+  document.getElementById('listaMarcou').innerHTML = cols.map(n=>'<span class="tag">'+n+'</span>').join('');
+}
+
+async function resetarDia() {
+  if(!confirm('Resetar todo o checklist de hoje?')) return;
+  dadosShared = { itens:{}, colaboradores:{} };
+  await window.storage.set(STORAGE_KEY, JSON.stringify(dadosShared), true);
+  renderChecklist();
+  atualizarQuemMarcou();
+}
+
+function confirmarNome() {
+  const inp = document.getElementById('nomeColaborador');
+  const nome = inp.value.trim();
+  if(!nome){return;}
+  nomeAtual = nome;
+  localStorage.setItem('colaborador_nome', nome);
+  inp.disabled = true;
+  document.getElementById('appContent').style.display='block';
+  carregarDados();
+  setInterval(carregarDados, 30000);
+}
+
+// Init
+document.getElementById('dataHoje').textContent =
+  new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+
+if (nomeAtual) {
+  document.getElementById('nomeColaborador').value = nomeAtual;
+  document.getElementById('nomeColaborador').disabled = true;
+  document.getElementById('appContent').style.display='block';
+  carregarDados();
+  setInterval(carregarDados, 30000);
+}
+</script>
+</body>
+</html>
