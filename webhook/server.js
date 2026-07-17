@@ -1699,7 +1699,7 @@ http.createServer(async (req, res) => {
               lote++;
               try {
                 // Delay de 8 segundos entre lotes para evitar bloqueio
-                if (lote > 1) await new Promise(r=>setTimeout(r,8000));
+                if (lote > 1) { console.log('SEFAZ: aguardando 35s antes do proximo lote...'); await new Promise(r=>setTimeout(r,35000)); }
                 console.log('SEFAZ captura lote '+lote+' NSU='+nsuAtual);
                 const resp = await sefazDistribuicaoDFe(cert.pfxBase64,cert.senha,CNPJ_EMP,nsuAtual,'prod');
                 const cStat = extrairTagXML(resp.xml,'cStat');
