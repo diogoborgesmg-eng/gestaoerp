@@ -731,7 +731,7 @@ async function consultarNFsSEFAZ(nsuForcado) {
       // Mescla: prefere dados completos (docZip), usa resumo (resNFe) quando não tem docZip
       const porChave = {};
       completos.forEach(n => { if(n.chNFe) porChave[n.chNFe]=n; });
-      resumos.forEach(n => { if(n.chNFe && !porChave[n.chNFe]) porChave[n.chNFe]=n; });
+      resumos.forEach(n => { const k=n.chNFe||n.chave; if(k && !porChave[k]){if(!n.chNFe)n.chNFe=k;porChave[k]=n;} });
       const loteNFs = Object.values(porChave);
       console.log(`SEFAZ lote ${lote}: ${resumos.length} resNFe, ${completos.length} docZip, ${loteNFs.length} total`);
       todasNFs.push(...loteNFs);
@@ -882,10 +882,31 @@ function extrairTagXML(xml, tag) {
 }
 
 function parsearNFesDoXML(xmlResp){
-  // Extrai os documentos fiscais (NF-e XML) da resposta da SEFAZ
+  // Extrai dados completos dos resumos resNFe da resposta SEFAZ
   const nfes=[];
-  const matches=xmlResp.matchAll(/<chNFe>(\d{44})<\/chNFe>[\s\S]*?<NSU>(\d+)<\/NSU>/g);
-  for(const m of matches)nfes.push({chave:m[1],nsu:m[2]});
+  const xml=xmlResp.replace(/\r?\n/g,' ');
+  const tag = (x,t) => { const m=x.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>')); return m?m[1].trim():''; };
+  // Tenta resNFe (resumo)
+  const blocos=xml.matchAll(/<resNFe>([\s\S]*?)<\/resNFe>/g);
+  for(const b of blocos){
+    const bloco=b[1];
+    const chNFe=tag(bloco,'chNFe');
+    if(!chNFe||chNFe.length!==44) continue;
+    const cnpjEmit=tag(bloco,'CNPJ');
+    const xNome=tag(bloco,'xNome');
+    const dEmi=tag(bloco,'dEmi')||tag(bloco,'dhEmi')||'';
+    const vNF=parseFloat(tag(bloco,'vNF')||'0');
+    const nNF=tag(bloco,'nNF');
+    // Converte data YYYY-MM-DD para DD/MM/YYYY
+    let dataFmt='';
+    if(dEmi){const[y,m,d]=(dEmi.split('T')[0]).split('-');dataFmt=d+'/'+m+'/'+y;}
+    nfes.push({chNFe,cnpjEmit,emitente:xNome,valor:vNF,data:dataFmt,nNF,_resNFe:true});
+  }
+  // Fallback: chNFe simples
+  if(!nfes.length){
+    const matches=xml.matchAll(/<chNFe>(\d{44})<\/chNFe>/g);
+    for(const m of matches)nfes.push({chNFe:m[1],emitente:'',valor:0,data:'',_resNFe:true});
+  }
   return nfes;
 }
 
