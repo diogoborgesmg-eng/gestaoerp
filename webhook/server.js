@@ -1685,19 +1685,27 @@ http.createServer(async (req, res) => {
           if (!xmlBrutos.length) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem XML salvo. Rode /sefaz-capturar primeiro.'})); return; }
           const ultimo = xmlBrutos[xmlBrutos.length-1];
           const xml = ultimo.xml || '';
-          const idxDocZip = xml.indexOf('docZip');
-          const matchesBrutos = [...xml.matchAll(/docZip/gi)];
-          const matchesTag = [...xml.matchAll(/<[^>]*[Dd]oc[Zz]ip[^>]*>/g)];
-          const amostraDocZip = idxDocZip>=0 ? xml.slice(Math.max(0,idxDocZip-20), idxDocZip+500) : 'NAO ENCONTRADO';
+          const xmlNorm = xml.replace(/\r?\n/g," ");
+          // Testa regex exato do parsearDocZips
+          const matchesFull = [...xmlNorm.matchAll(/<docZip[^>]*schema="([^"]*)"[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+          // Testa regex mais permissivo (sem validar conteudo)
+          const matchesSimples = [...xmlNorm.matchAll(/<docZip[^>]*>/g)];
+          // Testa regex com conteudo diferente
+          const matchesPermissivo = [...xmlNorm.matchAll(/<docZip[^>]*>([\s\S]*?)<\/docZip>/g)];
+          // Pega amostra do primeiro docZip para ver conteudo real
+          const primeiroMatch = matchesPermissivo[0];
+          const conteudoPrimeiro = primeiroMatch ? primeiroMatch[1].slice(0,200) : 'nada';
+          // Verifica se tem chars especiais
+          const charEspecial = primeiroMatch ? [...primeiroMatch[1].slice(0,100)].map(c=>c.charCodeAt(0)).filter(c=>c<32||c>126) : [];
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({
-            xmlLen: xml.length, nsu: ultimo.nsu, cStat: ultimo.cStat,
-            docZipPosicao: idxDocZip,
-            ocorrenciasDocZip: matchesBrutos.length,
-            tagsDocZip: matchesTag.map(m=>m[0]).slice(0,3),
-            amostraDocZip,
-            xmlPos1000: xml.slice(900,1400),
-            xmlPos5000: xml.slice(4900,5400)
+            xmlLen: xml.length, xmlNormLen: xmlNorm.length,
+            matchesFullRegex: matchesFull.length,
+            matchesTagSimples: matchesSimples.length,
+            matchesPermissivo: matchesPermissivo.length,
+            schemasEncontrados: matchesPermissivo.slice(0,5).map(m=>({schema:m[0].match(/schema="([^"]*)"/)?.[1]||'?', conteudoLen:m[1].length, conteudoInicio:m[1].slice(0,50)})),
+            conteudoPrimeiro,
+            charEspecialNoPrimeiro: charEspecial.slice(0,10)
           }, null, 2));
         } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
       })();
