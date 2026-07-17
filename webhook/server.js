@@ -1677,6 +1677,32 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/sefaz-analisar-xml') {
+      (async()=>{
+        try {
+          const {data:d} = await lerBlob();
+          const xmlBrutos = d.sefazXMLBruto || [];
+          if (!xmlBrutos.length) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem XML salvo. Rode /sefaz-capturar primeiro.'})); return; }
+          const ultimo = xmlBrutos[xmlBrutos.length-1];
+          const xml = ultimo.xml || '';
+          const idxDocZip = xml.indexOf('docZip');
+          const matchesBrutos = [...xml.matchAll(/docZip/gi)];
+          const matchesTag = [...xml.matchAll(/<[^>]*[Dd]oc[Zz]ip[^>]*>/g)];
+          const amostraDocZip = idxDocZip>=0 ? xml.slice(Math.max(0,idxDocZip-20), idxDocZip+500) : 'NAO ENCONTRADO';
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({
+            xmlLen: xml.length, nsu: ultimo.nsu, cStat: ultimo.cStat,
+            docZipPosicao: idxDocZip,
+            ocorrenciasDocZip: matchesBrutos.length,
+            tagsDocZip: matchesTag.map(m=>m[0]).slice(0,3),
+            amostraDocZip,
+            xmlPos1000: xml.slice(900,1400),
+            xmlPos5000: xml.slice(4900,5400)
+          }, null, 2));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/delete-sefaz-e-reprocessar') {
       (async()=>{
         try {
