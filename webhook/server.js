@@ -723,6 +723,7 @@ async function consultarNFsSEFAZ(nsuForcado) {
       const ultNSU = extrairTagXML(resp.xml, 'ultNSU');
       const maxNSU = extrairTagXML(resp.xml, 'maxNSU');
       console.log(`SEFAZ lote ${lote} - cStat:${cStat} ultNSU:${ultNSU} maxNSU:${maxNSU}`);
+      if (lote===1) console.log('SEFAZ XML amostra:', resp.xml.slice(0,800).replace(/\n/g,' '));
 
       if (cStat !== '138' && cStat !== '137') break;
       // Usa parsearNFesDoXML para extrair resumo (resNFe) e parsearDocZips para XML completo (docZip)
