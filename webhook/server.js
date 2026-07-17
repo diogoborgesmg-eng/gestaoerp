@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 const https = require('https');
 const http  = require('http');
+const zlib  = require('zlib');
 
 // ── Constantes ───────────────────────────────────────────
 const PORT        = process.env.PORT || 10000;
@@ -1072,11 +1073,13 @@ function parsearNFeXML(xml) {
 }
 
 function descompactarDocZip(docZipBase64) {
-  const buf = Buffer.from(docZipBase64, 'base64');
+  const buf = Buffer.from(docZipBase64.replace(/\s/g,''), 'base64');
   try {
     return zlib.gunzipSync(buf).toString('utf-8');
   } catch(e) {
-    return buf.toString('utf-8'); // ja descomprimido
+    console.log('descompactarDocZip err:', e.message, 'buf len:', buf.length, 'inicio:', buf.slice(0,4).toString('hex'));
+    try { return zlib.inflateRawSync(buf).toString('utf-8'); } catch(e2) {}
+    return buf.toString('utf-8');
   }
 }
 
