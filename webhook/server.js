@@ -1886,6 +1886,25 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/limpar-v8') {
+      (async()=>{
+        try {
+          const todos = await sb('GET','/rest/v1/lancamentos?select=device_id&limit=5000');
+          const v8ids = new Set();
+          if(Array.isArray(todos)) todos.forEach(l=>{
+            const d=l.device_id||'';
+            if(d.startsWith('device_')) v8ids.add(d);
+          });
+          console.log('Limpar v8:', [...v8ids]);
+          for(const did of v8ids){
+            await sb('DELETE','/rest/v1/lancamentos?device_id=eq.'+encodeURIComponent(did),null,{'Prefer':'return=minimal'});
+          }
+          res.writeHead(200);
+          res.end(JSON.stringify({ok:true,removidos:[...v8ids],msg:'Dados v8 removidos. Sincronize o sistema.'}));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      })();
+      return;
+    }
     if (req.url==='/deletar-bonificacoes') {
       (async()=>{
         try {
