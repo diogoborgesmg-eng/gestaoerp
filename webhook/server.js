@@ -1689,10 +1689,8 @@ http.createServer(async (req, res) => {
           const cert = d.dadosFiscais && d.dadosFiscais.certificado;
           if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({ok:false,erro:'Sem certificado'})); return; }
           if (!d.sefazXMLBruto) d.sefazXMLBruto = [];
-          // Responde imediatamente e processa em background
-          res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Capturando todos os lotes em background. Acompanhe nos logs do Render. Aguarde ~5min e acesse /sefaz-processar-xml-salvo'}));
-          // Processa em background
-          (async()=>{
+          // Processa sincronamente - mantém conexão aberta até terminar
+          try {
             let nsuAtual = nsuInicio;
             let lote = 0; let totalSalvos = 0;
             while (lote < 15) {
@@ -1759,8 +1757,9 @@ http.createServer(async (req, res) => {
             } else {
               await wppParaTodos('📄 SEFAZ: nenhuma NF nova encontrada nos '+totalSalvos+' lotes capturados.');
             }
-          })().catch(e=>console.error('SEFAZ bg err:',e.message));
-        } catch(e) { if(!res.headersSent){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));} }
+            res.writeHead(200); res.end(JSON.stringify({ok:true,lotesCapturados:totalSalvos,nfsLancadas:nfesNovas.length,msg:'Concluido!'}));
+          } catch(eb) { if(!res.headersSent){res.writeHead(200);res.end(JSON.stringify({erro:eb.message}));} }
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
       })();
       return;
     }
