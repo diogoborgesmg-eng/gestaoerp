@@ -21669,6 +21669,46 @@ async function puxarLancamentosOutrosDispositivos(diaComercial){
  }catch(e){console.error('Erro ao puxar lancamentos de outros dispositivos:',e.message);return{novos:0};}
 }
 
+
+async function resyncCompleto(){
+  if(!confirm('Isso vai limpar dados locais e recarregar TUDO do Supabase. Continuar?')) return;
+  const cfg=getSupabaseCfg();
+  if(!cfg.url||!cfg.key){alert('Supabase não configurado');return;}
+  try{
+    // Busca todos lancamentos
+    const resp=await fetch(cfg.url+'/rest/v1/lancamentos?order=dia_comercial.asc&limit=5000',{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!resp.ok){alert('Erro ao buscar dados: '+resp.status);return;}
+    const linhas=await resp.json();
+    // Salva config e device mas limpa dados de dias
+    const db=ldb();
+    const keys=Object.keys(db);
+    const dateFmt=/^\d{2}\/\d{2}\/\d{4}$/;
+    // Remove apenas entradas de dias (formato DD/MM/YYYY)
+    keys.forEach(k=>{ if(dateFmt.test(k)) delete db[k]; });
+    // Reconstrói do Supabase
+    const SKIP_DEVICE=['device_1781978915727','device_5suaenu8mr9js7mz','device_zyp5yrbpmr8mefj9'];
+    linhas.forEach(l=>{
+      // Filtra device_ids antigos do v8
+      if(SKIP_DEVICE.includes(l.device_id)) return;
+      const dia=l.dia_comercial;
+      if(!dia) return;
+      if(!db[dia])db[dia]={r:[],c:[]};
+      if(!db[dia].r)db[dia].r=[];
+      if(!db[dia].c)db[dia].c=[];
+      const todos=[...(db[dia].r||[]),...(db[dia].c||[])];
+      if(todos.find(x=>x.id===l.id)) return;
+      const item={id:l.id,d:l.descricao,v:Number(l.valor),cat:l.categoria,seg:l.segmento,dt:dia,_deOutroDispositivo:true};
+      if(l.tipo==='receita') db[dia].r.push(item);
+      else db[dia].c.push(item);
+    });
+    sdb(db);
+    alert('✅ Resync completo! '+linhas.length+' lançamentos carregados.');
+    render();
+  }catch(e){alert('Erro: '+e.message);}
+}
+
 async function atualizarDeOutrosDispositivos(){
  const r=await puxarLancamentosOutrosDispositivos();
  if(r.novos>0){
