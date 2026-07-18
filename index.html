@@ -6815,7 +6815,7 @@ async function limparEstoqueCompleto(){
     d.est=[];
     await fetch(`${cfg.url}/rest/v1/erp_sync`,{
      method:'POST',
-     headers:{'apikey':cfg.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+     headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
      body:JSON.stringify({device_id:cfg.deviceId,data:JSON.stringify(d)})
     });
    }
@@ -21640,8 +21640,8 @@ async function puxarLancamentosOutrosDispositivos(diaComercial){
  if(!cfg.url||!cfg.key)return{novos:0};
  const dia=diaComercial||hj();
  try{
-  const resp=await fetch(`${cfg.url}/rest/v1/lancamentos?dia_comercial=eq.${encodeURIComponent(dia)}`,{
-   headers:{'apikey':cfg.key}
+  const resp=await fetch(`${cfg.url}/rest/v1/lancamentos?dia_comercial=eq.${encodeURIComponent(dia)}&order=id.asc`,{
+   headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
   });
   if(!resp.ok)return{novos:0};
   const linhas=await resp.json();
