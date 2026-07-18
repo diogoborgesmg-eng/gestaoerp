@@ -1167,7 +1167,7 @@ async function lancarEstoqueNFeSefaz(nfe, dados, SB_URL, SB_KEY) {
   if (!dados.itens || dados.itens.length === 0) return 0;
 
   // Busca o blob atual do Supabase
-  const rows = await req2('GET', SB_URL+'/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1', null, {'apikey':SB_KEY});
+  const rows = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=1');
   if (!Array.isArray(rows) || !rows.length) return 0;
   const d = JSON.parse(rows[0].data);
   const deviceId = rows[0].device_id || 'sefaz_auto';
@@ -1416,7 +1416,7 @@ async function importarTransacoesPluggy() {
       } catch(ed) { console.log('Dedup err:', ed.message); }
       // Sincroniza blob para o frontend ver os dados
       try {
-        const todosLanc = await sb('GET', '/rest/v1/lancamentos?select=id,tipo,dia_comercial,valor,descricao,categoria,segmento,device_id&limit=5000');
+        const todosLanc = await sb('GET', '/rest/v1/lancamentos?select=id,tipo,dia_comercial,valor,descricao,categoria,segmento,device_id&order=dia_comercial.desc&limit=10000');
         if (Array.isArray(todosLanc)) {
           const {data:blobData, deviceId:blobDev} = await lerBlob();
           // Agrupa por dia
