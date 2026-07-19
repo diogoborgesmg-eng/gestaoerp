@@ -27573,10 +27573,48 @@ async function autoSyncSupabaseInicial(){
 // Agora 100% manual via botoes na tela de Config.
 // setTimeout(autoSyncSupabaseInicial,2500);
 
+// Migração automática: limpa localStorage v8 e recarrega do Supabase
+(async function migracaoV9(){
+  try {
+    const MIGRATION_KEY = 'erp_migrated_v9_clean';
+    if(localStorage.getItem(MIGRATION_KEY)) return; // já migrou
+    console.log('Iniciando migração v9: limpando dados v8 do localStorage...');
+    const db = ldb();
+    const dateFmt = /^\d{2}\/\d{2}\/\d{4}$/;
+    // Remove TODOS os dias do localStorage para recarregar limpo
+    Object.keys(db).forEach(k => { if(dateFmt.test(k)) delete db[k]; });
+    sdb(db);
+    console.log('localStorage limpo. Carregando do Supabase...');
+    const cfg = getSupabaseCfg();
+    if(cfg.url && cfg.key) {
+      const resp = await fetch(cfg.url+'/rest/v1/lancamentos?order=dia_comercial.asc&limit=5000', {
+        headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+      });
+      if(resp.ok){
+        const linhas = await resp.json();
+        const SKIP = new Set(['device_1781978915727','device_5suaenu8mr9js7mz','device_zyp5yrbpmr8mefj9']);
+        const db2 = ldb();
+        let count = 0;
+        linhas.forEach(l => {
+          if(!l.dia_comercial || SKIP.has(l.device_id||'')) return;
+          const dia = l.dia_comercial;
+          if(!db2[dia]) db2[dia]={r:[],c:[]};
+          const item={id:l.id,d:l.descricao,v:Number(l.valor||0),cat:l.categoria,seg:l.segmento,dt:dia,_sync:true};
+          const arr = l.tipo==='receita' ? db2[dia].r : db2[dia].c;
+          if(!arr.find(x=>x.id===l.id)) { arr.push(item); count++; }
+        });
+        sdb(db2);
+        console.log('Migração v9 concluída:', count, 'lançamentos carregados');
+        localStorage.setItem(MIGRATION_KEY,'1');
+      }
+    }
+  } catch(e){ console.error('Migração v9 erro:',e.message); }
+})().then(()=>{
 render();
 puxarLancamentosOutrosDispositivos(getDia()).then(r=>{if(r.novos>0)render();});
 sincronizarBlobAutomatico();
 setInterval(sincronizarBlobAutomatico, 5*60*1000);
+}).catch(e=>console.error(e));
 setTimeout(checkBotPending,2000);
 setInterval(checkBotPending,30000);
 // Sync inicial do bot
