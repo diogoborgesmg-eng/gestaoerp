@@ -1976,7 +1976,7 @@ http.createServer(async (req, res) => {
           const {data:d, deviceId} = await lerBlob();
           const cert = d.dadosFiscais && d.dadosFiscais.certificado;
           if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
-          const todas = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&dia_comercial=gte.01%2F07%2F2026&select=id,descricao,valor,dia_comercial&order=dia_comercial.asc&limit=200');
+          const todas = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&dia_comercial=like.*%2F07%2F2026&select=id,descricao,valor,dia_comercial&order=dia_comercial.asc&limit=200');
           if (!Array.isArray(todas)||!todas.length) { res.writeHead(200); res.end(JSON.stringify({ok:false,msg:'Nenhuma NF de julho'})); return; }
           const lote = todas.slice(offset, offset+limite);
           if (!lote.length) { res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Concluído! Todas as NFs processadas.',total:todas.length})); return; }
@@ -2014,7 +2014,7 @@ http.createServer(async (req, res) => {
                 let vf='';if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);vf=b.toLocaleDateString('pt-BR');}
                 const id='sefaz_cp_'+chNFe;
                 d.contasPagar.push({id,forn,val:Number(lanc.valor||0),venc:vf,pago:false,_sefaz:true,_estimado:true,chNFe});
-                resultados.push({forn,val:Number(lanc.valor||0),venc:vf,nDup:'única'});
+                resultados.push({forn,val:Number(lanc.valor||0),venc:vf,nDup:'unica'});
               }
               await new Promise(r=>setTimeout(r,2000));
             } catch(en){ console.log('Err:',forn,en.message); resultados.push({forn,erro:en.message}); }
