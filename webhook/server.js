@@ -883,6 +883,58 @@ function extrairTagXML(xml, tag) {
   return '';
 }
 
+
+// Consulta XML completo da NF por chave (procNFe com <dup>)
+async function consultarNFePorChave(certPfx, senha, cnpj, chNFe, ambiente='prod') {
+  const { certPem, keyPem } = carregarCertPFX(certPfx, senha);
+  const cnpjLimpo = cnpj.replace(/[^\d]/g,'');
+  const url = ambiente==='prod'
+    ? 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx'
+    : 'https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
+  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg><distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>${ambiente==='prod'?'1':'2'}</tpAmb><cUFAutor>31</cUFAutor><CNPJ>${cnpjLimpo}</CNPJ><consChNFe><chNFe>${chNFe}</chNFe></consChNFe></distDFeInt></nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  const u = new URL(url);
+  return new Promise((resolve,reject) => {
+    const body = Buffer.from(soapEnv,'utf8');
+    const opts = { hostname:u.hostname, path:u.pathname, method:'POST',
+      headers:{'Content-Type':'application/soap+xml; charset=utf-8','Content-Length':body.length},
+      cert:certPem, key:keyPem, rejectUnauthorized:false };
+    const r = https.request(opts, res => {
+      let d=''; const chunks=[];
+      res.on('data',c=>{d+=c;chunks.push(Buffer.isBuffer(c)?c:Buffer.from(c));});
+      res.on('end',()=>{
+        const enc=res.headers['content-encoding']||'';
+        if(enc.includes('gzip')){
+          try{ resolve({status:res.statusCode,xml:zlib.gunzipSync(Buffer.concat(chunks)).toString('utf-8')}); }
+          catch(eg){ resolve({status:res.statusCode,xml:d}); }
+        } else { resolve({status:res.statusCode,xml:d}); }
+      });
+    });
+    r.on('error',reject); r.write(body); r.end();
+  });
+}
+
+// Extrai parcelas <dup> do procNFe completo
+function extrairParcelas(xmlProcNFe, valorTotal, diaEmissao) {
+  const dups = [...xmlProcNFe.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+  if (!dups.length) {
+    // Sem parcelas: vencimento 30 dias após emissão
+    const pts=(diaEmissao||'').split('/');
+    let venc='';
+    if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);venc=b.toLocaleDateString('pt-BR');}
+    return [{val:Number(valorTotal||0), venc}];
+  }
+  return dups.map(m=>{
+    const bloco=m[0];
+    const tagV=(t)=>{const r=bloco.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+    const nDup=tagV('nDup');
+    const dVenc=tagV('dVenc'); // YYYY-MM-DD
+    const vDup=parseFloat(tagV('vDup')||'0');
+    let vencFmt='';
+    if(dVenc){const[y,m,d]=dVenc.split('-');vencFmt=d+'/'+m+'/'+y;}
+    return {nDup, val:vDup, venc:vencFmt};
+  });
+}
+
 function parsearNFesDoXML(xmlResp){
   // Extrai dados completos dos resumos resNFe da resposta SEFAZ
   const nfes=[];
@@ -1801,16 +1853,20 @@ http.createServer(async (req, res) => {
               await gravarLancamento(idLanc,'custo',dia,'NF - '+(nfe.emitente||'Fornecedor'),
                 detectarGrupoServidor(nfe.emitente||'').catDRE||'🥩 Matéria Prima',nfe.valor,'sefaz_auto');
               // Conta a pagar
-              const idCP = 'sefaz_cp_'+nfe.chNFe;
-              if (!d.contasPagar.find(cp=>cp.id===idCP)) {
-                const venc = nfe.vencimento || (()=>{
-                  const pts=(dia||'').split('/');
-                  if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);return b.toLocaleDateString('pt-BR');}
-                  return '';
-                })();
-                d.contasPagar.push({id:idCP,forn:nfe.emitente||'Fornecedor',val:Number(nfe.valor||0),
-                  venc,pago:false,_sefaz:true,_estimado:!nfe.vencimento,cnpjEmit:nfe.cnpjEmit,chNFe:nfe.chNFe});
-              }
+              // Cria CP para cada parcela real
+              parcelas.forEach((parc,pi)=>{
+                const idCP = 'sefaz_cp_'+nfe.chNFe+(parcelas.length>1?'_p'+(pi+1):'');
+                if (!d.contasPagar.find(cp=>cp.id===idCP)) {
+                  d.contasPagar.push({
+                    id:idCP, forn:nfe.emitente||'Fornecedor',
+                    val:parc.val||Number(nfe.valor||0),
+                    venc:parc.venc||'', pago:false,
+                    _sefaz:true, _estimado:!parc.venc,
+                    nDup:parc.nDup, cnpjEmit:nfe.cnpjEmit, chNFe:nfe.chNFe,
+                    parcela: parcelas.length>1?`${pi+1}/${parcelas.length}`:undefined
+                  });
+                }
+              });
             }
             resultados.push({emitente:nfe.emitente,valor:nfe.valor,dia,bonif:isBonif});
           }
