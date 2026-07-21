@@ -2000,9 +2000,15 @@ http.createServer(async (req, res) => {
               await new Promise(r=>setTimeout(r,2000));
               const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
               const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+              // Descomprime docZips para extrair XML interno com <dup>
+              let xmlInternoTotal = '';
+              const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+              for (const mz of dzMatches) {
+                try { xmlInternoTotal += descompactarDocZip(mz[1].trim()) + '\n'; } catch(ez){}
+              }
               const xmlParaDup = xmlInternoTotal || procXml;
               const dups = [...xmlParaDup.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
-              console.log('Dups encontrados:', dups.length, 'em', xmlInternoTotal?'xml interno':'soap');
+              console.log('procNFe:', forn, 'docZips:', dzMatches.length, 'dups:', dups.length);
               // Remove CPs antigas desta NF
               d.contasPagar = d.contasPagar.filter(c=>!c.chNFe||c.chNFe!==chNFe);
               if (dups.length>0) {
