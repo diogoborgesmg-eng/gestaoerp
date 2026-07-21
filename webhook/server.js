@@ -2000,7 +2000,9 @@ http.createServer(async (req, res) => {
               await new Promise(r=>setTimeout(r,2000));
               const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
               const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-              const dups = [...procXml.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+              const xmlParaDup = xmlInternoTotal || procXml;
+              const dups = [...xmlParaDup.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+              console.log('Dups encontrados:', dups.length, 'em', xmlInternoTotal?'xml interno':'soap');
               // Remove CPs antigas desta NF
               d.contasPagar = d.contasPagar.filter(c=>!c.chNFe||c.chNFe!==chNFe);
               if (dups.length>0) {
