@@ -1909,6 +1909,31 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/debug-nfe/')) {
+      (async()=>{
+        try {
+          const chNFe = decodeURIComponent(req.url.split('/debug-nfe/')[1]);
+          const {data:d} = await lerBlob();
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+          if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
+          const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
+          const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+          const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+          let xmlInterno = '';
+          for (const mz of dzMatches) {
+            try { xmlInterno += descompactarDocZip(mz[1].trim()).slice(0,600)+'\n---\n'; } catch(ez){ xmlInterno += 'ERR:'+ez.message+'\n'; }
+          }
+          const xmlBusca = xmlInterno || procXml;
+          const dups = [...xmlBusca.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+          res.writeHead(200);
+          res.end(JSON.stringify({chNFe,status:proc.status,xmlLen:procXml.length,
+            docZips:dzMatches.length,xmlInternoAmostra:xmlInterno.slice(0,600),
+            dups:dups.length,dupsXml:dups.map(m=>m[0]),
+            soapAmostra:procXml.slice(0,300)},null,2));
+        }catch(e){ res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
