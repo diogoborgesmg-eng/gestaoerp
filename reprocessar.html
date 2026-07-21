@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reprocessar CPs Julho</title>
+<style>
+  body { font-family: monospace; background: #0f0f1a; color: #fff; padding: 20px; max-width: 600px; margin: 0 auto; }
+  h1 { color: #ff6b35; font-size: 1.1rem; }
+  .log { background: #1a1a2e; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 0.8rem; max-height: 400px; overflow-y: auto; }
+  .ok { color: #00cc66; }
+  .err { color: #ff4444; }
+  .info { color: #aaa; }
+  .venc { color: #ff8800; }
+  button { background: #ff6b35; color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-size: 1rem; cursor: pointer; width: 100%; margin-top: 10px; }
+  button:disabled { background: #555; cursor: not-allowed; }
+  .progress { background: #2a2a3e; border-radius: 20px; height: 10px; margin: 10px 0; }
+  .bar { background: linear-gradient(90deg,#ff6b35,#00cc66); height: 10px; border-radius: 20px; transition: width 0.3s; width: 0%; }
+</style>
+</head>
+<body>
+<h1>🔄 Reprocessar Contas a Pagar — Julho 2026</h1>
+<p style="color:#888;font-size:0.8rem">Manifesta ciência e busca parcelas reais de cada NF</p>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div id="status" style="color:#aaa;font-size:0.85rem;margin-bottom:8px">Pronto para iniciar</div>
+<button id="btn" onclick="iniciar()">▶ Iniciar Reprocessamento</button>
+<div class="log" id="log"></div>
+
+<script>
+const BASE = 'https://gestaoerp-webhook.onrender.com';
+let rodando = false;
+
+function log(msg, cls='info') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function iniciar() {
+  if (rodando) return;
+  rodando = true;
+  document.getElementById('btn').disabled = true;
+  document.getElementById('btn').textContent = '⏳ Processando...';
+  document.getElementById('log').innerHTML = '';
+  
+  let offset = 0;
+  let total = null;
+  let cpsGeradas = 0;
+
+  while (true) {
+    try {
+      document.getElementById('status').textContent = `Processando lote offset=${offset}...`;
+      log(`📦 Buscando NFs ${offset+1}-${offset+3}...`);
+      
+      const r = await fetch(`${BASE}/reprocessar-cp-julho?offset=${offset}`);
+      const d = await r.json();
+      
+      if (d.erro) { log('❌ Erro: ' + d.erro, 'err'); break; }
+      
+      if (!total) total = parseInt((d.lote||'').split(' de ')[1]) || 38;
+      
+      // Log das CPs geradas
+      (d.cps||[]).forEach(cp => {
+        if (cp.erro) {
+          log(`  ⚠️ ${cp.forn}: ${cp.erro}`, 'err');
+        } else {
+          log(`  ✅ ${cp.forn} — R$${cp.val?.toFixed(2)} venc: ${cp.venc} ${cp.parcela?'('+cp.parcela+')':''}`, 'ok');
+          cpsGeradas++;
+        }
+      });
+      
+      // Atualiza progresso
+      const atual = parseInt((d.lote||'0').split('-')[1]?.split(' ')[0]) || offset+3;
+      const pct = total ? Math.min(100, Math.round(atual/total*100)) : 0;
+      document.getElementById('bar').style.width = pct+'%';
+      document.getElementById('status').textContent = `${d.lote} — ${cpsGeradas} CPs criadas`;
+      
+      if (!d.temMais || d.msg === 'Concluído!') {
+        log('🎉 Concluído! ' + cpsGeradas + ' CPs criadas no total.', 'ok');
+        document.getElementById('bar').style.width = '100%';
+        document.getElementById('status').textContent = '✅ Concluído! ' + cpsGeradas + ' CPs criadas';
+        break;
+      }
+      
+      offset += 3;
+      // Pequena pausa entre lotes
+      await new Promise(r => setTimeout(r, 1000));
+      
+    } catch(e) {
+      log('❌ Erro de rede: ' + e.message, 'err');
+      log('Aguardando 5s antes de tentar novamente...', 'info');
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+  
+  rodando = false;
+  document.getElementById('btn').disabled = false;
+  document.getElementById('btn').textContent = '▶ Iniciar Novamente';
+}
+</script>
+</body>
+</html>
