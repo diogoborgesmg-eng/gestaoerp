@@ -1976,7 +1976,8 @@ http.createServer(async (req, res) => {
           const {data:d, deviceId} = await lerBlob();
           const cert = d.dadosFiscais && d.dadosFiscais.certificado;
           if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
-          const todas = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&dia_comercial=like.*%2F07%2F2026&select=id,descricao,valor,dia_comercial&order=dia_comercial.asc&limit=200');
+          const todasSefaz = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&select=id,descricao,valor,dia_comercial&order=dia_comercial.asc&limit=500');
+          const todas = (Array.isArray(todasSefaz)?todasSefaz:[]).filter(l=>(l.dia_comercial||'').endsWith('/07/2026'));
           if (!Array.isArray(todas)||!todas.length) { res.writeHead(200); res.end(JSON.stringify({ok:false,msg:'Nenhuma NF de julho'})); return; }
           const lote = todas.slice(offset, offset+limite);
           if (!lote.length) { res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Concluído! Todas as NFs processadas.',total:todas.length})); return; }
@@ -1985,7 +1986,7 @@ http.createServer(async (req, res) => {
           for (const lanc of lote) {
             const chNFe = (lanc.id||'').replace('nf_','');
             if (!chNFe||chNFe.length!==44) continue;
-            const forn = (lanc.descricao||'').replace(/^NF \d+ - /,'').trim();
+            const forn = (lanc.descricao||'').replace(/^NF[\s\d]* - /,'').trim()||lanc.descricao||'?';
             console.log('CP julho offset='+offset+':', forn, lanc.valor);
             try {
               const mr = await manifestarCiencia(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
