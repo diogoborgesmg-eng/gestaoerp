@@ -1967,6 +1967,67 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/reprocessar-cp-julho') {
+      (async()=>{
+        try {
+          const {data:d, deviceId} = await lerBlob();
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+          if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
+          res.writeHead(200,{'Content-Type':'application/json','Transfer-Encoding':'chunked'});
+          const nfsJulho = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&dia_comercial=gte.01%2F07%2F2026&select=id,descricao,valor,dia_comercial&limit=200');
+          if (!Array.isArray(nfsJulho)||!nfsJulho.length) { res.end(JSON.stringify({ok:false,msg:'Nenhuma NF de julho'})); return; }
+          console.log('Reprocessar CPs julho:', nfsJulho.length, 'NFs');
+          if (!d.contasPagar) d.contasPagar = [];
+          // Remove CPs estimadas de julho
+          d.contasPagar = d.contasPagar.filter(cp => !(cp._sefaz && cp._estimado && (cp.venc||'').includes('/07/2026')));
+          const resultados = [];
+          for (const lanc of nfsJulho) {
+            const chNFe = (lanc.id||'').replace('nf_','');
+            if (!chNFe||chNFe.length!==44) continue;
+            const forn = (lanc.descricao||'').replace(/^NF \d+ - /,'').trim();
+            console.log('Processando:', forn, lanc.valor);
+            try {
+              const mr = await manifestarCiencia(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
+              const mrXml = mr.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+              const cStat = (mrXml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
+              console.log('Ciência:', forn, cStat);
+              await new Promise(r=>setTimeout(r,3000));
+              const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
+              const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+              const dups = [...procXml.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+              console.log('Parcelas:', forn, dups.length+'x');
+              if (dups.length>0) {
+                dups.forEach((m,pi)=>{
+                  const b=m[0];
+                  const tg=(t)=>{const r=b.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+                  const dVenc=tg('dVenc');const vDup=parseFloat(tg('vDup')||'0');const nDup=tg('nDup');
+                  let vf='';if(dVenc){const[y,mm,dd]=dVenc.split('-');vf=dd+'/'+mm+'/'+y;}
+                  const id='sefaz_cp_'+chNFe+(dups.length>1?'_p'+(pi+1):'');
+                  if(!d.contasPagar.find(c=>c.id===id)){
+                    d.contasPagar.push({id,forn,val:vDup,venc:vf,pago:false,_sefaz:true,_estimado:false,nDup,chNFe,
+                      parcela:dups.length>1?`${pi+1}/${dups.length}`:undefined});
+                  }
+                  resultados.push({forn,val:vDup,venc:vf,parcela:nDup});
+                });
+              } else {
+                const id='sefaz_cp_'+chNFe;
+                if(!d.contasPagar.find(c=>c.id===id)){
+                  const pts=(lanc.dia_comercial||'').split('/');
+                  let vf='';if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);vf=b.toLocaleDateString('pt-BR');}
+                  d.contasPagar.push({id,forn,val:Number(lanc.valor||0),venc:vf,pago:false,_sefaz:true,_estimado:true,chNFe});
+                  resultados.push({forn,val:Number(lanc.valor||0),venc:vf,parcela:'única'});
+                }
+              }
+              await new Promise(r=>setTimeout(r,4000));
+            } catch(en){ console.log('Err:',forn,en.message); }
+          }
+          await salvarBlob(d,deviceId);
+          console.log('Concluído:', resultados.length, 'CPs criadas');
+          res.end(JSON.stringify({ok:true,nfs:nfsJulho.length,cps:resultados.length,resultados},null,2));
+        } catch(e){ if(!res.headersSent){res.writeHead(200);} res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/limpar-v8') {
       (async()=>{
         try {
