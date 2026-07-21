@@ -1650,6 +1650,10 @@ setInterval(async () => {
 
 // ── Servidor HTTP ────────────────────────────────────────
 http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type,apikey,Authorization');
+  if (req.method==='OPTIONS') { res.writeHead(204); res.end(); return; }
   // Rotas GET
   if (req.method==='GET') {
     if (req.url==='/') { res.writeHead(200); res.end(JSON.stringify({status:'ok v9'})); return; }
