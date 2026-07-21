@@ -1934,6 +1934,57 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/importar-xml-nfe' && req.method==='POST') {
+      let body='';
+      req.on('data',c=>body+=c);
+      req.on('end',async()=>{
+        try {
+          const {xml} = JSON.parse(body);
+          if (!xml) { res.writeHead(200); res.end(JSON.stringify({erro:'xml obrigatorio'})); return; }
+          // Extrai chNFe
+          const chNFe = (xml.match(/<chNFe>([\d]{44})<\/chNFe>/)||[])[1] ||
+                        (xml.match(/Id="NFe([\d]{44})"/)||[])[1];
+          if (!chNFe) { res.writeHead(200); res.end(JSON.stringify({erro:'chNFe nao encontrada'})); return; }
+          // Extrai dados básicos
+          const tag = (t) => { const r=xml.match(new RegExp('<'+t+'[^>]*>([^<]*)<\/'+t+'>'));return r?r[1].trim():''; };
+          const xNome = tag('xNome');
+          const vNF = parseFloat(tag('vNF')||'0');
+          const dhEmi = (tag('dhEmi')||'').split('T')[0];
+          let dataFmt='';
+          if(dhEmi){const[y,m,d]=dhEmi.split('-');dataFmt=d+'/'+m+'/'+y;}
+          // Extrai parcelas <dup>
+          const dups = [...xml.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+          const {data:d, deviceId} = await lerBlob();
+          if (!d.contasPagar) d.contasPagar = [];
+          // Remove CPs antigas desta chNFe
+          d.contasPagar = d.contasPagar.filter(cp=>cp.chNFe!==chNFe);
+          const cpsGeradas = [];
+          if (dups.length>0) {
+            dups.forEach((m,pi)=>{
+              const bl=m[0];
+              const tg=(t)=>{const r=bl.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+              const dVenc=tg('dVenc');const vDup=parseFloat(tg('vDup')||'0');const nDup=tg('nDup');
+              let vf='';if(dVenc){const[y,mm,dd]=dVenc.split('-');vf=dd+'/'+mm+'/'+y;}
+              const id='sefaz_cp_'+chNFe+(dups.length>1?'_p'+(pi+1):'');
+              d.contasPagar.push({id,forn:xNome,val:vDup,venc:vf,pago:false,_sefaz:true,_estimado:false,
+                nDup,chNFe,parcela:dups.length>1?`${pi+1}/${dups.length}`:undefined});
+              cpsGeradas.push({nDup,val:vDup,venc:vf});
+            });
+          } else {
+            // Sem dup - CP única
+            const id='sefaz_cp_'+chNFe;
+            d.contasPagar.push({id,forn:xNome,val:vNF,pago:false,_sefaz:true,chNFe});
+            cpsGeradas.push({nDup:'unica',val:vNF,venc:''});
+          }
+          // Garante lançamento no DRE
+          await gravarLancamento('nf_'+chNFe,'custo',dataFmt,'NF - '+xNome,'🥩 Matéria Prima',vNF,'sefaz_auto').catch(()=>{});
+          await salvarBlob(d,deviceId);
+          res.writeHead(200);
+          res.end(JSON.stringify({ok:true,chNFe,emitente:xNome,valor:vNF,data:dataFmt,parcelas:cpsGeradas},null,2));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      });
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
