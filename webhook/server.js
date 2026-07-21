@@ -818,17 +818,42 @@ async function consultarNFsSEFAZ(nsuForcado) {
       if (nfe.chNFe && cert.pfxBase64) {
         manifestarCiencia(cert.pfxBase64, cert.senha, CNPJ_EMP, nfe.chNFe, 'prod')
           .then(async mr => {
-            const cStatM = (mr.xml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
-            console.log('Ciência:', nfe.emitente, 'cStat:', cStatM);
+            const mrXml = mr.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+            const cStatM = (mrXml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
+            const xMotM = (mrXml.match(/<xMotivo>([^<]*)<\/xMotivo>/)||[])[1]||'';
+            console.log('Ciência:', nfe.emitente, 'cStat:', cStatM, '|', xMotM);
             await new Promise(r=>setTimeout(r,3000));
             try {
               const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, CNPJ_EMP, nfe.chNFe, 'prod');
-              const completas = parsearDocZips(proc.xml);
+              const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+              console.log('procNFe xmlLen:', procXml.length, 'inicio:', procXml.slice(0,100));
+              const completas = parsearDocZips(procXml);
               for (const nfeC of completas) {
                 if (!nfeC.chNFe) continue;
                 console.log('procNFe:', nfeC.emitente, 'itens:', nfeC.itens?.length||0, 'venc:', nfeC.vencimento||'-');
                 if (nfeC.itens?.length) await lancarEstoqueNFeSefaz(nfeC,nfeC,SB_URL,SB_KEY).catch(()=>{});
-                if (nfeC.vencimento) {
+                // Extrai parcelas reais do procNFe
+                const xmlProc = nfeC._xmlCompleto || procXml;
+                const dups = [...xmlProc.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+                console.log('Parcelas:', nfe.emitente, dups.length+'x');
+                if (dups.length > 0) {
+                  // Remove CP estimada e cria CPs com parcelas reais
+                  const cpIdx = data.contasPagar.findIndex(c=>c.id==='sefaz_cp_'+nfeC.chNFe);
+                  if (cpIdx>=0) data.contasPagar.splice(cpIdx,1);
+                  dups.forEach((m,pi)=>{
+                    const bloco=m[0];
+                    const tagD=(t)=>{const r=bloco.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+                    const dVenc=tagD('dVenc');const vDup=parseFloat(tagD('vDup')||'0');const nDup=tagD('nDup');
+                    let vencFmt='';
+                    if(dVenc){const[y,mm,dd]=dVenc.split('-');vencFmt=dd+'/'+mm+'/'+y;}
+                    const idCP='sefaz_cp_'+nfeC.chNFe+(dups.length>1?'_p'+(pi+1):'');
+                    if(!data.contasPagar.find(c=>c.id===idCP)){
+                      data.contasPagar.push({id:idCP,forn:nfeC.emitente||'?',val:vDup,venc:vencFmt,
+                        pago:false,_sefaz:true,_estimado:false,nDup,cnpjEmit:nfeC.cnpjEmit,chNFe:nfeC.chNFe,
+                        parcela:dups.length>1?`${pi+1}/${dups.length}`:undefined});
+                    }
+                  });
+                } else if (nfeC.vencimento) {
                   const cp = data.contasPagar.find(c=>c.id==='sefaz_cp_'+nfeC.chNFe);
                   if (cp) { cp.venc=nfeC.vencimento; cp._estimado=false; }
                 }
