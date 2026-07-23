@@ -2285,6 +2285,7 @@ function abrirPluggy(){
   let body='';
   req.on('data',c=>body+=c);
   req.on('end', async()=>{
+    console.log('POST recebido:', req.url, 'body len:', body.length, 'inicio:', body.slice(0,100));
     try {
       // Ignora body vazio (health checks do Render)
       if (!body || !body.trim()) { res.writeHead(200); res.end('ok'); return; }
