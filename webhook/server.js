@@ -2303,14 +2303,23 @@ function abrirPluggy(){
       const ev = JSON.parse(body);
 
       // Webhook Evolution API (WhatsApp)
-      if (ev.event && ['messages.upsert','message.upsert'].includes(ev.event)) {
+      const evLower = (ev.event||'').toLowerCase().replace(/_/g,'.');
+      if (evLower.includes('messages.upsert') || evLower.includes('message.upsert')) {
         const msg = ev.data;
-        if (!msg||!msg.key||!msg.key.remoteJid||!msg.key.remoteJid.includes('@g.us')) { res.writeHead(200); res.end('ok'); return; }
-        const grupoId = msg.key.remoteJid;
-        global._ultimoGrupoId = grupoId;
-        if (!msg.key.fromMe) {
-          processarMensagemBot(msg, grupoId).catch(e=>console.error('Bot err:',e.message));
+        const msgs = ev.data?.messages || (Array.isArray(ev.data) ? ev.data : [ev.data]);
+        for (const msgItem of msgs) {
+          if (!msgItem||!msgItem.key||!msgItem.key.remoteJid) continue;
+          const jid = msgItem.key.remoteJid;
+          const isGroup = jid.includes('@g.us');
+          const isDirect = jid.includes('@s.whatsapp.net');
+          if (!isGroup && !isDirect) continue;
+          if (isGroup) global._ultimoGrupoId = jid;
+          console.log('Bot msg:', isGroup?'grupo':'direto', jid.slice(0,20));
+          if (!msgItem.key.fromMe) {
+            processarMensagemBot(msgItem, isGroup?jid:null).catch(e=>console.error('Bot err:',e.message));
+          }
         }
+        // handled above
         res.writeHead(200); res.end('ok');
         return;
       }
