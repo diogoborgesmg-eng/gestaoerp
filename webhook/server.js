@@ -1893,10 +1893,16 @@ http.createServer(async (req, res) => {
           }
           const xmlBusca = xmlInterno || procXml;
           const dups = [...xmlBusca.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+          const dupIdx = xmlBusca.indexOf('<dup>');
+          const cobrIdx = xmlBusca.indexOf('<cobr>');
           res.writeHead(200);
           res.end(JSON.stringify({chNFe,status:proc.status,xmlLen:procXml.length,
-            docZips:dzMatches.length,xmlInternoAmostra:xmlInterno.slice(0,600),
-            dups:dups.length,dupsXml:dups.map(m=>m[0]),
+            docZips:dzMatches.length,
+            xmlInternoLen:xmlInterno.length,
+            xmlInternoAmostra:xmlInterno.slice(0,600),
+            xmlInternoFim:xmlInterno.slice(-500),
+            dupIdx, cobrIdx,
+            duplicados:dups.length,dupsXml:dups.map(m=>m[0]),
             soapAmostra:procXml.slice(0,300)},null,2));
         }catch(e){ res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
       })();
