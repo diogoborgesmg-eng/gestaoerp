@@ -2043,13 +2043,9 @@ http.createServer(async (req, res) => {
             const forn = (lanc.descricao||'').replace(/^NF[\s\d]* - /,'').trim()||lanc.descricao||'?';
             console.log('CP julho offset='+offset+':', forn, lanc.valor);
             try {
-              const mr = await manifestarCiencia(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
-              const mrXml = mr.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-              const cStat = (mrXml.match(/<cStat>(\d+)<\/cStat>/)||[])[1];
-              console.log('Ciência:', forn, cStat);
-              await new Promise(r=>setTimeout(r,2000));
               const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,chNFe,'prod');
               const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+              console.log('procNFe:', forn, 'status:', proc.status, 'len:', procXml.length);
               // Descomprime docZips para extrair XML interno com <dup>
               let xmlInternoTotal = '';
               const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
