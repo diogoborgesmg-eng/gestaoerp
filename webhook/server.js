@@ -1889,7 +1889,7 @@ http.createServer(async (req, res) => {
           const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
           let xmlInterno = '';
           for (const mz of dzMatches) {
-            try { xmlInterno += descompactarDocZip(mz[1].trim()).slice(0,600)+'\n---\n'; } catch(ez){ xmlInterno += 'ERR:'+ez.message+'\n'; }
+            try { xmlInterno += descompactarDocZip(mz[1].trim())+'\n---\n'; } catch(ez){ xmlInterno += 'ERR:'+ez.message+'\n'; }
           }
           const xmlBusca = xmlInterno || procXml;
           const dups = [...xmlBusca.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
