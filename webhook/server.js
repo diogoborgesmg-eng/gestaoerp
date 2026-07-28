@@ -1062,21 +1062,21 @@ async function consultarNFeByChave(pfxBase64, senha, cnpj, chNFe, ambiente) {
   const cUF = '31'; // MG
   const tpAmb = ambiente === 'prod' ? '1' : '2';
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?>
+<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+<soap12:Body>
+<nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+<nfeDadosMsg>
 <distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
 <tpAmb>${tpAmb}</tpAmb>
 <cUFAutor>${cUF}</cUFAutor>
 <CNPJ>${cnpj}</CNPJ>
-<consChNFe>
-<chNFe>${chNFe}</chNFe>
-</consChNFe>
+<consChNFe><chNFe>${chNFe}</chNFe></consChNFe>
 </distDFeInt>
-</nfeDadosMsg>`;
-
-  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?>
-<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-<soap12:Body>${xml}</soap12:Body>
+</nfeDadosMsg>
+</nfeDistDFeInteresse>
+</soap12:Body>
+</soap12:Body>
 </soap12:Envelope>`;
 
   const url = 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
