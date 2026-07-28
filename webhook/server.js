@@ -1048,63 +1048,31 @@ async function manifestarCiencia(certPfx, senha, cnpj, chNFe, ambiente='prod') {
   });
 }
 
-async function consultarNFeByChave(pfxBase64, senha, cnpj, chNFe, ambiente) {
-  const forge = getForge();
-  const pfxDer = forge.util.decode64(pfxBase64);
-  const p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(pfxDer), senha);
-  let cert = null, key = null;
-  p12.safeContents.forEach(sc => sc.safeBags.forEach(bag => {
-    if (bag.type === forge.pki.oids.pkcs8ShroudedKeyBag || bag.type === forge.pki.oids.keyBag) key = bag.key;
-    if (bag.type === forge.pki.oids.certBag) cert = bag.cert;
-  }));
-  const certPem = forge.pki.certificateToPem(cert);
-  const keyPem = forge.pki.privateKeyToPem(key);
-  const cUF = '31'; // MG
-  const tpAmb = ambiente === 'prod' ? '1' : '2';
-
-  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?>
-<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-<soap12:Body>
-<nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
-<nfeDadosMsg>
-<distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
-<tpAmb>${tpAmb}</tpAmb>
-<cUFAutor>${cUF}</cUFAutor>
-<CNPJ>${cnpj}</CNPJ>
-<consChNFe><chNFe>${chNFe}</chNFe></consChNFe>
-</distDFeInt>
-</nfeDadosMsg>
-</nfeDistDFeInteresse>
-</soap12:Body>
-</soap12:Body>
-</soap12:Envelope>`;
-
-  const url = 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
-  const https = require('https');
-  const tls = require('tls');
-  const ctx = tls.createSecureContext({ cert: certPem, key: keyPem });
-
-  return new Promise((resolve, reject) => {
-    const body = Buffer.from(soapEnv, 'utf8');
-    const opts = {
-      hostname: 'www1.nfe.fazenda.gov.br',
-      path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/soap+xml; charset=utf-8',
-        'Content-Length': body.length,
-        'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse'
-      },
-      secureContext: ctx
-    };
-    const req = https.request(opts, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ xml: data, status: res.statusCode }));
+async function consultarNFeByChave(pfxBase64, senha, cnpj, chNFe, ambiente='prod') {
+  const {certPem, keyPem} = carregarCertPFX(pfxBase64, senha);
+  const cnpjLimpo = cnpj.replace(/[^\d]/g,'');
+  const tpAmb = ambiente==='prod' ? '1' : '2';
+  const xmlBody = `<distDFeInt versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>${tpAmb}</tpAmb><cUFAutor>31</cUFAutor><CNPJ>${cnpjLimpo}</CNPJ><consChNFe><chNFe>${chNFe}</chNFe></consChNFe></distDFeInt>`;
+  const soapEnv = `<?xml version="1.0" encoding="UTF-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg>${xmlBody}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  const url = ambiente==='prod' ? 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx' : 'https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
+  const u = new URL(url);
+  return new Promise((resolve,reject) => {
+    const body = Buffer.from(soapEnv,'utf8');
+    const opts = {hostname:u.hostname, path:u.pathname, method:'POST',
+      headers:{'Content-Type':'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse"','Content-Length':body.length},
+      cert:certPem, key:keyPem, rejectUnauthorized:false};
+    const r = https.request(opts, res => {
+      let d=''; const chunks=[];
+      res.on('data',c=>{d+=c;chunks.push(Buffer.isBuffer(c)?c:Buffer.from(c));});
+      res.on('end',()=>{
+        const enc=res.headers['content-encoding']||'';
+        if(enc.includes('gzip')){
+          try{ resolve({status:res.statusCode,xml:zlib.gunzipSync(Buffer.concat(chunks)).toString('utf-8')}); }
+          catch(eg){ resolve({status:res.statusCode,xml:d}); }
+        } else { resolve({status:res.statusCode,xml:d}); }
+      });
     });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
+    r.on('error',reject); r.write(body); r.end();
   });
 }
 
