@@ -2026,7 +2026,7 @@ http.createServer(async (req, res) => {
         try {
           const params = new URL('http://x'+req.url).searchParams;
           const offset = parseInt(params.get('offset')||'0');
-          const limite = 3; // 3 NFs por chamada (~20 segundos)
+          const limite = parseInt(params.get('limite')||'3');
           const {data:d, deviceId} = await lerBlob();
           const cert = d.dadosFiscais && d.dadosFiscais.certificado;
           if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
@@ -2085,7 +2085,7 @@ http.createServer(async (req, res) => {
           res.end(JSON.stringify({
             ok:true, lote:`${offset+1}-${Math.min(offset+limite,todas.length)} de ${todas.length}`,
             cps:resultados, temMais,
-            proximaRota: temMais ? `/reprocessar-cp-julho?offset=${proximo}` : null,
+            proximaRota: temMais ? `/reprocessar-cp-julho?offset=${proximo}&limite=${limite}` : null,
             msg: temMais ? `Rode: /reprocessar-cp-julho?offset=${proximo}` : 'Concluído!'
           },null,2));
         } catch(e){ if(!res.headersSent){res.writeHead(200);} res.end(JSON.stringify({erro:e.message})); }
