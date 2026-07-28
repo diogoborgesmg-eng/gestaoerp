@@ -52,7 +52,7 @@ async function iniciar() {
       document.getElementById('status').textContent = `Processando lote offset=${offset}...`;
       log(`📦 Buscando NFs ${offset+1}-${offset+3}...`);
       
-      const r = await fetch(`${BASE}/reprocessar-cp-julho?offset=${offset}`);
+      const r = await fetch(`${BASE}/reprocessar-cp-julho?offset=${offset}&limite=2`);
       const d = await r.json();
       
       if (d.erro) { log('❌ Erro: ' + d.erro, 'err'); break; }
@@ -84,7 +84,7 @@ async function iniciar() {
       
       offset += 3;
       // Pequena pausa entre lotes
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 5000));
       
     } catch(e) {
       log('❌ Erro de rede: ' + e.message, 'err');
