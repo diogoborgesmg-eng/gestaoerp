@@ -1571,7 +1571,55 @@ function classificarPluggy(tx) {
   return '🔄 Outros';
 }
 
+
+async function processarFilaNFe() {
+  try {
+    const {data:d, deviceId} = await lerBlob();
+    const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+    if (!cert||!cert.pfxBase64||!d.filaNFe||!d.filaNFe.length) return;
+    if (!d.contasPagar) d.contasPagar = [];
+    const nfe = d.filaNFe.shift();
+    if (!nfe||!nfe.chNFe) { await salvarBlob(d,deviceId); return; }
+    console.log('Fila NFe:', nfe.emitente, nfe.chNFe.slice(0,10));
+    try {
+      const proc = await consultarNFeByChave(cert.pfxBase64,cert.senha,CNPJ_EMP,nfe.chNFe,'prod');
+      const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+      const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+      let xmlInterno = '';
+      for (const mz of dzMatches) { try { xmlInterno += descompactarDocZip(mz[1].trim())+'\n'; } catch(ez){} }
+      const dups = [...(xmlInterno||procXml).matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+      d.contasPagar = d.contasPagar.filter(cp=>cp.chNFe!==nfe.chNFe);
+      if (dups.length > 0) {
+        console.log('Fila NFe parcelas:', nfe.emitente, dups.length+'x');
+        dups.forEach((m,pi)=>{
+          const bl=m[0];
+          const tg=(t)=>{const r=bl.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+          const dVenc=tg('dVenc');const vDup=parseFloat(tg('vDup')||'0');const nDup=tg('nDup');
+          let vf='';if(dVenc){const[y,mm,dd]=dVenc.split('-');vf=dd+'/'+mm+'/'+y;}
+          const id='sefaz_cp_'+nfe.chNFe+(dups.length>1?'_p'+(pi+1):'');
+          if(!d.contasPagar.find(cp=>cp.id===id))
+            d.contasPagar.push({id,forn:nfe.emitente,val:vDup,venc:vf,pago:false,_sefaz:true,_estimado:false,nDup,chNFe:nfe.chNFe,parcela:dups.length>1?`${pi+1}/${dups.length}`:undefined});
+        });
+      } else {
+        const pts=(nfe.data||'').split('/');
+        let vf='';if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);vf=b.toLocaleDateString('pt-BR');}
+        const id='sefaz_cp_'+nfe.chNFe;
+        if(!d.contasPagar.find(cp=>cp.id===id))
+          d.contasPagar.push({id,forn:nfe.emitente,val:Number(nfe.valor||0),venc:vf,pago:false,_sefaz:true,_estimado:true,chNFe:nfe.chNFe});
+      }
+    } catch(en) { console.log('Fila NFe err:', en.message, '- devolvendo'); d.filaNFe.push(nfe); }
+    await salvarBlob(d,deviceId);
+    console.log('Fila NFe: restam', d.filaNFe.length);
+  } catch(e) { console.log('Fila NFe fatal:', e.message); }
+}
+
 // ── Agendador ─────────────────────────────────────────────
+// A cada 2h (entre 5h e 23h Brasília): processa 1 NF da fila
+setInterval(()=>{
+  const h=(new Date().getUTCHours()-3+24)%24;
+  if(h>=5&&h<=23) processarFilaNFe().catch(()=>{});
+}, 2*60*60*1000);
+
 let _ultimoSefaz = '', _ultimoSaldo = '', _ultimoPDF = '', _ultimoAlerta = '';
 let _saldoDebounce = null;
 
