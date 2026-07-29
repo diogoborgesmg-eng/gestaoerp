@@ -2023,6 +2023,23 @@ http.createServer(async (req, res) => {
       });
       return;
     }
+    if (req.url==='/reclassificar-pluggy') {
+      (async()=>{
+        try {
+          const todos = await sb('GET','/rest/v1/lancamentos?device_id=eq.pluggy_auto&select=id,descricao,categoria&limit=2000');
+          if (!Array.isArray(todos)) { res.writeHead(200); res.end(JSON.stringify({erro:'sem dados'})); return; }
+          let atualizados = 0;
+          for (const l of todos) {
+            const novacat = classificarPluggy({description:l.descricao, category:''});
+            if (novacat === '__IGNORAR__' || novacat === l.categoria) continue;
+            await sb('PATCH','/rest/v1/lancamentos?id=eq.'+encodeURIComponent(l.id),{categoria:novacat},{'Prefer':'return=minimal'});
+            atualizados++;
+          }
+          res.writeHead(200); res.end(JSON.stringify({ok:true,total:todos.length,atualizados}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
