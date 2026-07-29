@@ -2030,8 +2030,19 @@ http.createServer(async (req, res) => {
           if (!Array.isArray(todos)) { res.writeHead(200); res.end(JSON.stringify({erro:'sem dados'})); return; }
           let atualizados = 0;
           for (const l of todos) {
-            const novacat = classificarPluggy({description:l.descricao, category:''});
-            if (novacat === '__IGNORAR__' || novacat === l.categoria) continue;
+            const desc = (l.descricao||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            let novacat = null;
+            if (desc.includes('rendimento') && desc.includes('aporte')) novacat = '__IGNORAR__';
+            else if (desc.includes('entregador')||desc.includes('motoboy')) novacat = '👥 RH / Mão de Obra';
+            else if (desc.includes('diaria')||desc.includes('diaria')) novacat = '👥 RH / Mão de Obra';
+            else if (desc.includes('rodrigo nascimento')||desc.includes('renata cristine')||
+                     desc.includes('laura cecilia')||desc.includes('maria eduarda ribeir')||
+                     desc.includes('joao vitor')||desc.includes('isabela couto')||
+                     desc.includes('sandra cristina')) novacat = '👥 RH / Mão de Obra';
+            else if (desc.includes('mensalidade de seguro')||desc.includes('seguro de vida')) novacat = '🏢 Custos Fixos';
+            else if (desc.includes('capitalizacao')||desc.includes('capitalizacao')) novacat = '🏢 Custos Fixos';
+            else if (desc.includes('wilson jose')||desc.includes('wilson jose')) novacat = '🥩 Matéria Prima';
+            if (!novacat || novacat === '__IGNORAR__' || novacat === l.categoria) continue;
             await sb('PATCH','/rest/v1/lancamentos?id=eq.'+encodeURIComponent(l.id),{categoria:novacat},{'Prefer':'return=minimal'});
             atualizados++;
           }
