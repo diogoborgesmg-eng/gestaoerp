@@ -1551,7 +1551,7 @@ function classificarPluggy(tx) {
   if (desc.includes('juro')||desc.includes('encargo')) return '⚠️ Juros/Multa';
   // RH via PIX - nomes e palavras-chave conhecidas
   if (desc.includes('diaria')||desc.includes('diária')) return '👥 RH / Mão de Obra';
-  if (desc.includes('wilson jose')||desc.includes('wilson josé')) return '👥 RH / Mão de Obra';
+  if (desc.includes('wilson jose')||desc.includes('wilson josé')) return '🥩 Matéria Prima'; // carvão
   if (desc.includes('entregador')||desc.includes('motoboy')) return '👥 RH / Mão de Obra';
   if (desc.includes('pix')||desc.startsWith('deb pix')||desc.startsWith('transferencia | pix')) return '🔄 PIX Enviado';
 
