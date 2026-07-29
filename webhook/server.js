@@ -1549,8 +1549,14 @@ function classificarPluggy(tx) {
   if (desc.startsWith('tar ')||desc.includes('tarifa')||desc.includes('ccf')||desc.includes('mensalidade maquininha')) return '🏦 Tarifas Bancárias';
   if (desc.includes('iof')) return '💳 Taxas/Impostos';
   if (desc.includes('juro')||desc.includes('encargo')) return '⚠️ Juros/Multa';
-  // RH via PIX - nomes e palavras-chave conhecidas
+  // RH via PIX e débitos
   if (desc.includes('diaria')||desc.includes('diária')) return '👥 RH / Mão de Obra';
+  if (desc.includes('entregador')||desc.includes('motoboy')) return '👥 RH / Mão de Obra';
+  if (desc.includes('rodrigo nascimento')||desc.includes('renata cristine')||desc.includes('laura cecilia')||
+      desc.includes('maria eduarda')||desc.includes('joao vitor')||desc.includes('isabela couto')||
+      desc.includes('sandra cristina')) return '👥 RH / Mão de Obra';
+  // Custos fixos
+  if (desc.includes('seguro')||desc.includes('capitalizacao')||desc.includes('capitaliza')) return '🏢 Custos Fixos';
   if (desc.includes('wilson jose')||desc.includes('wilson josé')) return '🥩 Matéria Prima'; // carvão
   if (desc.includes('entregador')||desc.includes('motoboy')) return '👥 RH / Mão de Obra';
   if (desc.includes('pix')||desc.startsWith('deb pix')||desc.startsWith('transferencia | pix')) return '🔄 PIX Enviado';
