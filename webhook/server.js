@@ -815,9 +815,9 @@ async function consultarNFsSEFAZ(nsuForcado) {
       }
 
       // 4. Adiciona NF à fila de consulta de parcelas (processada a cada 2h)
-      if (!d.filaNFe) d.filaNFe = [];
-      if (nfe.chNFe && !d.filaNFe.find(f=>f.chNFe===nfe.chNFe)) {
-        d.filaNFe.push({chNFe:nfe.chNFe, emitente:nfe.emitente||'?', valor:nfe.valor, data:nfe.data});
+      if (!data.filaNFe) data.filaNFe = [];
+      if (nfe.chNFe && !data.filaNFe.find(f=>f.chNFe===nfe.chNFe)) {
+        data.filaNFe.push({chNFe:nfe.chNFe, emitente:nfe.emitente||'?', valor:nfe.valor, data:nfe.data});
         console.log('Fila NFe: adicionado', nfe.emitente, nfe.chNFe.slice(0,10));
       }
       if (false && nfe.chNFe && cert.pfxBase64) {
