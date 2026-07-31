@@ -2057,6 +2057,35 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/recriar-cp-sefaz') {
+      (async()=>{
+        try {
+          const nfLanc = await sb('GET','/rest/v1/lancamentos?device_id=eq.sefaz_auto&select=id,descricao,valor,dia_comercial&limit=500');
+          if (!Array.isArray(nfLanc)) { res.writeHead(200); res.end(JSON.stringify({erro:'sem dados'})); return; }
+          const {data:d, deviceId} = await lerBlob();
+          if (!d.contasPagar) d.contasPagar = [];
+          let criadas = 0;
+          for (const l of nfLanc) {
+            const chNFe = (l.id||'').replace('nf_','');
+            const idCP = 'sefaz_cp_'+chNFe;
+            if (d.contasPagar.find(cp=>cp.id===idCP||cp.chNFe===chNFe)) continue;
+            const pts=(l.dia_comercial||'').split('/');
+            let venc='';
+            if(pts.length===3){const b=new Date(Number(pts[2]),Number(pts[1])-1,parseInt(pts[0])+30);venc=b.toLocaleDateString('pt-BR');}
+            const forn=(l.descricao||'').replace(/^NF[\s\d]* - /,'').trim();
+            d.contasPagar.push({id:idCP,forn,val:Number(l.valor||0),venc,pago:false,_sefaz:true,_estimado:true,chNFe,dt:l.dia_comercial});
+            // Adiciona à fila para pegar parcelas reais
+            if(!d.filaNFe) d.filaNFe=[];
+            if(chNFe.length===44&&!d.filaNFe.find(f=>f.chNFe===chNFe))
+              d.filaNFe.push({chNFe,emitente:forn,valor:Number(l.valor||0),data:l.dia_comercial});
+            criadas++;
+          }
+          await salvarBlob(d,deviceId);
+          res.writeHead(200);res.end(JSON.stringify({ok:true,total:nfLanc.length,criadas,msg:'CPs criadas e adicionadas à fila de parcelas'}));
+        }catch(e){res.writeHead(200);res.end(JSON.stringify({erro:e.message}));}
+      })();
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
