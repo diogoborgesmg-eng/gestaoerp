@@ -2494,6 +2494,20 @@ function abrirPluggy(){
   });
 }).listen(PORT, ()=>{
   console.log('GestaoERP v9 porta '+PORT);
+// Startup check SEFAZ
+setTimeout(async()=>{
+  try{
+    const hBR=(new Date().getUTCHours()-3+24)%24;
+    const {data:dS}=await lerBlob();
+    const hoje=new Date().toLocaleDateString('pt-BR');
+    if(hBR>=3&&(dS.ultimoSefazDia||'')!==hoje){
+      console.log('Startup: SEFAZ nao rodou hoje, hora Brasilia:'+hBR+', disparando...');
+      consultarNFsSEFAZ().catch(e=>console.log('Startup SEFAZ err:',e.message));
+    }else{
+      console.log('Startup: SEFAZ ok, ultimo:'+(dS.ultimoSefazDia||'nunca')+' hora:'+hBR);
+    }
+  }catch(e){console.log('Startup err:',e.message);}
+},15000);
   console.log('Anthropic:', CLAUDE_KEY?'OK':'FALTANDO');
   console.log('GitHub:', GHTOKEN?'OK':'FALTANDO');
 });
