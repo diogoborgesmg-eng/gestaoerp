@@ -872,6 +872,8 @@ async function consultarNFsSEFAZ(nsuForcado) {
     await salvarBlob(data, deviceId);
 
     // Notifica apenas NFs novas
+    // Marca que SEFAZ rodou hoje
+    try { const {data:ds,deviceId:did}=await lerBlob(); ds.ultimoSefazDia=new Date().toLocaleDateString('pt-BR'); await salvarBlob(ds,did); } catch(e){}
     if (nfesNovas.length) {
       const resumo = nfesNovas.map(n=>`• ${n.emitente||'?'} — R$${Number(n.valor||0).toFixed(2)}`).join('\n');
       await wppParaTodos(`📄 SEFAZ: ${nfesNovas.length} NF(s) nova(s):\n${resumo}\n\nLançado no sistema!`);
