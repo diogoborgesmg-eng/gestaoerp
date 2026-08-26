@@ -2059,6 +2059,35 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url==='/sincronizar-certificado') {
+      (async()=>{
+        try {
+          // Busca todos os blobs no Supabase procurando certificado
+          const todos = await sb('GET','/rest/v1/erp_sync?select=device_id,data&order=updated_at.desc&limit=20');
+          if (!Array.isArray(todos)||!todos.length) { res.writeHead(200); res.end(JSON.stringify({erro:'Nenhum blob encontrado'})); return; }
+          let certEncontrado = null;
+          let deviceOrigem = null;
+          for (const row of todos) {
+            try {
+              const d = typeof row.data==='string' ? JSON.parse(row.data) : row.data;
+              if (d && d.dadosFiscais && d.dadosFiscais.certificado && d.dadosFiscais.certificado.pfxBase64) {
+                certEncontrado = d.dadosFiscais;
+                deviceOrigem = row.device_id;
+                break;
+              }
+            } catch(ep){}
+          }
+          if (!certEncontrado) { res.writeHead(200); res.end(JSON.stringify({erro:'Certificado nao encontrado em nenhum blob. Clique Atualizar no ERP primeiro.'})); return; }
+          // Copia para o blob gestaoerp_v9
+          const {data:d, deviceId} = await lerBlob();
+          d.dadosFiscais = certEncontrado;
+          await salvarBlob(d, deviceId);
+          console.log('Certificado sincronizado de', deviceOrigem, 'para', deviceId);
+          res.writeHead(200); res.end(JSON.stringify({ok:true, msg:'Certificado sincronizado!', origem:deviceOrigem, cnpj:certEncontrado.cnpj||'ok'}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+      })();
+      return;
+    }
     if (req.url==='/recriar-cp-sefaz') {
       (async()=>{
         try {
