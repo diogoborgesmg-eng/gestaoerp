@@ -49,31 +49,21 @@ function resultado(msg, ok) {
 // Verifica localStorage
 function verificarCert() {
   // Tenta diferentes chaves onde o ERP pode salvar o certificado
-  const chaves = ['erp_cert_1','erp_cert_2','erp_certificado','certificado_pfx'];
-  for (const chave of chaves) {
-    const val = localStorage.getItem(chave);
-    if (val) {
-      try {
-        const obj = JSON.parse(val);
-        if (obj.pfxBase64 || obj.cert || obj.data) {
-          pfxBase64 = obj.pfxBase64 || obj.cert || obj.data;
-          cnpjCert = obj.cnpj || obj.CNPJ || '';
-          mostrarStatus('✅ Certificado encontrado: ' + chave, 'ok');
-          document.getElementById('certInfo').textContent = 'CNPJ: ' + (cnpjCert||'?') + ' | Chave: ' + chave;
-          document.getElementById('senhaCard').style.display = 'block';
-          document.getElementById('btnSync').disabled = false;
-          return;
-        }
-      } catch(e) {
-        if (val.length > 100) {
-          pfxBase64 = val;
-          mostrarStatus('✅ Certificado encontrado: ' + chave, 'ok');
-          document.getElementById('senhaCard').style.display = 'block';
-          document.getElementById('btnSync').disabled = false;
-          return;
-        }
-      }
+  // Chaves conhecidas do ERP
+  const pfx = localStorage.getItem('erp_cert_pfx_1') || localStorage.getItem('erp_cert_pfx') || localStorage.getItem('_cert_pfx_tmp_1');
+  const senhaAuto = localStorage.getItem('erp_cert_senha_1') || localStorage.getItem('erp_cert_senha') || '';
+  if (pfx && pfx.length > 100) {
+    pfxBase64 = pfx;
+    const infoStr = localStorage.getItem('erp_cert_info_1') || localStorage.getItem('erp_cert_info') || '{}';
+    try { const info = JSON.parse(infoStr); cnpjCert = info.cnpj || info.CNPJ || ''; } catch(e){}
+    mostrarStatus('✅ Certificado encontrado! CNPJ: ' + (cnpjCert||'?'), 'ok');
+    document.getElementById('senhaCard').style.display = 'block';
+    if (senhaAuto) {
+      document.getElementById('senhaCert').value = senhaAuto;
+      document.getElementById('certInfo').textContent = 'Senha preenchida automaticamente';
     }
+    document.getElementById('btnSync').disabled = false;
+    return;
   }
   // Busca em todas as chaves do localStorage
   for (let i = 0; i < localStorage.length; i++) {
