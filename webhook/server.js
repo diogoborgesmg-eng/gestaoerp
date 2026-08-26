@@ -106,8 +106,13 @@ async function salvarBotLancamentosGitHub(lancamentos) {
 
 // ── Blob erp_sync ────────────────────────────────────────
 async function lerBlob() {
-  const r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&order=updated_at.desc&limit=20');
-  if (!Array.isArray(r)||!r.length) return { data:{}, deviceId:'v9' };
+  // Busca blob específico gestaoerp_v9 primeiro, depois outros
+  let r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&device_id=eq.gestaoerp_v9&limit=1');
+  if (!Array.isArray(r)||!r.length) {
+    r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&limit=20');
+  }
+  console.log('lerBlob: rows=', Array.isArray(r)?r.length:r);
+  if (!Array.isArray(r)||!r.length) return { data:{}, deviceId:'gestaoerp_v9' };
   // Mescla todas as linhas preservando certificado e dados importantes
   const merged = {};
   // Processa do mais antigo para o mais recente (mais recente sobrescreve)
