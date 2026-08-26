@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sincronizar Certificado</title>
+<style>
+  body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;padding:20px;max-width:500px;margin:0 auto;}
+  h1{color:#ff6b35;font-size:1.1rem;margin-bottom:8px;}
+  .card{background:#1a1a2e;border-radius:12px;padding:16px;margin:12px 0;}
+  .status{padding:10px;border-radius:8px;margin:8px 0;font-size:0.85rem;}
+  .ok{background:#0f2a0f;color:#00cc66;}
+  .err{background:#2a0f0f;color:#ff4444;}
+  .info{background:#1a2a3a;color:#aaa;}
+  button{width:100%;background:#ff6b35;color:#fff;border:none;border-radius:10px;padding:14px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:8px;}
+  button:disabled{background:#555;cursor:not-allowed;}
+  label{font-size:0.85rem;color:#aaa;display:block;margin-bottom:4px;}
+  input{width:100%;background:#0f0f1a;border:1px solid #333;border-radius:8px;padding:10px;color:#fff;font-size:0.9rem;box-sizing:border-box;}
+</style>
+</head>
+<body>
+<h1>🔐 Sincronizar Certificado com Servidor</h1>
+<div class="card">
+  <div id="statusCert" class="status info">Verificando localStorage...</div>
+  <div id="certInfo" style="font-size:0.8rem;color:#888;margin-top:6px;"></div>
+</div>
+<div class="card" id="senhaCard" style="display:none">
+  <label>Senha do certificado:</label>
+  <input type="password" id="senhaCert" placeholder="Digite a senha do .pfx">
+</div>
+<button id="btnSync" onclick="sincronizar()" disabled>🔄 Sincronizar com Servidor</button>
+<div id="resultado"></div>
+
+<script>
+const SERVIDOR = 'https://gestaoerp-webhook.onrender.com';
+let pfxBase64 = null;
+let cnpjCert = null;
+
+function mostrarStatus(msg, tipo) {
+  document.getElementById('statusCert').className = 'status ' + tipo;
+  document.getElementById('statusCert').textContent = msg;
+}
+
+function resultado(msg, ok) {
+  const el = document.getElementById('resultado');
+  el.innerHTML = '<div class="status ' + (ok?'ok':'err') + '">' + msg + '</div>';
+}
+
+// Verifica localStorage
+function verificarCert() {
+  // Tenta diferentes chaves onde o ERP pode salvar o certificado
+  const chaves = ['erp_cert_1','erp_cert_2','erp_certificado','certificado_pfx'];
+  for (const chave of chaves) {
+    const val = localStorage.getItem(chave);
+    if (val) {
+      try {
+        const obj = JSON.parse(val);
+        if (obj.pfxBase64 || obj.cert || obj.data) {
+          pfxBase64 = obj.pfxBase64 || obj.cert || obj.data;
+          cnpjCert = obj.cnpj || obj.CNPJ || '';
+          mostrarStatus('✅ Certificado encontrado: ' + chave, 'ok');
+          document.getElementById('certInfo').textContent = 'CNPJ: ' + (cnpjCert||'?') + ' | Chave: ' + chave;
+          document.getElementById('senhaCard').style.display = 'block';
+          document.getElementById('btnSync').disabled = false;
+          return;
+        }
+      } catch(e) {
+        if (val.length > 100) {
+          pfxBase64 = val;
+          mostrarStatus('✅ Certificado encontrado: ' + chave, 'ok');
+          document.getElementById('senhaCard').style.display = 'block';
+          document.getElementById('btnSync').disabled = false;
+          return;
+        }
+      }
+    }
+  }
+  // Busca em todas as chaves do localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k.includes('cert') || k.includes('pfx') || k.includes('fiscal')) {
+      const v = localStorage.getItem(k);
+      document.getElementById('certInfo').textContent += k + ' (' + (v||'').length + ' chars)  ';
+    }
+  }
+  mostrarStatus('⚠️ Certificado não encontrado no localStorage. Clique "Atualizar" no ERP primeiro.', 'err');
+}
+
+async function sincronizar() {
+  const senha = document.getElementById('senhaCert').value;
+  if (!senha) { resultado('Digite a senha do certificado', false); return; }
+  if (!pfxBase64) { resultado('Certificado não encontrado', false); return; }
+  document.getElementById('btnSync').disabled = true;
+  document.getElementById('btnSync').textContent = '⏳ Enviando...';
+  try {
+    const r = await fetch(SERVIDOR + '/upload-certificado', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({pfxBase64, senha, cnpj: cnpjCert})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      resultado('✅ ' + d.msg + ' SEFAZ vai funcionar agora!', true);
+    } else {
+      resultado('❌ ' + d.erro, false);
+    }
+  } catch(e) {
+    resultado('❌ Erro: ' + e.message, false);
+  }
+  document.getElementById('btnSync').disabled = false;
+  document.getElementById('btnSync').textContent = '🔄 Sincronizar com Servidor';
+}
+
+verificarCert();
+</script>
+</body>
+</html>
