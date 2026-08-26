@@ -141,10 +141,13 @@ async function lerBlob() {
 
 const BLOB_DEVICE_ID = 'gestaoerp_v9';
 async function salvarBlob(data, deviceId) {
-  // Sempre usa device_id fixo para não fragmentar dados em múltiplas linhas
-  return sb('POST', '/rest/v1/erp_sync',
-    { device_id: BLOB_DEVICE_ID, data:JSON.stringify(data) },
-    { Prefer:'resolution=merge-duplicates' });
+  try {
+    const payload = { device_id: BLOB_DEVICE_ID, data:JSON.stringify(data), updated_at: new Date().toISOString() };
+    const r = await sb('POST', '/rest/v1/erp_sync', payload, { Prefer:'resolution=merge-duplicates,return=representation' });
+    if (r && r.error) console.log('salvarBlob err:', JSON.stringify(r.error));
+    else console.log('salvarBlob ok, device:', BLOB_DEVICE_ID);
+    return r;
+  } catch(e) { console.log('salvarBlob exception:', e.message); }
 }
 
 // ── Pluggy ───────────────────────────────────────────────
