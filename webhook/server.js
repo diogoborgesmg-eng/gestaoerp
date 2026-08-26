@@ -114,13 +114,18 @@ async function lerBlob() {
   for (const row of [...r].reverse()) {
     try {
       const d = JSON.parse(row.data||'{}');
+      // Salva certificado antes de sobrescrever
+      const certSalvo = (merged.dadosFiscais && merged.dadosFiscais.certificado) ? merged.dadosFiscais.certificado : null;
+      const nsuSalvo = (merged.dadosFiscais && merged.dadosFiscais.ultimoNSU) ? merged.dadosFiscais.ultimoNSU : null;
       Object.assign(merged, d);
-      // Certificado: sempre preserva se existir em qualquer linha
-      if (d.dadosFiscais && d.dadosFiscais.certificado) {
-        if (!merged.dadosFiscais) merged.dadosFiscais = {};
-        merged.dadosFiscais.certificado = d.dadosFiscais.certificado;
-        if (d.dadosFiscais.ultimoNSU) merged.dadosFiscais.ultimoNSU = d.dadosFiscais.ultimoNSU;
-      }
+      // Restaura certificado se foi perdido pelo Object.assign
+      if (!merged.dadosFiscais) merged.dadosFiscais = {};
+      if (certSalvo && !merged.dadosFiscais.certificado) merged.dadosFiscais.certificado = certSalvo;
+      if (nsuSalvo && !merged.dadosFiscais.ultimoNSU) merged.dadosFiscais.ultimoNSU = nsuSalvo;
+      // Atualiza com dados da linha atual se tiver certificado mais novo
+      if (d.dadosFiscais && d.dadosFiscais.certificado) merged.dadosFiscais.certificado = d.dadosFiscais.certificado;
+      if (d.dadosFiscais && d.dadosFiscais.ultimoNSU) merged.dadosFiscais.ultimoNSU = d.dadosFiscais.ultimoNSU;
+      if (d.dadosFiscais && d.dadosFiscais.ultimoSefazDia) merged.dadosFiscais.ultimoSefazDia = d.dadosFiscais.ultimoSefazDia;
       // pluggyItemIds: usa o da linha mais recente que tiver
       if (d.pluggyItemIds && d.pluggyItemIds.length) merged.pluggyItemIds = d.pluggyItemIds;
       // contasPagar: merge sem duplicar
