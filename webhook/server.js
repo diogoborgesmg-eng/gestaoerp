@@ -2435,6 +2435,19 @@ function abrirPluggy(){
       // Ignora body vazio (health checks do Render)
       if (!body || !body.trim()) { res.writeHead(200); res.end('ok'); return; }
 
+      if (req.url==='/upload-certificado') {
+        try {
+          const {pfxBase64,senha,cnpj} = JSON.parse(body);
+          if (!pfxBase64||!senha) { res.writeHead(200); res.end(JSON.stringify({erro:'pfxBase64 e senha obrigatorios'})); return; }
+          const {data:d, deviceId} = await lerBlob();
+          if (!d.dadosFiscais) d.dadosFiscais = {};
+          d.dadosFiscais.certificado = {pfxBase64, senha, cnpj:cnpj||CNPJ_EMP};
+          await salvarBlob(d, deviceId);
+          console.log('Certificado salvo via upload, CNPJ:', cnpj||CNPJ_EMP);
+          res.writeHead(200); res.end(JSON.stringify({ok:true,msg:'Certificado salvo no servidor!'}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+        return;
+      }
       if (req.url==='/pluggy-save-item') {
         const {itemId} = JSON.parse(body);
         if (!itemId) { res.writeHead(400); res.end(JSON.stringify({ok:false})); return; }
