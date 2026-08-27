@@ -2448,6 +2448,34 @@ function abrirPluggy(){
       // Ignora body vazio (health checks do Render)
       if (!body || !body.trim()) { res.writeHead(200); res.end('ok'); return; }
 
+      if (req.url==='/consultar-nfe-direto') {
+        try {
+          const {pfxBase64, senha, nsu} = JSON.parse(body);
+          if (!pfxBase64||!senha) { res.writeHead(200); res.end(JSON.stringify({erro:'pfxBase64 e senha obrigatorios'})); return; }
+          const nsuUsar = nsu || '000000000000000';
+          console.log('consultar-nfe-direto NSU:', nsuUsar);
+          const resp = await sefazDistribuicaoDFe(pfxBase64, senha, CNPJ_EMP, nsuUsar, 'prod');
+          const cStat = extrairTagXML(resp.xml, 'cStat');
+          const ultNSU = extrairTagXML(resp.xml, 'ultNSU');
+          const maxNSU = extrairTagXML(resp.xml, 'maxNSU');
+          console.log('SEFAZ direto: cStat='+cStat+' ultNSU='+ultNSU);
+          if (cStat!=='138'&&cStat!=='137') {
+            res.writeHead(200); res.end(JSON.stringify({erro:'SEFAZ retornou cStat='+cStat, ultNSU, maxNSU})); return;
+          }
+          const nfs = parsearDocZips(resp.xml);
+          // Também salva certificado no blob para uso futuro
+          try {
+            const {data:d, deviceId} = await lerBlob();
+            if (!d.dadosFiscais) d.dadosFiscais = {};
+            d.dadosFiscais.certificado = {pfxBase64, senha, cnpj:CNPJ_EMP};
+            d.dadosFiscais.ultimoNSU = ultNSU;
+            await salvarBlob(d, deviceId);
+            console.log('Certificado salvo no blob automaticamente');
+          } catch(es){}
+          res.writeHead(200); res.end(JSON.stringify({ok:true, cStat, ultNSU, maxNSU, nfs, xmlLen:resp.xml.length}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
+        return;
+      }
       if (req.url==='/upload-certificado') {
         try {
           const {pfxBase64,senha,cnpj} = JSON.parse(body);
