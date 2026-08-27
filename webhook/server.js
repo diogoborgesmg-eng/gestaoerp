@@ -2164,6 +2164,76 @@ http.createServer(async (req, res) => {
       })();
       return;
     }
+    if (req.url && req.url.startsWith('/testar-nf-completa')) {
+      (async()=>{
+        try {
+          const params = new URL('http://x'+req.url).searchParams;
+          const nsuParam = params.get('nsu') || '000000000004973';
+          const {data:d} = await lerBlob();
+          const cert = d.dadosFiscais && d.dadosFiscais.certificado;
+          if (!cert||!cert.pfxBase64) { res.writeHead(200); res.end(JSON.stringify({erro:'Sem certificado'})); return; }
+          
+          // 1. Captura resNFe
+          console.log('Teste NF completa: capturando NSU', nsuParam);
+          const resp = await sefazDistribuicaoDFe(cert.pfxBase64, cert.senha, CNPJ_EMP, nsuParam, 'prod');
+          const cStat = extrairTagXML(resp.xml, 'cStat');
+          const ultNSU = extrairTagXML(resp.xml, 'ultNSU');
+          if (cStat!=='138'&&cStat!=='137') {
+            res.writeHead(200); res.end(JSON.stringify({erro:'SEFAZ bloqueado: cStat='+cStat+' aguarde 1h', ultNSU})); return;
+          }
+          
+          // 2. Extrai resumos
+          const resumos = parsearDocZips(resp.xml);
+          if (!resumos.length) { res.writeHead(200); res.end(JSON.stringify({erro:'Nenhuma NF no lote', cStat, ultNSU})); return; }
+          const primeira = resumos[0];
+          console.log('Primeira NF:', primeira.emitente, primeira.valor, primeira.chNFe?.slice(0,10));
+          
+          // 3. Busca procNFe completo
+          console.log('Buscando procNFe completo...');
+          const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, CNPJ_EMP, primeira.chNFe, 'prod');
+          const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+          
+          // 4. Descomprime docZips
+          let xmlInterno = '';
+          const dzMatches = [...procXml.matchAll(/<docZip[^>]*>([A-Za-z0-9+\/=\s]+)<\/docZip>/g)];
+          for (const mz of dzMatches) {
+            try { xmlInterno += descompactarDocZip(mz[1].trim()) + '\n'; } catch(ez){}
+          }
+          
+          // 5. Extrai parcelas <dup>
+          const xmlBusca = xmlInterno || procXml;
+          const dups = [...xmlBusca.matchAll(/<dup[^>]*>[\s\S]*?<\/dup>/g)];
+          const parcelas = dups.map(m=>{
+            const bl=m[0];
+            const tg=(t)=>{const r=bl.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+            return {nDup:tg('nDup'), dVenc:tg('dVenc'), vDup:tg('vDup')};
+          });
+          
+          // 6. Extrai itens <det>
+          const dets = [...xmlBusca.matchAll(/<det[^>]*>[\s\S]*?<\/det>/g)];
+          const itens = dets.slice(0,5).map(m=>{
+            const bl=m[0];
+            const tg=(t)=>{const r=bl.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>'));return r?r[1].trim():'';};
+            return {xProd:tg('xProd'), qCom:tg('qCom'), uCom:tg('uCom'), vProd:tg('vProd')};
+          });
+          
+          res.writeHead(200);
+          res.end(JSON.stringify({
+            ok:true, nsu:nsuParam, ultNSU, totalNFsNoLote:resumos.length,
+            nf:{
+              emitente:primeira.emitente, cnpj:primeira.cnpjEmit,
+              valor:primeira.valor, data:primeira.data, chNFe:primeira.chNFe,
+              nNF:primeira.nNF
+            },
+            procNFe:{status:proc.status, xmlLen:procXml.length, docZips:dzMatches.length, xmlInternoLen:xmlInterno.length},
+            parcelas,
+            itens: itens.length ? itens : [{aviso:'Itens não encontrados no XML'}],
+            xmlInternoPrimeiros500: xmlInterno.slice(0,500)
+          },null,2));
+        } catch(e){ res.writeHead(200); res.end(JSON.stringify({erro:e.message, stack:e.stack?.slice(0,200)})); }
+      })();
+      return;
+    }
     if (req.url==='/sefaz-analisar-xml') {
       (async()=>{
         try {
