@@ -106,13 +106,18 @@ async function salvarBotLancamentosGitHub(lancamentos) {
 
 // ── Blob erp_sync ────────────────────────────────────────
 async function lerBlob() {
-  // Busca blob específico gestaoerp_v9 primeiro, depois outros
-  let r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&device_id=eq.gestaoerp_v9&limit=1');
-  if (!Array.isArray(r)||!r.length) {
-    r = await sb('GET', '/rest/v1/erp_sync?select=data,device_id&limit=20');
-  }
-  console.log('lerBlob: rows=', Array.isArray(r)?r.length:r);
-  if (!Array.isArray(r)||!r.length) return { data:{}, deviceId:'gestaoerp_v9' };
+  // Usa GitHub como armazenamento principal do blob (sem limite de egress)
+  try {
+    const ghReq = await httpReq('GET',
+      'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json?ref=dados',
+      null, {'Authorization':'token '+GITHUB_TOKEN,'Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP'});
+    if (ghReq && ghReq.content) {
+      const data = JSON.parse(Buffer.from(ghReq.content.replace(/\n/g,''),'base64').toString('utf-8'));
+      console.log('lerBlob GitHub: ok, cert='+!!(data.dadosFiscais&&data.dadosFiscais.certificado));
+      return {data, deviceId:'gestaoerp_v9', _sha: ghReq.sha};
+    }
+  } catch(eg) { console.log('lerBlob GitHub err:', eg.message); }
+  return { data:{}, deviceId:'gestaoerp_v9' };
   // Mescla todas as linhas preservando certificado e dados importantes
   const merged = {};
   // Processa do mais antigo para o mais recente (mais recente sobrescreve)
@@ -146,13 +151,25 @@ async function lerBlob() {
 
 const BLOB_DEVICE_ID = 'gestaoerp_v9';
 async function salvarBlob(data, deviceId) {
+  // Salva no GitHub (sem limite de egress)
   try {
-    const payload = { device_id: BLOB_DEVICE_ID, data:JSON.stringify(data), updated_at: new Date().toISOString() };
-    const r = await sb('POST', '/rest/v1/erp_sync', payload, { Prefer:'resolution=merge-duplicates,return=representation' });
-    if (r && r.error) console.log('salvarBlob err:', JSON.stringify(r.error));
-    else console.log('salvarBlob ok, device:', BLOB_DEVICE_ID);
-    return r;
-  } catch(e) { console.log('salvarBlob exception:', e.message); }
+    // Busca SHA atual para update
+    let sha = null;
+    try {
+      const cur = await httpReq('GET',
+        'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json?ref=dados',
+        null, {'Authorization':'token '+GITHUB_TOKEN,'Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP'});
+      if (cur && cur.sha) sha = cur.sha;
+    } catch(e) {}
+    const payload = {message:'blob update '+new Date().toISOString().slice(0,16),
+      content: Buffer.from(JSON.stringify(data)).toString('base64'),
+      branch:'dados'};
+    if (sha) payload.sha = sha;
+    await httpReq('PUT',
+      'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json',
+      payload, {'Authorization':'token '+GITHUB_TOKEN,'Content-Type':'application/json','User-Agent':'GestaoERP'});
+    console.log('salvarBlob GitHub: ok, cert='+!!(data.dadosFiscais&&data.dadosFiscais.certificado));
+  } catch(e) { console.log('salvarBlob GitHub err:', e.message); }
 }
 
 // ── Pluggy ───────────────────────────────────────────────
