@@ -109,7 +109,7 @@ async function lerBlob() {
   // Usa GitHub como armazenamento principal do blob (sem limite de egress)
   try {
     const ghReq = await httpReq('GET',
-      'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json?ref=dados',
+      'https://api.github.com/repos/'+REPO+'/contents/dados/blob_v9.json?ref=dados',
       null, {'Authorization':'token '+GITHUB_TOKEN,'Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP'});
     if (ghReq && ghReq.content) {
       const data = JSON.parse(Buffer.from(ghReq.content.replace(/\n/g,''),'base64').toString('utf-8'));
@@ -157,7 +157,7 @@ async function salvarBlob(data, deviceId) {
     let sha = null;
     try {
       const cur = await httpReq('GET',
-        'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json?ref=dados',
+        'https://api.github.com/repos/'+REPO+'/contents/dados/blob_v9.json?ref=dados',
         null, {'Authorization':'token '+GITHUB_TOKEN,'Accept':'application/vnd.github.v3+json','User-Agent':'GestaoERP'});
       if (cur && cur.sha) sha = cur.sha;
     } catch(e) {}
@@ -166,7 +166,7 @@ async function salvarBlob(data, deviceId) {
       branch:'dados'};
     if (sha) payload.sha = sha;
     await httpReq('PUT',
-      'https://api.github.com/repos/'+GITHUB_REPO+'/contents/dados/blob_v9.json',
+      'https://api.github.com/repos/'+REPO+'/contents/dados/blob_v9.json',
       payload, {'Authorization':'token '+GITHUB_TOKEN,'Content-Type':'application/json','User-Agent':'GestaoERP'});
     console.log('salvarBlob GitHub: ok, cert='+!!(data.dadosFiscais&&data.dadosFiscais.certificado));
   } catch(e) { console.log('salvarBlob GitHub err:', e.message); }
