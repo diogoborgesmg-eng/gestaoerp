@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta NF-e SEFAZ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; padding: 16px; max-width: 540px; margin: 0 auto; }
+h1 { color: #ff6b35; font-size: 1.1rem; margin-bottom: 4px; }
+.sub { color: #666; font-size: 0.8rem; margin-bottom: 14px; }
+.card { background: #1a1a2e; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+label { font-size: 0.82rem; color: #aaa; display: block; margin-bottom: 5px; }
+input[type="password"], input[type="text"] { width: 100%; background: #0f0f1a; border: 1px solid #333; border-radius: 8px; padding: 10px; color: #fff; font-size: 0.9rem; }
+input[type="file"] { display: none; }
+.file-btn { display: block; background: #1a2a3a; border: 1.5px dashed #4488ff; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; color: #4488ff; font-size: 0.85rem; margin-bottom: 10px; }
+.file-btn.ok { border-color: #00cc66; color: #00cc66; background: #0f2a1a; }
+button { width: 100%; background: #ff6b35; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 6px; }
+button:disabled { background: #555; }
+.status { padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 0.82rem; }
+.ok { background: #0f2a0f; color: #00cc66; }
+.err { background: #2a0f0f; color: #ff4444; }
+.info { background: #1a2a3a; color: #aaa; }
+.nf { background: #1a1a2e; border-radius: 8px; padding: 10px; margin: 5px 0; border-left: 3px solid #ff6b35; }
+.nf-nome { font-size: 0.85rem; font-weight: 700; }
+.nf-det { font-size: 0.75rem; color: #aaa; margin-top: 3px; }
+.nf-val { font-size: 0.9rem; color: #ff6b35; font-weight: 700; float: right; }
+.progress { background: #2a2a3e; border-radius: 20px; height: 6px; margin: 6px 0; }
+.bar { background: linear-gradient(90deg, #ff6b35, #00cc66); height: 6px; border-radius: 20px; width: 0%; transition: width 0.3s; }
+</style>
+</head>
+<body>
+<h1>📄 Consulta NF-e SEFAZ</h1>
+<p class="sub">Di Casa Laranjinha — Patos de Minas MG</p>
+
+<div class="card">
+  <label onclick="document.getElementById('pfxFile').click()" class="file-btn" id="fileLabel">
+    📎 Clique para selecionar o arquivo .pfx
+  </label>
+  <input type="file" id="pfxFile" accept=".pfx,.p12" onchange="selecionarArquivo()">
+  <label>Senha do certificado:</label>
+  <input type="password" id="senha" placeholder="Digite a senha">
+  <div style="margin-top:10px">
+    <label>NSU inicial (deixe 0 para buscar todas):</label>
+    <input type="text" id="nsu" value="0" style="width:200px">
+  </div>
+</div>
+
+<button id="btnConsultar" onclick="consultar()" disabled>🔍 Consultar NFs no SEFAZ</button>
+
+<div id="statusDiv"></div>
+<div id="progress" style="display:none">
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div id="progressTxt" style="font-size:0.75rem;color:#888;text-align:center"></div>
+</div>
+<div id="resultados"></div>
+
+<script>
+const SERVIDOR = 'https://gestaoerp-webhook.onrender.com';
+let pfxBase64 = null;
+let todasNFs = [];
+
+function status(msg, tipo) {
+  document.getElementById('statusDiv').innerHTML = '<div class="status '+tipo+'">'+msg+'</div>';
+}
+
+function selecionarArquivo() {
+  const f = document.getElementById('pfxFile').files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    pfxBase64 = e.target.result.split(',')[1];
+    document.getElementById('fileLabel').textContent = '✅ ' + f.name;
+    document.getElementById('fileLabel').className = 'file-btn ok';
+    document.getElementById('btnConsultar').disabled = false;
+    status('Arquivo carregado: ' + f.name, 'ok');
+  };
+  reader.readAsDataURL(f);
+}
+
+async function consultarLote(nsu) {
+  const senha = document.getElementById('senha').value;
+  const r = await fetch(SERVIDOR + '/consultar-nfe-direto', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pfxBase64, senha, nsu})
+  });
+  return r.json();
+}
+
+async function consultar() {
+  const senha = document.getElementById('senha').value;
+  if (!senha) { status('Digite a senha do certificado', 'err'); return; }
+  if (!pfxBase64) { status('Selecione o arquivo .pfx', 'err'); return; }
+  
+  document.getElementById('btnConsultar').disabled = true;
+  document.getElementById('btnConsultar').textContent = '⏳ Consultando...';
+  document.getElementById('progress').style.display = 'block';
+  document.getElementById('resultados').innerHTML = '';
+  todasNFs = [];
+  
+  let nsuAtual = document.getElementById('nsu').value.padStart(15, '0');
+  let lote = 0; let maxNSU = '999999999999999';
+  
+  status('Conectando ao SEFAZ...', 'info');
+  
+  while (lote < 20) {
+    lote++;
+    document.getElementById('progressTxt').textContent = 'Lote ' + lote + ' — NSU ' + nsuAtual;
+    
+    try {
+      const d = await consultarLote(nsuAtual);
+      
+      if (d.erro) {
+        status('❌ ' + d.erro + (d.ultNSU ? ' (NSU: '+d.ultNSU+')' : ''), 'err');
+        break;
+      }
+      
+      maxNSU = d.maxNSU || maxNSU;
+      const pct = Math.min(100, Math.round(parseInt(nsuAtual)/parseInt(maxNSU)*100));
+      document.getElementById('bar').style.width = pct + '%';
+      
+      if (d.nfs && d.nfs.length) {
+        todasNFs.push(...d.nfs);
+        renderNFs();
+        status('✅ ' + todasNFs.length + ' NF(s) encontradas até agora...', 'ok');
+      }
+      
+      if (!d.ultNSU || d.ultNSU >= d.maxNSU || d.cStat === '137') break;
+      nsuAtual = d.ultNSU;
+      
+      await new Promise(r => setTimeout(r, 2000));
+    } catch(e) {
+      status('❌ Erro: ' + e.message, 'err');
+      break;
+    }
+  }
+  
+  if (todasNFs.length === 0) {
+    status('Nenhuma NF nova encontrada', 'info');
+  } else {
+    status('✅ ' + todasNFs.length + ' NF(s) encontradas!', 'ok');
+  }
+  
+  document.getElementById('btnConsultar').disabled = false;
+  document.getElementById('btnConsultar').textContent = '🔍 Consultar novamente';
+}
+
+function renderNFs() {
+  const div = document.getElementById('resultados');
+  const porMes = {};
+  todasNFs.forEach(nf => {
+    const mes = (nf.data||'').slice(3) || 'Sem data';
+    if (!porMes[mes]) porMes[mes] = [];
+    porMes[mes].push(nf);
+  });
+  
+  let html = '<div style="margin-top:10px">';
+  Object.keys(porMes).sort().reverse().forEach(mes => {
+    const total = porMes[mes].reduce((a,n)=>a+Number(n.valor||0),0);
+    html += '<div style="color:#aaa;font-size:0.75rem;padding:6px 0;border-bottom:1px solid #2a2a3e">' +
+      '📅 ' + mes + ' — ' + porMes[mes].length + ' NFs — R$' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>';
+    porMes[mes].forEach(nf => {
+      html += '<div class="nf">' +
+        '<span class="nf-val">R$' + Number(nf.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>' +
+        '<div class="nf-nome">' + (nf.emitente||'?') + '</div>' +
+        '<div class="nf-det">📅 ' + (nf.data||'?') + ' · NF ' + (nf.nNF||'?') + '</div>' +
+      '</div>';
+    });
+  });
+  html += '</div>';
+  div.innerHTML = html;
+}
+</script>
+</body>
+</html>
