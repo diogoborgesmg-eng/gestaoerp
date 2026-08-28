@@ -2224,7 +2224,16 @@ http.createServer(async (req, res) => {
           const primeira = resumos[0];
           console.log('Primeira NF:', primeira.emitente, primeira.valor, primeira.chNFe?.slice(0,10));
           
-          // 3. Busca procNFe completo
+          // 3. Manifesta ciência (com assinatura digital)
+          console.log('Manifestando ciencia para:', primeira.chNFe.slice(0,15));
+          const mr = await manifestarCiencia(cert.pfxBase64, cert.senha, CNPJ_EMP, primeira.chNFe, 'prod');
+          const mrXml = mr.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+          const cStatM = (mrXml.match(/<cStat>(\d+)<\/cStat>/)||[])[1] || 'N/A';
+          const xMotivoM = (mrXml.match(/<xMotivo>([^<]*)<\/xMotivo>/)||[])[1] || '';
+          console.log('Ciencia cStat:', cStatM, xMotivoM);
+          // Aguarda SEFAZ processar
+          await new Promise(r=>setTimeout(r,5000));
+          // 4. Busca procNFe completo
           console.log('Buscando procNFe completo...');
           const proc = await consultarNFeByChave(cert.pfxBase64, cert.senha, CNPJ_EMP, primeira.chNFe, 'prod');
           const procXml = proc.xml.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
@@ -2261,6 +2270,7 @@ http.createServer(async (req, res) => {
               valor:primeira.valor, data:primeira.data, chNFe:primeira.chNFe,
               nNF:primeira.nNF
             },
+            manifestacao:{cStat:cStatM, xMotivo:xMotivoM, status:mr.status},
             procNFe:{status:proc.status, xmlLen:procXml.length, docZips:dzMatches.length, xmlInternoLen:xmlInterno.length},
             parcelas,
             itens: itens.length ? itens : [{aviso:'Itens não encontrados no XML'}],
