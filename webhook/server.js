@@ -1187,7 +1187,21 @@ function parsearNFeXML(xml) {
     if (!isNaN(d)) vencFormatado = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
   }
 
-  return { emitente, cnpjEmit, nNF, chNFe, data: dataFormatada, vencimento: vencFormatado, valor: vNF || vProd, itens };
+  // Extrai parcelas <dup> se existirem
+  const dupMatches = [...xml.matchAll(/<dup[\s\S]*?<\/dup>/g)];
+  const parcelas = dupMatches.map(m => {
+    const bl = m[0];
+    const tg = (t) => { const r=bl.match(new RegExp('<'+t+'>([^<]*)<\/'+t+'>')); return r?r[1].trim():''; };
+    const dVenc = tg('dVenc'); const vDup = parseFloat(tg('vDup')||'0'); const nDup = tg('nDup');
+    let vf = '';
+    if (dVenc) { const [y,mm,dd]=dVenc.split('-'); vf=dd+'/'+mm+'/'+y; }
+    return {nDup, venc: vf, val: vDup};
+  });
+
+  // Vencimento: usa primeira parcela se existir, senão vencimento calculado
+  const vencReal = parcelas.length > 0 ? parcelas[0].venc : vencFormatado;
+
+  return { emitente, cnpjEmit, nNF, chNFe, data: dataFormatada, vencimento: vencReal, valor: vNF || vProd, itens, parcelas };
 }
 
 function descompactarDocZip(docZipBase64) {
