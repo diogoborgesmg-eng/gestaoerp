@@ -1693,11 +1693,8 @@ async function processarFilaNFe() {
 }
 
 // ── Agendador ─────────────────────────────────────────────
-// A cada 2h (entre 5h e 23h Brasília): processa 1 NF da fila
-setInterval(()=>{
-  const h=(new Date().getUTCHours()-3+24)%24;
-  if(h>=5&&h<=23) processarFilaNFe().catch(()=>{});
-}, 2*60*60*1000);
+// Fila NFe desativada - usa fluxo de manifestação em lote no SEFAZ diário
+// setInterval fila desativado para não consumir quota SEFAZ
 
 let _ultimoSefaz = '', _ultimoSaldo = '', _ultimoPDF = '', _ultimoAlerta = '';
 let _saldoDebounce = null;
@@ -2277,6 +2274,18 @@ http.createServer(async (req, res) => {
             xmlInternoPrimeiros500: xmlInterno.slice(0,500)
           },null,2));
         } catch(e){ res.writeHead(200); res.end(JSON.stringify({erro:e.message, stack:e.stack?.slice(0,200)})); }
+      })();
+      return;
+    }
+    if (req.url==='/limpar-fila-nfe') {
+      (async()=>{
+        try {
+          const {data:d, deviceId} = await lerBlob();
+          const antes = (d.filaNFe||[]).length;
+          d.filaNFe = [];
+          await salvarBlob(d, deviceId);
+          res.writeHead(200); res.end(JSON.stringify({ok:true, removidas:antes, msg:'Fila limpa'}));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({erro:e.message})); }
       })();
       return;
     }
