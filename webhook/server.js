@@ -1725,6 +1725,12 @@ setInterval(async () => {
     if (PLUGGY_CID && PLUGGY_CSEC) importarTransacoesPluggy().catch(e=>console.error('Pluggy err:',e.message));
   }
 
+  // 4h Brasília = 7h UTC: procNFe das NFs manifestadas às 3h
+  if (hUTC===7 && _ultimoSefaz===dia) {
+    console.log('SEFAZ 4h: buscando procNFe...');
+    consultarNFsSEFAZ().catch(e=>console.error('SEFAZ 4h err:',e.message));
+  }
+
   // 6h Brasília = 9h UTC: PDF do dia anterior
   if (hUTC===9 && _ultimoPDF!==dia) {
     _ultimoPDF = dia;
