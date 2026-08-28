@@ -1062,26 +1062,62 @@ async function sefazDistribuicaoDFe(pfxBase64, senha, cnpj, ultNSU='000000000000
 }
 
 async function manifestarCiencia(certPfx, senha, cnpj, chNFe, ambiente='prod') {
+  const forge = getForge();
   const { certPem, keyPem } = carregarCertPFX(certPfx, senha);
   const cnpjLimpo = cnpj.replace(/[^\d]/g, '');
-  const agora = new Date().toISOString().split('.')[0] + '-03:00';
-  const nSeqEvento = '1';
-  const xmlEvento = `<envEvento versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe"><idLote>1</idLote><evento versao="1.00"><infEvento Id="ID210210${chNFe}${nSeqEvento.padStart(2,'0')}"><cOrgao>91</cOrgao><tpAmb>${ambiente==='prod'?'1':'2'}</tpAmb><CNPJ>${cnpjLimpo}</CNPJ><chNFe>${chNFe}</chNFe><dhEvento>${agora}</dhEvento><tpEvento>210210</tpEvento><nSeqEvento>${nSeqEvento}</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Ciencia da Operacao</descEvento></detEvento></infEvento></evento></envEvento>`;
+  const agora = new Date().toISOString().replace('Z','').slice(0,19) + '-03:00';
+  const nSeq = '01';
+  const idEvento = 'ID210210' + chNFe + nSeq;
+  const tpAmb = ambiente==='prod' ? '1' : '2';
+
+  // XML do infEvento (sem assinatura)
+  const xmlInfEvento = `<infEvento Id="${idEvento}"><cOrgao>91</cOrgao><tpAmb>${tpAmb}</tpAmb><CNPJ>${cnpjLimpo}</CNPJ><chNFe>${chNFe}</chNFe><dhEvento>${agora}</dhEvento><tpEvento>210210</tpEvento><nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Ciencia da Operacao</descEvento></detEvento></infEvento>`;
+
+  // 1. SHA-1 do infEvento (para DigestValue)
+  const md = forge.md.sha1.create();
+  md.update(xmlInfEvento, 'utf8');
+  const digestValue = forge.util.encode64(md.digest().bytes());
+
+  // 2. SignedInfo
+  const signedInfo = `<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#"><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#${idEvento}"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>${digestValue}</DigestValue></Reference></SignedInfo>`;
+
+  // 3. RSA-SHA1 do SignedInfo (para SignatureValue)
+  const privKey = forge.pki.privateKeyFromPem(keyPem);
+  const md2 = forge.md.sha1.create();
+  md2.update(signedInfo, 'utf8');
+  const sigBytes = privKey.sign(md2);
+  const signatureValue = forge.util.encode64(sigBytes);
+
+  // 4. X509Certificate em base64
+  const certDer = forge.pki.pemToDer(certPem);
+  const certB64 = forge.util.encode64(certDer.bytes());
+
+  // 5. Monta evento assinado
+  const xmlEvento = `<envEvento versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe"><idLote>1</idLote><evento versao="1.00">${xmlInfEvento}<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">${signedInfo}<SignatureValue>${signatureValue}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certB64}</X509Certificate></X509Data></KeyInfo></Signature></evento></envEvento>`;
+
   const url = ambiente==='prod'
     ? 'https://www1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx'
     : 'https://hom1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx';
   const soapEnv = `<?xml version="1.0" encoding="UTF-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeRecepcaoEvento xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4"><nfeDadosMsg>${xmlEvento}</nfeDadosMsg></nfeRecepcaoEvento></soap12:Body></soap12:Envelope>`;
+
   const u = new URL(url);
   return new Promise((resolve, reject) => {
     const body = Buffer.from(soapEnv, 'utf8');
-    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
-      headers: { 'Content-Type': 'application/soap+xml; charset=utf-8', 'Content-Length': body.length },
-      cert: certPem, key: keyPem, rejectUnauthorized: false };
+    const opts = { hostname:u.hostname, path:u.pathname, method:'POST',
+      headers:{'Content-Type':'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento"','Content-Length':body.length},
+      cert:certPem, key:keyPem, rejectUnauthorized:false };
     const r = https.request(opts, res => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => resolve({ status: res.statusCode, xml: d }));
+      let d=''; const chunks=[];
+      res.on('data',c=>{d+=c;chunks.push(Buffer.isBuffer(c)?c:Buffer.from(c));});
+      res.on('end',()=>{
+        const enc=res.headers['content-encoding']||'';
+        if(enc.includes('gzip')){
+          try{resolve({status:res.statusCode,xml:zlib.gunzipSync(Buffer.concat(chunks)).toString('utf-8')});}
+          catch(eg){resolve({status:res.statusCode,xml:d});}
+        } else { resolve({status:res.statusCode,xml:d}); }
+      });
     });
-    r.on('error', reject); r.write(body); r.end();
+    r.on('error',reject); r.write(body); r.end();
   });
 }
 
