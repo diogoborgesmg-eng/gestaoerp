@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refeições Corporativas — Di Casa Laranjinha</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  :root {
+    --laranja: #E85D04; --laranja-escuro: #C44D03; --laranja-claro: #FFF4EE;
+    --verde: #16A34A; --verde-claro: #F0FDF4;
+    --vermelho: #DC2626; --vermelho-claro: #FEF2F2;
+    --cinza-100: #F3F4F6; --cinza-200: #E5E7EB; --cinza-400: #9CA3AF;
+    --cinza-600: #4B5563; --cinza-900: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #F9FAFB; color: var(--cinza-900); min-height: 100vh; }
+  .header { background: var(--laranja); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(232,93,4,0.25); }
+  .header-title { font-size: 1rem; font-weight: 700; color: white; }
+  .header-sub { font-size: 0.72rem; color: rgba(255,255,255,0.8); margin-top: 1px; }
+  .header-date { font-size: 0.78rem; color: rgba(255,255,255,0.9); font-weight: 500; text-align: right; }
+  .nav { display: flex; background: white; border-bottom: 2px solid var(--cinza-200); padding: 0 24px; overflow-x: auto; }
+  .nav-btn { padding: 12px 16px; font-size: 0.82rem; font-weight: 600; color: var(--cinza-400); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap; }
+  .nav-btn.active { color: var(--laranja); border-bottom-color: var(--laranja); }
+  .page { display: none; padding: 20px; max-width: 900px; margin: 0 auto; }
+  .page.active { display: block; }
+  .registro-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 600px) { .registro-layout { grid-template-columns: 1fr; } .nav-btn { padding: 10px 10px; font-size: 0.75rem; } }
+  .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .card-title { font-size: 0.78rem; font-weight: 600; color: var(--cinza-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+  .pin-display { background: var(--cinza-100); border-radius: 10px; padding: 16px; text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: 8px; color: var(--cinza-900); margin-bottom: 16px; min-height: 64px; display: flex; align-items: center; justify-content: center; }
+  .pin-display.error { background: var(--vermelho-claro); color: var(--vermelho); }
+  .pin-display.success { background: var(--verde-claro); color: var(--verde); }
+  .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .num-btn { padding: 16px; font-size: 1.2rem; font-weight: 700; background: var(--cinza-100); border: none; border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--cinza-900); }
+  .num-btn:hover { background: var(--cinza-200); }
+  .num-btn:active { transform: scale(0.95); }
+  .num-btn.del { background: var(--vermelho-claro); color: var(--vermelho); }
+  .resultado { display: none; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 16px; }
+  .resultado.ok { background: var(--verde-claro); border: 2px solid #86EFAC; }
+  .resultado.erro { background: var(--vermelho-claro); border: 2px solid #FCA5A5; }
+  .resultado-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .resultado-nome { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+  .resultado-msg { font-size: 0.85rem; color: var(--cinza-600); }
+  .resumo-dia { background: var(--laranja-claro); border: 1.5px solid #FDBA74; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .resumo-dia-title { font-size: 0.78rem; font-weight: 600; color: var(--laranja-escuro); margin-bottom: 8px; }
+  .resumo-dia-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .resumo-num { font-size: 1.5rem; font-weight: 800; color: var(--laranja); }
+  .resumo-label { font-size: 0.72rem; color: var(--cinza-600); }
+  .log-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cinza-100); font-size: 0.85rem; }
+  .log-item:last-child { border-bottom: none; }
+  .log-nome { font-weight: 600; }
+  .log-hora { color: var(--cinza-400); font-size: 0.75rem; }
+  .log-empresa { font-size: 0.72rem; background: var(--laranja-claro); color: var(--laranja-escuro); padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 0.78rem; font-weight: 600; color: var(--cinza-600); margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--cinza-200); border-radius: 8px; font-size: 0.9rem; font-family: 'Inter', sans-serif; color: var(--cinza-900); outline: none; transition: border 0.2s; }
+  .form-input:focus { border-color: var(--laranja); }
+  .form-select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--cinza-200); border-radius: 8px; font-size: 0.9rem; font-family: 'Inter', sans-serif; color: var(--cinza-900); background: white; outline: none; }
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+  .btn-primary { background: var(--laranja); color: white; }
+  .btn-primary:hover { background: var(--laranja-escuro); }
+  .btn-danger { background: var(--vermelho-claro); color: var(--vermelho); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 10px 12px; font-size: 0.72rem; font-weight: 600; color: var(--cinza-400); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--cinza-200); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--cinza-100); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--cinza-100); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+  .badge-laranja { background: var(--laranja-claro); color: var(--laranja-escuro); }
+  .relatorio-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .filtro-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .total-box { background: var(--cinza-900); color: white; border-radius: 10px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+  .total-box .valor { font-size: 1.3rem; font-weight: 800; color: #FCD34D; }
+  .empty { text-align: center; padding: 30px; color: var(--cinza-400); font-size: 0.85rem; }
+  .pin-badge { display: inline-block; background: var(--cinza-100); border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; font-weight: 700; font-family: monospace; letter-spacing: 2px; color: var(--cinza-600); }
+  .alert { padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 500; margin-bottom: 12px; }
+  .alert-verde { background: var(--verde-claro); color: var(--verde); }
+  .alert-vermelho { background: var(--vermelho-claro); color: var(--vermelho); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">🍽️ Refeições Corporativas</div>
+    <div class="header-sub">Di Casa Laranjinha</div>
+  </div>
+  <div class="header-date" id="headerDate"></div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="irPara('registro',this)">Registrar</button>
+  <button class="nav-btn" onclick="irPara('relatorio',this)">Relatório</button>
+  <button class="nav-btn" onclick="irPara('empresas',this)">Empresas</button>
+  <button class="nav-btn" onclick="irPara('funcionarios',this)">Funcionários</button>
+</div>
+
+<!-- REGISTRO -->
+<div class="page active" id="page-registro">
+  <div class="registro-layout">
+    <div class="card">
+      <div class="card-title">Digite o PIN — 4 dígitos</div>
+      <div class="pin-display" id="pinDisplay">_ _ _ _</div>
+      <div class="numpad">
+        <button class="num-btn" onclick="digitarPin('1')">1</button>
+        <button class="num-btn" onclick="digitarPin('2')">2</button>
+        <button class="num-btn" onclick="digitarPin('3')">3</button>
+        <button class="num-btn" onclick="digitarPin('4')">4</button>
+        <button class="num-btn" onclick="digitarPin('5')">5</button>
+        <button class="num-btn" onclick="digitarPin('6')">6</button>
+        <button class="num-btn" onclick="digitarPin('7')">7</button>
+        <button class="num-btn" onclick="digitarPin('8')">8</button>
+        <button class="num-btn" onclick="digitarPin('9')">9</button>
+        <button class="num-btn del" onclick="apagarPin()">⌫</button>
+        <button class="num-btn" onclick="digitarPin('0')">0</button>
+        <button class="num-btn del" onclick="limparPin()">✕</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="resultado" id="resultado">
+        <div class="resultado-icon" id="resultadoIcon"></div>
+        <div class="resultado-nome" id="resultadoNome"></div>
+        <div class="resultado-msg" id="resultadoMsg"></div>
+      </div>
+      <div class="card">
+        <div class="resumo-dia">
+          <div class="resumo-dia-title">Resumo de hoje</div>
+          <div class="resumo-dia-grid">
+            <div><div class="resumo-num" id="totalHoje">0</div><div class="resumo-label">refeições</div></div>
+            <div><div class="resumo-num" id="valorHoje">R$ 0,00</div><div class="resumo-label">total do dia</div></div>
+          </div>
+        </div>
+        <div class="card-title">Registros de hoje</div>
+        <div id="logHoje"><div class="empty">Nenhum registro ainda</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RELATÓRIO -->
+<div class="page" id="page-relatorio">
+  <div class="card">
+    <div class="relatorio-header">
+      <div>
+        <div style="font-size:1rem;font-weight:700">Relatório Mensal</div>
+        <div style="font-size:0.78rem;color:var(--cinza-400)">Por empresa e funcionário</div>
+      </div>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="filtro-row">
+      <select class="form-select" id="filtroEmpresa" style="width:auto" onchange="renderRelatorio()"><option value="">Todas as empresas</option></select>
+      <select class="form-select" id="filtroMes" style="width:auto" onchange="renderRelatorio()"></select>
+    </div>
+    <div id="conteudoRelatorio"></div>
+  </div>
+</div>
+
+<!-- EMPRESAS -->
+<div class="page" id="page-empresas">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-title">Nova empresa</div>
+      <div id="alertEmpresa"></div>
+      <div class="form-group"><label class="form-label">Nome da empresa</label><input class="form-input" id="nomeEmpresa" placeholder="Ex: Copave"></div>
+      <div class="form-group"><label class="form-label">Valor por refeição (R$)</label><input class="form-input" id="valorEmpresa" type="number" placeholder="20.00" step="0.01"></div>
+      <button class="btn btn-primary" onclick="salvarEmpresa()">Salvar empresa</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Empresas cadastradas</div>
+      <div id="listaEmpresas"><div class="empty">Nenhuma empresa</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FUNCIONÁRIOS -->
+<div class="page" id="page-funcionarios">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-title">Novo funcionário</div>
+      <div id="alertFuncionario"></div>
+      <div class="form-group"><label class="form-label">Nome completo</label><input class="form-input" id="nomeFuncionario" placeholder="Nome do funcionário"></div>
+      <div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="empresaFuncionario"><option value="">Selecione a empresa</option></select></div>
+      <div class="form-group"><label class="form-label">PIN (4 dígitos)</label><input class="form-input" id="pinFuncionario" type="number" placeholder="1234"></div>
+      <button class="btn btn-primary" onclick="salvarFuncionario()">Salvar funcionário</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Funcionários cadastrados</div>
+      <select class="form-select" id="filtroEmpresaFunc" style="margin-bottom:12px" onchange="renderFuncionarios()"><option value="">Todas as empresas</option></select>
+      <div id="listaFuncionarios"><div class="empty">Nenhum funcionário</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const D=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}};
+const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const getEmpresas=()=>D('dcl_empresas')||[];
+const setEmpresas=v=>S('dcl_empresas',v);
+const getFuncionarios=()=>D('dcl_funcionarios')||[];
+const setFuncionarios=v=>S('dcl_funcionarios',v);
+const getRegistros=()=>D('dcl_registros')||[];
+const setRegistros=v=>S('dcl_registros',v);
+
+function irPara(page,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(page==='relatorio'){popularFiltros();renderRelatorio();}
+  if(page==='empresas')renderListaEmpresas();
+  if(page==='funcionarios'){popularSelectEmpresas();renderFuncionarios();}
+  if(page==='registro')renderLogHoje();
+}
+
+let pinAtual='';
+function digitarPin(n){
+  if(pinAtual.length>=4)return;
+  pinAtual+=n;
+  atualizarDisplay();
+  if(pinAtual.length===4)setTimeout(confirmarPin,300);
+}
+function apagarPin(){pinAtual=pinAtual.slice(0,-1);atualizarDisplay();}
+function limparPin(){
+  pinAtual='';
+  const d=document.getElementById('pinDisplay');
+  d.textContent='_ _ _ _';d.className='pin-display';
+  document.getElementById('resultado').style.display='none';
+}
+function atualizarDisplay(){
+  document.getElementById('pinDisplay').textContent=pinAtual.padEnd(4,'_').split('').join(' ');
+}
+function confirmarPin(){
+  if(pinAtual.length!==4)return;
+  const func=getFuncionarios().find(f=>f.pin===pinAtual);
+  const display=document.getElementById('pinDisplay');
+  if(!func){
+    display.className='pin-display error';
+    mostrarResultado('erro','❌','PIN não encontrado','Verifique e tente novamente');
+    setTimeout(limparPin,2500);return;
+  }
+  const hoje=new Date().toISOString().slice(0,10);
+  const jaReg=getRegistros().find(r=>r.funcionarioId===func.id&&r.data===hoje);
+  if(jaReg){
+    display.className='pin-display error';
+    mostrarResultado('erro','⚠️',func.nome,`Já registrado hoje às ${jaReg.hora}`);
+    setTimeout(limparPin,2500);return;
+  }
+  const empresa=getEmpresas().find(e=>e.id===func.empresaId);
+  const agora=new Date();
+  const hora=agora.toTimeString().slice(0,5);
+  const regs=getRegistros();
+  regs.push({id:Date.now().toString(),funcionarioId:func.id,empresaId:func.empresaId,
+    data:hoje,hora,valor:empresa?empresa.valor:0});
+  setRegistros(regs);
+  display.className='pin-display success';
+  mostrarResultado('ok','✅',func.nome,`${empresa?empresa.nome:''} — R$ ${Number(empresa?.valor||0).toFixed(2).replace('.',',')} às ${hora}`);
+  renderLogHoje();
+  setTimeout(limparPin,3000);
+}
+function mostrarResultado(tipo,icon,nome,msg){
+  const el=document.getElementById('resultado');
+  el.className='resultado '+(tipo==='ok'?'ok':'erro');
+  el.style.display='block';
+  document.getElementById('resultadoIcon').textContent=icon;
+  document.getElementById('resultadoNome').textContent=nome;
+  document.getElementById('resultadoMsg').textContent=msg;
+}
+function renderLogHoje(){
+  const hoje=new Date().toISOString().slice(0,10);
+  const regs=getRegistros().filter(r=>r.data===hoje);
+  const funcs=getFuncionarios();const empresas=getEmpresas();
+  document.getElementById('totalHoje').textContent=regs.length;
+  document.getElementById('valorHoje').textContent='R$ '+regs.reduce((s,r)=>s+Number(r.valor),0).toFixed(2).replace('.',',');
+  const log=document.getElementById('logHoje');
+  if(!regs.length){log.innerHTML='<div class="empty">Nenhum registro ainda</div>';return;}
+  log.innerHTML=[...regs].sort((a,b)=>b.hora.localeCompare(a.hora)).map(r=>{
+    const f=funcs.find(x=>x.id===r.funcionarioId);
+    const e=empresas.find(x=>x.id===r.empresaId);
+    return `<div class="log-item">
+      <div><div class="log-nome">${f?f.nome:'?'}</div><div class="log-hora">${r.hora}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="log-empresa">${e?e.nome:''}</span>
+        <span style="font-weight:700;color:var(--laranja)">R$ ${Number(r.valor).toFixed(2).replace('.',',')}</span>
+      </div></div>`;
+  }).join('');
+}
+function salvarEmpresa(){
+  const nome=document.getElementById('nomeEmpresa').value.trim();
+  const valor=parseFloat(document.getElementById('valorEmpresa').value);
+  const alrt=document.getElementById('alertEmpresa');
+  if(!nome||isNaN(valor)||valor<=0){alrt.innerHTML='<div class="alert alert-vermelho">Preencha nome e valor.</div>';return;}
+  const emp=getEmpresas();emp.push({id:Date.now().toString(),nome,valor});setEmpresas(emp);
+  document.getElementById('nomeEmpresa').value='';document.getElementById('valorEmpresa').value='';
+  alrt.innerHTML='<div class="alert alert-verde">✅ Empresa salva!</div>';
+  setTimeout(()=>alrt.innerHTML='',2000);renderListaEmpresas();
+}
+function renderListaEmpresas(){
+  const emp=getEmpresas();const el=document.getElementById('listaEmpresas');
+  if(!emp.length){el.innerHTML='<div class="empty">Nenhuma empresa</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Empresa</th><th>Valor</th><th></th></tr></thead><tbody>
+    ${emp.map(e=>`<tr><td><strong>${e.nome}</strong></td><td>R$ ${Number(e.valor).toFixed(2).replace('.',',')}</td>
+    <td><button class="btn btn-danger" style="padding:4px 10px;font-size:0.75rem" onclick="excluirEmpresa('${e.id}')">✕</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+function excluirEmpresa(id){if(!confirm('Excluir empresa?'))return;setEmpresas(getEmpresas().filter(e=>e.id!==id));renderListaEmpresas();}
+function popularSelectEmpresas(){
+  const emp=getEmpresas();const opts=emp.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('');
+  document.getElementById('empresaFuncionario').innerHTML='<option value="">Selecione</option>'+opts;
+  document.getElementById('filtroEmpresaFunc').innerHTML='<option value="">Todas</option>'+opts;
+  const sel=document.getElementById('filtroEmpresa');
+  if(sel)sel.innerHTML='<option value="">Todas as empresas</option>'+opts;
+}
+function salvarFuncionario(){
+  const nome=document.getElementById('nomeFuncionario').value.trim();
+  const empresaId=document.getElementById('empresaFuncionario').value;
+  const pin=document.getElementById('pinFuncionario').value.toString().padStart(4,'0').slice(0,4);
+  const alrt=document.getElementById('alertFuncionario');
+  if(!nome||!empresaId||pin.length!==4){alrt.innerHTML='<div class="alert alert-vermelho">Preencha todos os campos.</div>';return;}
+  const funcs=getFuncionarios();
+  if(funcs.find(f=>f.pin===pin)){alrt.innerHTML='<div class="alert alert-vermelho">PIN já em uso. Escolha outro.</div>';return;}
+  funcs.push({id:Date.now().toString(),nome,empresaId,pin});setFuncionarios(funcs);
+  document.getElementById('nomeFuncionario').value='';document.getElementById('pinFuncionario').value='';
+  alrt.innerHTML=`<div class="alert alert-verde">✅ Salvo! PIN: ${pin}</div>`;
+  setTimeout(()=>alrt.innerHTML='',3000);renderFuncionarios();
+}
+function renderFuncionarios(){
+  const filtro=document.getElementById('filtroEmpresaFunc')?.value||'';
+  const funcs=getFuncionarios().filter(f=>!filtro||f.empresaId===filtro);
+  const empresas=getEmpresas();const el=document.getElementById('listaFuncionarios');
+  if(!funcs.length){el.innerHTML='<div class="empty">Nenhum funcionário</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Nome</th><th>Empresa</th><th>PIN</th><th></th></tr></thead><tbody>
+    ${funcs.map(f=>{const e=empresas.find(x=>x.id===f.empresaId);return`<tr>
+      <td><strong>${f.nome}</strong></td>
+      <td><span class="badge badge-laranja">${e?e.nome:'-'}</span></td>
+      <td><span class="pin-badge">${f.pin}</span></td>
+      <td><button class="btn btn-danger" style="padding:4px 10px;font-size:0.75rem" onclick="excluirFuncionario('${f.id}')">✕</button></td>
+    </tr>`;}).join('')}</tbody></table>`;
+}
+function excluirFuncionario(id){if(!confirm('Excluir?'))return;setFuncionarios(getFuncionarios().filter(f=>f.id!==id));renderFuncionarios();}
+function popularFiltros(){
+  popularSelectEmpresas();
+  const regs=getRegistros();
+  const meses=[...new Set(regs.map(r=>r.data.slice(0,7)))].sort().reverse();
+  const mesAtual=new Date().toISOString().slice(0,7);
+  const todos=meses.includes(mesAtual)?meses:[mesAtual,...meses];
+  const nomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  document.getElementById('filtroMes').innerHTML=todos.map(m=>{
+    const[y,mm]=m.split('-');return`<option value="${m}">${nomes[parseInt(mm)-1]}/${y}</option>`;
+  }).join('');
+}
+function renderRelatorio(){
+  const ef=document.getElementById('filtroEmpresa')?.value||'';
+  const mf=document.getElementById('filtroMes')?.value||new Date().toISOString().slice(0,7);
+  const regs=getRegistros().filter(r=>r.data.startsWith(mf)&&(!ef||r.empresaId===ef));
+  const funcs=getFuncionarios();const empresas=getEmpresas();
+  const el=document.getElementById('conteudoRelatorio');
+  if(!regs.length){el.innerHTML='<div class="empty">Nenhum registro neste período</div>';return;}
+  const porEmp={};regs.forEach(r=>{if(!porEmp[r.empresaId])porEmp[r.empresaId]=[];porEmp[r.empresaId].push(r);});
+  let html='';let totalG=0;let totalR=0;
+  Object.keys(porEmp).forEach(empId=>{
+    const emp=empresas.find(e=>e.id===empId);const ers=porEmp[empId];
+    const porF={};ers.forEach(r=>{if(!porF[r.funcionarioId])porF[r.funcionarioId]=[];porF[r.funcionarioId].push(r);});
+    const totE=ers.reduce((s,r)=>s+Number(r.valor),0);totalG+=totE;totalR+=ers.length;
+    html+=`<div style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:1rem;font-weight:700">${emp?emp.nome:'Empresa'}</div>
+        <div style="font-size:0.82rem;color:var(--cinza-400)">${ers.length} refeições — <strong style="color:var(--laranja)">R$ ${totE.toFixed(2).replace('.',',')}</strong></div>
+      </div>
+      <table><thead><tr><th>Funcionário</th><th>Refeições</th><th>Unit.</th><th>Total</th></tr></thead><tbody>
+        ${Object.keys(porF).map(fId=>{
+          const f=funcs.find(x=>x.id===fId);const qtd=porF[fId].length;
+          const val=porF[fId].reduce((s,r)=>s+Number(r.valor),0);
+          return`<tr><td>${f?f.nome:'?'}</td><td>${qtd}</td><td>R$ ${Number(emp?.valor||0).toFixed(2).replace('.',',')}</td><td><strong>R$ ${val.toFixed(2).replace('.',',')}</strong></td></tr>`;
+        }).join('')}
+      </tbody></table></div>`;
+  });
+  html+=`<div class="total-box"><div><div style="font-size:0.78rem;color:#9CA3AF">Total do período</div><div style="margin-top:2px;font-size:0.85rem">${totalR} refeições</div></div><div class="valor">R$ ${totalG.toFixed(2).replace('.',',')}</div></div>`;
+  el.innerHTML=html;
+}
+function atualizarData(){
+  const a=new Date();
+  const ds=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const ms=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  document.getElementById('headerDate').innerHTML=`${ds[a.getDay()]}, ${a.getDate()} ${ms[a.getMonth()]}<br>${a.toTimeString().slice(0,5)}`;
+}
+atualizarData();setInterval(atualizarData,30000);renderLogHoje();
+const emp=getEmpresas();if(!emp.length){emp.push({id:'copave',nome:'Copave',valor:20});setEmpresas(emp);}
+</script>
+</body>
+</html>
