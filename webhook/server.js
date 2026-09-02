@@ -1788,6 +1788,24 @@ http.createServer(async (req, res) => {
   // Rotas GET
   if (req.method==='GET') {
     if (req.url==='/') { res.writeHead(200); res.end(JSON.stringify({status:'ok v9'})); return; }
+    if (req.url==='/api/blob') {
+      (async()=>{
+        try {
+          const {data:d} = await lerBlob();
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({
+            ok: true,
+            lancamentos: d.lancamentos || [],
+            contasPagar: d.contasPagar || [],
+            pluggyItemIds: d.pluggyItemIds || [],
+            dadosFiscais: d.dadosFiscais ? {ultimoNSU: d.dadosFiscais.ultimoNSU} : {},
+            filaNFe: (d.filaNFe||[]).length
+          }));
+        } catch(e) { res.writeHead(200); res.end(JSON.stringify({ok:false,erro:e.message})); }
+      })();
+      return;
+    }
+
     if (req.url==='/ultimo-grupo') { res.writeHead(200); res.end(JSON.stringify({ultimoGrupoId:global._ultimoGrupoId||null})); return; }
     if (req.url && req.url.startsWith('/ultimo-grupo?debug')) {
       try {
