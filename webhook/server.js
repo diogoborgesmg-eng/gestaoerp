@@ -77,10 +77,24 @@ async function claude(messages, maxTokens=1000) {
 const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
 
 async function gravarLancamento(id, tipo, dia, descricao, categoria, valor, deviceId) {
-  return sb('POST', '/rest/v1/lancamentos',
-    { id, tipo, dia_comercial:dia, descricao, categoria:categoria||'🔄 Outros',
-      segmento:null, valor:Math.abs(Number(valor||0)), device_id:deviceId },
-    { Prefer:'return=minimal,resolution=ignore-duplicates' }).catch(()=>{});
+  // Salva no blob GitHub (sem Supabase)
+  try {
+    const {data:d, deviceId:did} = await lerBlob();
+    if (!d.lancamentos) d.lancamentos = [];
+    // Ignora duplicata
+    if (d.lancamentos.find(l=>l.id===id)) return;
+    d.lancamentos.push({
+      id, tipo, dia_comercial:dia, descricao,
+      categoria: categoria||'🔄 Outros',
+      valor: Math.abs(Number(valor||0)),
+      device_id: deviceId,
+      created_at: new Date().toISOString()
+    });
+    // Mantém últimos 2000 lançamentos
+    if (d.lancamentos.length > 2000) d.lancamentos = d.lancamentos.slice(-2000);
+    await salvarBlob(d, did);
+    console.log('GitHub:', 1, 'lançamentos salvos');
+  } catch(e) { console.log('gravarLancamento err:', e.message); }
 }
 
 // ── GitHub (bot_lancamentos.json) ────────────────────────
