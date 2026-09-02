@@ -3395,7 +3395,60 @@ h1{color:#fff;font-size:clamp(20px,5vw,32px);font-weight:800;margin-bottom:4px;t
 .coment-box{width:100%;max-width:480px;background:rgba(255,255,255,0.07);border:2px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px;color:#fff;font-size:16px;resize:none;font-family:inherit;margin-bottom:16px;}
 .btn-send{padding:14px 40px;border-radius:12px;border:none;background:#f59e0b;color:#000;font-size:15px;font-weight:800;cursor:pointer;}
 .stars{color:#f59e0b;font-size:clamp(20px,5vw,28px);letter-spacing:4px;margin-bottom:8px;}
-</style></head><body>
+</style></head><body><script>
+// Resync automático do servidor (substitui Supabase)
+(async function resyncDoServidor() {
+  try {
+    const SERVIDOR = 'https://gestaoerp-webhook.onrender.com';
+    const r = await fetch(SERVIDOR + '/api/blob');
+    if (!r.ok) return;
+    const dados = await r.json();
+    if (!dados.ok) return;
+
+    // Merge lançamentos no localStorage
+    const ldb = () => { try { return JSON.parse(localStorage.getItem('erp_db')||'{}'); } catch { return {}; } };
+    const sdb = v => localStorage.setItem('erp_db', JSON.stringify(v));
+    const db = ldb();
+
+    let novos = 0;
+    (dados.lancamentos||[]).forEach(l => {
+      const dia = l.dia_comercial;
+      if (!dia) return;
+      if (!db[dia]) db[dia] = [];
+      if (!db[dia].find(x => x.id === l.id)) {
+        db[dia].push({
+          id: l.id, tipo: l.tipo, descricao: l.descricao,
+          categoria: l.categoria, valor: l.valor,
+          device_id: l.device_id || 'servidor'
+        });
+        novos++;
+      }
+    });
+
+    // Merge contasPagar no blob local
+    if (dados.contasPagar && dados.contasPagar.length) {
+      const blobLocal = JSON.parse(localStorage.getItem('gestaoerp_blob_v9')||'{}');
+      if (!blobLocal.contasPagar) blobLocal.contasPagar = [];
+      dados.contasPagar.forEach(cp => {
+        if (!blobLocal.contasPagar.find(x => x.id === cp.id)) {
+          blobLocal.contasPagar.push(cp);
+          novos++;
+        }
+      });
+      localStorage.setItem('gestaoerp_blob_v9', JSON.stringify(blobLocal));
+    }
+
+    if (novos > 0) {
+      sdb(db);
+      console.log('Resync servidor: ' + novos + ' itens novos');
+      // Recarrega a UI se possível
+      if (typeof renderTudo === 'function') renderTudo();
+      else if (typeof atualizarDRE === 'function') atualizarDRE();
+    }
+  } catch(e) { console.log('Resync err:', e.message); }
+})();
+</script>
+
 <div id="main" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:560px;">
 <div class="logo">${nome}</div>
 <h1>Como foi sua experiência?</h1>
