@@ -21636,37 +21636,37 @@ async function sincronizarBlobAutomatico(){
 }
 
 async function puxarLancamentosOutrosDispositivos(diaComercial){
- const cfg=getSupabaseCfg();
- if(!cfg.url||!cfg.key)return{novos:0};
  const dia=diaComercial||hj();
  try{
-  const resp=await fetch(`${cfg.url}/rest/v1/lancamentos?dia_comercial=eq.${encodeURIComponent(dia)}&order=id.asc`,{
-   headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
-  });
+  const resp=await fetch('https://gestaoerp-webhook.onrender.com/api/blob');
   if(!resp.ok)return{novos:0};
-  const linhas=await resp.json();
+  const dados=await resp.json();
+  if(!dados.ok)return{novos:0};
   const db=ldb();
   if(!db[dia])db[dia]={r:[],c:[]};
   if(!db[dia].r)db[dia].r=[];
   if(!db[dia].c)db[dia].c=[];
-  const todosLocais=[...( db[dia].r||[]),...(db[dia].c||[])];
-  const idsLocais=new Set(todosLocais.map(x=>x.id));
-  // Chave de deduplicacao: valor + primeiros 20 chars da descricao (evita duplicar mesmo lancamento com ID diferente)
-  const chavesLocais=new Set(todosLocais.map(x=>String(Math.round(Number(x.v||0)*100))+'_'+(x.d||'').slice(0,20).toLowerCase().trim()));
+  const todosLocais=[...(db[dia].r||[]),(db[dia].c||[])].map(x=>x.id);
   let novos=0;
-  linhas.forEach(l=>{
-   if(idsLocais.has(l.id))return;
-   const chave=String(Math.round(Number(l.valor||0)*100))+'_'+(l.descricao||'').slice(0,20).toLowerCase().trim();
-   if(chavesLocais.has(chave))return; // mesmo valor+descricao ja existe, nao duplica
-   const item={id:l.id,d:l.descricao,v:Number(l.valor),cat:l.categoria,seg:l.segmento,dt:dia,_deOutroDispositivo:true};
-   if(l.tipo==='receita')db[dia].r.push(item);
-   else db[dia].c.push(item);
-   chavesLocais.add(chave); // atualiza set para evitar duplicar no mesmo batch
-   novos++;
+  const lancsDia=(dados.lancamentos||[]).filter(l=>l.dia_comercial===dia);
+  lancsDia.forEach(l=>{
+   if(!todosLocais.includes(l.id)){
+    const obj={id:l.id,descricao:l.descricao,categoria:l.categoria,valor:Number(l.valor||0),device_id:l.device_id};
+    if(l.tipo==='custo')db[dia].c.push(obj);
+    else db[dia].r.push(obj);
+    novos++;
+   }
   });
+  // Merge contasPagar
+  if(dados.contasPagar&&dados.contasPagar.length){
+   const bv=JSON.parse(localStorage.getItem('gestaoerp_blob_v9')||'{}');
+   if(!bv.contasPagar)bv.contasPagar=[];
+   dados.contasPagar.forEach(cp=>{if(!bv.contasPagar.find(x=>x.id===cp.id)){bv.contasPagar.push(cp);novos++;}});
+   localStorage.setItem('gestaoerp_blob_v9',JSON.stringify(bv));
+  }
   if(novos>0)sdb(db);
   return{novos};
- }catch(e){console.error('Erro ao puxar lancamentos de outros dispositivos:',e.message);return{novos:0};}
+ }catch(e){console.log('sync err:',e.message);return{novos:0};}
 }
 
 
@@ -27612,6 +27612,7 @@ async function autoSyncSupabaseInicial(){
 render();
 puxarLancamentosOutrosDispositivos(getDia()).then(r=>{if(r.novos>0)render();});
 sincronizarBlobAutomatico();
+puxarLancamentosOutrosDispositivos(hj()).catch(()=>{});
 setInterval(sincronizarBlobAutomatico, 5*60*1000);
 }).catch(e=>console.error(e));
 setTimeout(checkBotPending,2000);
