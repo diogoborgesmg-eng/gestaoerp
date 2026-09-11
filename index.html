@@ -21541,101 +21541,42 @@ async function gravarMovimentoEstoqueSupabase(produto,tipo,quantidade,origem){
 }
 
 async function sincronizarBlobAutomatico(){
- // Verifica se o blob no Supabase e mais recente que o local
- // Se sim, mescla estoque e contas a pagar automaticamente
- const cfg=getSupabaseCfg();
- if(!cfg.url||!cfg.key)return;
  try{
-  const resp=await fetch(`${cfg.url}/rest/v1/erp_sync?select=data,updated_at,device_id&order=updated_at.desc&limit=1`,
-   {headers:{'apikey':cfg.key}});
+  const resp=await fetch('https://gestaoerp-webhook.onrender.com/api/blob');
   if(!resp.ok)return;
-  const rows=await resp.json();
-  if(!rows||!rows.length)return;
-  const row=rows[0];
-  const ultimoSync=localStorage.getItem('erp_ultimo_blob_sync')||'';
-  if(ultimoSync===row.updated_at)return; // ja sincronizei esse blob, nao repete
-  // Blob e mais novo e veio de outro dispositivo/servidor — mescla
-  const dadosServidor=JSON.parse(row.data);
+  const dados=await resp.json();
+  if(!dados.ok)return;
   const db=ldb();
   let mudou=false;
-  // Mescla funcionarios cadastrados pelo bot
-  if(dadosServidor.funcionarios&&dadosServidor.funcionarios.length>0){
-   if(!db.funcionarios)db.funcionarios=[];
-   const idsLocais=new Set((db.funcionarios).map(f=>f.id));
-   const nomesLocais=new Set((db.funcionarios).map(f=>(f.nome||'').toLowerCase()));
-   dadosServidor.funcionarios.forEach(f=>{
-    if(!idsLocais.has(f.id)&&!nomesLocais.has((f.nome||'').toLowerCase())){
-     db.funcionarios.push(f);
-     mudou=true;
-    }
-   });
-  }
-  // Mescla ponto (presencas registradas pelo bot)
-  if(dadosServidor.ponto){
-   if(!db.ponto)db.ponto={};
-   Object.keys(dadosServidor.ponto).forEach(dia=>{
-    if(!db.ponto[dia])db.ponto[dia]={};
-    Object.keys(dadosServidor.ponto[dia]).forEach(funcId=>{
-     if(!db.ponto[dia][funcId]){
-      db.ponto[dia][funcId]=dadosServidor.ponto[dia][funcId];
-      mudou=true;
-     }
-    });
-   });
-  }
-  // Mescla estoque (produtos com _sefaz:true sao do servidor)
-  if(dadosServidor.est&&dadosServidor.est.length>0){
-   const idsLocais=new Set((db.est||[]).map(p=>p.id));
-   dadosServidor.est.forEach(p=>{
-    if(!idsLocais.has(p.id)){
-     if(!db.est)db.est=[];
-     db.est.push(p);
-     mudou=true;
-    }
-   });
-  }
-  // Mescla contas a pagar com deduplicacao por id E por valor+fornecedor
-  if(dadosServidor.contasPagar&&dadosServidor.contasPagar.length>0){
-   const idsLocais=new Set((db.contasPagar||[]).map(cp=>cp.id));
-   const chavesLocais=new Set((db.contasPagar||[]).map(cp=>String(cp.val||cp.valor||0)+'_'+(cp.forn||cp.desc||'').slice(0,15)));
-   dadosServidor.contasPagar.forEach(cp=>{
-    const chave=String(cp.val||cp.valor||0)+'_'+(cp.forn||cp.desc||'').slice(0,15);
-    if(!idsLocais.has(cp.id)&&!chavesLocais.has(chave)){
-     if(!db.contasPagar)db.contasPagar=[];
-     db.contasPagar.push(cp);
-     mudou=true;
-    }
-   });
-  }
-  // Mescla lancamentos DRE do servidor sem duplicar por id E por valor+descricao
-  const diasServidor=Object.keys(dadosServidor).filter(k=>/\d{2}\/\d{2}\/\d{4}/.test(k));
-  diasServidor.forEach(dia=>{
+  // Merge lancamentos
+  (dados.lancamentos||[]).forEach(l=>{
+   const dia=l.dia_comercial;
+   if(!dia)return;
    if(!db[dia])db[dia]={r:[],c:[]};
-   ['r','c'].forEach(tipo=>{
-    const itensServidor=dadosServidor[dia][tipo]||[];
-    const idsLocais=new Set((db[dia][tipo]||[]).map(x=>x.id));
-    const chavesLocais=new Set((db[dia][tipo]||[]).map(x=>String(x.v||0)+'_'+(x.d||'').slice(0,15)));
-    itensServidor.forEach(item=>{
-     const chave=String(item.v||0)+'_'+(item.d||'').slice(0,15);
-     if(!idsLocais.has(item.id)&&!chavesLocais.has(chave)){
-      db[dia][tipo].push(item);
-      mudou=true;
-     }
-    });
-   });
+   if(!db[dia].r)db[dia].r=[];
+   if(!db[dia].c)db[dia].c=[];
+   const ids=[...(db[dia].r||[]),...(db[dia].c||[])].map(x=>x.id);
+   if(!ids.includes(l.id)){
+    const obj={id:l.id,descricao:l.descricao,categoria:l.categoria,valor:Number(l.valor||0),device_id:l.device_id||'servidor'};
+    if(l.tipo==='custo')db[dia].c.push(obj);
+    else db[dia].r.push(obj);
+    mudou=true;
+   }
   });
-  if(mudou){
-   sdb(db);
-   localStorage.setItem('erp_ultimo_blob_sync',row.updated_at);
-   render();
-   console.log('Auto-sync: blob do servidor mesclado (estoque/contas a pagar atualizados)');
-  }else{
-   localStorage.setItem('erp_ultimo_blob_sync',row.updated_at);
+  if(mudou)sdb(db);
+  // Merge contasPagar e blob
+  const bv=JSON.parse(localStorage.getItem('gestaoerp_blob_v9')||'{}');
+  let bvMudou=false;
+  if(dados.contasPagar&&dados.contasPagar.length){
+   if(!bv.contasPagar)bv.contasPagar=[];
+   dados.contasPagar.forEach(cp=>{if(!bv.contasPagar.find(x=>x.id===cp.id)){bv.contasPagar.push(cp);bvMudou=true;}});
   }
- }catch(e){console.error('Erro sincronizarBlobAutomatico:',e.message);}
+  if(bvMudou)localStorage.setItem('gestaoerp_blob_v9',JSON.stringify(bv));
+  if(mudou||bvMudou)console.log('Blob sync: ok');
+ }catch(e){console.log('sincronizarBlobAutomatico err:',e.message);}
 }
 
-async function puxarLancamentosOutrosDispositivos(diaComercial){
+async async function puxarLancamentosOutrosDispositivos(diaComercial){
  const dia=diaComercial||hj();
  try{
   const resp=await fetch('https://gestaoerp-webhook.onrender.com/api/blob');
