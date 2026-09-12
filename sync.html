@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sincronizando...</title>
+<style>
+  body{font-family:sans-serif;background:#0f0f1a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .box{text-align:center;padding:30px;}
+  .spinner{width:50px;height:50px;border:4px solid #333;border-top:4px solid #ff6b35;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h2{color:#ff6b35;margin-bottom:8px;}
+  p{color:#888;font-size:0.9rem;}
+  .ok{color:#00cc66;}
+  .err{color:#ff4444;}
+  .item{background:#1a1a2e;border-radius:8px;padding:8px 14px;margin:6px 0;font-size:0.85rem;text-align:left;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner" id="spinner"></div>
+  <h2>🔄 Sincronizando dados</h2>
+  <p>Buscando lançamentos do servidor...</p>
+  <div id="log"></div>
+</div>
+<script>
+const SERVIDOR = 'https://gestaoerp-webhook.onrender.com';
+
+function log(msg, tipo) {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="item ${tipo||''}">${msg}</div>`;
+}
+
+function ldb() { try { return JSON.parse(localStorage.getItem('erp_db')||'{}'); } catch { return {}; } }
+function sdb(v) { localStorage.setItem('erp_db', JSON.stringify(v)); }
+
+async function sync() {
+  try {
+    log('📡 Conectando ao servidor...');
+    const resp = await fetch(SERVIDOR + '/api/blob');
+    if (!resp.ok) throw new Error('Servidor não respondeu');
+    const dados = await resp.json();
+    if (!dados.ok) throw new Error('Dados inválidos');
+
+    log(`✅ Servidor conectado`);
+
+    // Merge lançamentos
+    const db = ldb();
+    let novosLanc = 0;
+    const lancamentos = dados.lancamentos || [];
+    log(`📦 ${lancamentos.length} lançamentos no servidor`);
+
+    lancamentos.forEach(l => {
+      const dia = l.dia_comercial;
+      if (!dia) return;
+      if (!db[dia]) db[dia] = {r:[], c:[]};
+      if (!db[dia].r) db[dia].r = [];
+      if (!db[dia].c) db[dia].c = [];
+      const ids = [...(db[dia].r||[]), ...(db[dia].c||[])].map(x=>x.id);
+      if (!ids.includes(l.id)) {
+        const obj = {id:l.id, descricao:l.descricao, categoria:l.categoria,
+          valor:Number(l.valor||0), device_id:l.device_id||'servidor'};
+        if (l.tipo==='custo') db[dia].c.push(obj);
+        else db[dia].r.push(obj);
+        novosLanc++;
+      }
+    });
+
+    if (novosLanc > 0) sdb(db);
+    log(`✅ ${novosLanc} lançamentos novos adicionados`, 'ok');
+
+    // Merge contasPagar no blob
+    const bv = JSON.parse(localStorage.getItem('gestaoerp_blob_v9')||'{}');
+    if (!bv.contasPagar) bv.contasPagar = [];
+    let novasCPs = 0;
+    (dados.contasPagar||[]).forEach(cp => {
+      if (!bv.contasPagar.find(x=>x.id===cp.id)) {
+        bv.contasPagar.push(cp);
+        novasCPs++;
+      }
+    });
+    if (novasCPs > 0) localStorage.setItem('gestaoerp_blob_v9', JSON.stringify(bv));
+    log(`✅ ${novasCPs} contas a pagar sincronizadas`, 'ok');
+
+    // Parar spinner
+    document.getElementById('spinner').style.display = 'none';
+    log(`<strong>✅ Sincronização concluída!</strong><br>Redirecionando para o ERP...`, 'ok');
+
+    setTimeout(() => { window.location.href = '/'; }, 2000);
+
+  } catch(e) {
+    document.getElementById('spinner').style.display = 'none';
+    log(`❌ Erro: ${e.message}`, 'err');
+    log('Redirecionando mesmo assim...');
+    setTimeout(() => { window.location.href = '/'; }, 3000);
+  }
+}
+
+sync();
+</script>
+</body>
+</html>
